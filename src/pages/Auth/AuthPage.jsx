@@ -1,11 +1,4 @@
 import { useState } from 'react'
-import AuthForm from '../../components/auth/AuthForm'
-import OverlayPanel from '../../components/auth/OverlayPanel'
-import {
-  API_BASE_URL,
-  getResponseMessage,
-  parseResponseBody,
-} from '../../lib/apiClient'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const phonePattern = /^\d{10}$/
@@ -15,7 +8,7 @@ const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 const validateName = (value, label) =>
   namePattern.test(value.trim()) ? '' : `${label} can only contain letters.`
 
-const validatePhoneNumber = (value, label) =>
+const validatePhone = (value, label) =>
   phonePattern.test(value.trim()) ? '' : `${label} must be 10 digits only.`
 
 const validateEmail = (value) =>
@@ -24,532 +17,410 @@ const validateEmail = (value) =>
 const validatePassword = (value) =>
   passwordPattern.test(value)
     ? ''
-    : 'Password must be at least 8 characters and include uppercase, lowercase, and a number.'
+    : 'Password must be at least 8 characters with uppercase, lowercase, and a number.'
 
-const createNameField = (name, label, autoComplete) => ({
-  name,
-  type: 'text',
-  placeholder: label,
-  label,
-  autoComplete,
-  required: true,
-  maxLength: 40,
-  validate: (value) => validateName(value, label),
-  sanitize: (value) => value.replace(/\d/g, ''),
-  wrapperClassName: 'name-part',
-})
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
 
-const createPhoneField = (name, label, autoComplete, required = false) => ({
-  name,
-  type: 'tel',
-  placeholder: required ? label : `${label} (Optional)`,
-  label,
-  autoComplete,
-  inputMode: 'numeric',
-  required,
-  maxLength: 10,
-  validate: (value) => validatePhoneNumber(value, label),
-  sanitize: (value) => value.replace(/\D/g, '').slice(0, 10),
-})
-
-const emailField = {
-  name: 'email',
-  type: 'email',
-  placeholder: 'Email Address',
-  label: 'Email address',
-  autoComplete: 'email',
-  required: true,
-  maxLength: 254,
-  validate: validateEmail,
-}
-
-const createPasswordField = (autoComplete, withValidation = false) => ({
-  name: 'password',
-  type: 'password',
-  placeholder: 'Password',
-  label: 'Password',
-  autoComplete,
-  required: true,
-  maxLength: 64,
-  ...(withValidation ? { validate: validatePassword } : {}),
-})
-
-const signInFields = [emailField, createPasswordField('current-password')]
-
-const signUpFields = [
-  ...[
-    ['firstName', 'First Name', 'given-name'],
-    ['middleName', 'Middle Name', 'additional-name'],
-    ['lastName', 'Last Name', 'family-name'],
-  ].map(([name, label, autoComplete]) =>
-    createNameField(name, label, autoComplete),
-  ),
-  createPhoneField('phoneNumber', 'Phone Number', 'tel', true),
-  createPhoneField(
-    'secondaryPhoneNumber',
-    'Additional Phone Number',
-    'tel-national',
-  ),
-  emailField,
-  createPasswordField('new-password', true),
-]
-
-const authPageStyles = `
-  .auth-page {
+  .ma-page {
+    display: flex;
     min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background:
-      radial-gradient(circle at top left, rgba(255, 75, 43, 0.18), transparent 34%),
-      radial-gradient(circle at bottom right, rgba(255, 65, 108, 0.22), transparent 38%),
-      linear-gradient(135deg, #fff7f6 0%, #ffeef1 42%, #fff 100%);
+    width: 100%;
+    background: #fff;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #1c1917;
   }
 
-  .auth-page .container {
+  /* Left image panel */
+  .ma-image-panel {
+    display: none;
     position: relative;
-    overflow: hidden;
-    width: min(100%, 900px);
-    min-height: 640px;
-    background: #ffffff;
-    border-radius: 28px;
-    box-shadow:
-      0 24px 60px rgba(255, 65, 108, 0.12),
-      0 12px 28px rgba(15, 23, 42, 0.12);
+    width: 50%;
+    flex-shrink: 0;
   }
 
-  .auth-page .container h1,
-  .auth-page .container p {
-    margin: 0;
+  @media (min-width: 1024px) {
+    .ma-image-panel {
+      display: block;
+    }
   }
 
-  .auth-page .container h1 {
-    color: #1f1f2e;
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-  }
-
-  .auth-page .container p {
-    color: rgba(255, 255, 255, 0.86);
-    font-size: 0.96rem;
-    line-height: 1.6;
-    max-width: 320px;
-  }
-
-  .auth-page .form-container {
+  .ma-image-panel img {
     position: absolute;
-    top: 0;
+    inset: 0;
+    width: 100%;
     height: 100%;
-    transition: all 0.6s ease-in-out;
+    object-fit: cover;
   }
 
-  .auth-page .sign-in-container {
-    left: 0;
-    width: 50%;
-    z-index: 2;
-  }
-
-  .auth-page .sign-up-container {
-    left: 0;
-    width: 50%;
-    opacity: 0;
+  .ma-image-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.22);
     z-index: 1;
   }
 
-  .auth-page .container.right-panel-active .sign-in-container {
-    transform: translateX(100%);
+  .ma-image-text {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    padding: 3rem;
+    color: #fff;
   }
 
-  .auth-page .container.right-panel-active .sign-up-container {
-    transform: translateX(100%);
-    opacity: 1;
-    z-index: 5;
-    animation: auth-page-show 0.6s;
+  .ma-image-text h1 {
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+    line-height: 1.15;
+    color: #fff;
   }
 
-  @keyframes auth-page-show {
-    0%,
-    49.99% {
-      opacity: 0;
-      z-index: 1;
-    }
-
-    50%,
-    100% {
-      opacity: 1;
-      z-index: 5;
-    }
+  .ma-image-text p {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+    max-width: 360px;
+    line-height: 1.6;
   }
 
-  .auth-page form {
-    background: #ffffff;
+  /* Right form panel */
+  .ma-form-panel {
+    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: center;
-    height: 100%;
-    padding: 32px 56px;
-    text-align: center;
-    overflow-y: auto;
+    padding: 3rem 2rem;
   }
 
-  .auth-page form h1 {
-    margin-bottom: 10px;
+  @media (min-width: 1024px) {
+    .ma-form-panel {
+      padding: 3rem 5rem;
+    }
   }
 
-  .auth-page .form-status {
+  .ma-form-inner {
     width: 100%;
-    margin: 0 0 14px;
-    color: #6b7280;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    text-align: left;
+    max-width: 448px;
+    margin: 0 auto;
   }
 
-  .auth-page .form-status.is-success {
-    color: #15803d;
+  .ma-form-header {
+    margin-bottom: 2.5rem;
   }
 
-  .auth-page .form-status.is-error {
-    color: #d13b59;
+  .ma-form-header h2 {
+    font-size: 1.875rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.4rem;
+    color: #1c1917;
   }
 
-  .auth-page .auth-form-sign-up {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    align-content: center;
-  }
-
-  .auth-page .auth-form-sign-up h1,
-  .auth-page .auth-form-sign-up .field-group:not(.name-part),
-  .auth-page .auth-form-sign-up button {
-    grid-column: 1 / -1;
-  }
-
-  .auth-page .field-group {
-    width: 100%;
-    text-align: left;
-  }
-
-  .auth-page form input {
-    width: 100%;
+  .ma-form-header p {
+    font-size: 0.9rem;
+    color: #78716c;
+    font-weight: 300;
     margin: 0;
-    padding: 14px 16px;
-    border: 1px solid #f2d7de;
-    border-radius: 999px;
-    background: #fff7f8;
-    color: #2d1e23;
+  }
+
+  /* Form layout */
+  .ma-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .ma-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .ma-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .ma-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .ma-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #78716c;
+  }
+
+  .ma-input {
+    width: 100%;
+    height: 3rem;
+    padding: 0 0.875rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 0;
+    background: #fff;
+    font-size: 0.9rem;
+    color: #1c1917;
+    font-family: inherit;
+    font-weight: 300;
     outline: none;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      background-color 0.2s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
   }
 
-  .auth-page form input:focus {
-    border-color: #ff5d74;
-    background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(255, 93, 116, 0.15);
+  .ma-input:focus {
+    border-color: #1c1917;
+    box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.08);
   }
 
-  .auth-page form input[aria-invalid='true'] {
-    border-color: #e11d48;
-    background: #fff4f6;
+  .ma-input[aria-invalid='true'] {
+    border-color: #ef4444;
   }
 
-  .auth-page form input[aria-invalid='true']:focus {
-    box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.14);
+  .ma-error {
+    font-size: 0.72rem;
+    color: #ef4444;
+    margin: 0;
   }
 
-  .auth-page .field-error {
-    display: block;
-    margin: 6px 14px 0;
-    color: #d13b59;
-    font-size: 0.75rem;
-    line-height: 1.4;
-  }
-
-  .auth-page button {
-    margin-top: 16px;
-    padding: 14px 46px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%);
-    color: #ffffff;
+  .ma-submit {
+    width: 100%;
+    height: 3rem;
+    background: #1c1917;
+    color: #fff;
+    border: none;
+    border-radius: 0;
     font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    font-family: inherit;
     cursor: pointer;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease,
-      background-position 0.6s ease-in-out;
+    transition: background 0.15s ease;
+    margin-top: 0.25rem;
   }
 
-  .auth-page button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 24px rgba(255, 75, 43, 0.24);
+  .ma-submit:hover {
+    background: #292524;
   }
 
-  .auth-page button:active {
-    transform: translateY(0);
+  .ma-submit:active {
+    background: #1c1917;
   }
 
-  .auth-page button:disabled {
-    cursor: wait;
-    opacity: 0.72;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .auth-page button:focus-visible {
-    outline: 3px solid rgba(255, 75, 43, 0.28);
+  .ma-submit:focus-visible {
+    outline: 2px solid #1c1917;
     outline-offset: 3px;
   }
 
-  .auth-page button.ghost {
-    background: transparent;
-    border-color: rgba(255, 255, 255, 0.88);
-    box-shadow: none;
-  }
-
-  .auth-page button.ghost:hover {
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: none;
-  }
-
-  .auth-page .overlay-container {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 50%;
-    height: 100%;
-    overflow: hidden;
-    transition: transform 0.6s ease-in-out;
-    z-index: 100;
-  }
-
-  .auth-page .container.right-panel-active .overlay-container {
-    transform: translateX(-100%);
-  }
-
-  .auth-page .overlay {
-    position: relative;
-    left: -100%;
-    width: 200%;
-    height: 100%;
-    color: #ffffff;
-    background:
-      radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.22), transparent 24%),
-      linear-gradient(135deg, #ff4b2b 0%, #ff416c 55%, #ff6f91 100%);
-    transform: translateX(0);
-    transition: transform 0.6s ease-in-out;
-  }
-
-  .auth-page .container.right-panel-active .overlay {
-    transform: translateX(50%);
-  }
-
-  .auth-page .overlay-panel {
-    position: absolute;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 50%;
-    height: 100%;
-    padding: 0 48px;
+  /* Toggle link */
+  .ma-toggle-wrap {
+    margin-top: 2rem;
     text-align: center;
-    transition: transform 0.6s ease-in-out;
   }
 
-  .auth-page .overlay-panel h1 {
-    color: #ffffff;
-    margin-bottom: 14px;
+  .ma-toggle-btn {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #78716c;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0;
+    transition: color 0.15s ease;
   }
 
-  .auth-page .overlay-panel p {
-    margin-bottom: 24px;
-  }
-
-  .auth-page .overlay-left {
-    transform: translateX(-20%);
-  }
-
-  .auth-page .container.right-panel-active .overlay-left {
-    transform: translateX(0);
-  }
-
-  .auth-page .overlay-right {
-    right: 0;
-    transform: translateX(0);
-  }
-
-  .auth-page .container.right-panel-active .overlay-right {
-    transform: translateX(20%);
-  }
-
-  @media (max-width: 860px) {
-    .auth-page {
-      padding: 16px;
-    }
-
-    .auth-page .container {
-      min-height: 700px;
-    }
-
-    .auth-page form {
-      padding: 28px;
-    }
-
-    .auth-page .auth-form-sign-up {
-      grid-template-columns: 1fr;
-    }
-
-    .auth-page .overlay-panel {
-      padding: 0 28px;
-    }
-
-    .auth-page button {
-      padding-inline: 28px;
-    }
+  .ma-toggle-btn:hover {
+    color: #1c1917;
   }
 `
 
-function AuthPage({ onAuthenticated }) {
-  const [isSignUpActive, setIsSignUpActive] = useState(false)
-  const [submittingMode, setSubmittingMode] = useState('')
-  const [formFeedback, setFormFeedback] = useState({
-    'sign-in': { message: '', tone: 'idle' },
-    'sign-up': { message: '', tone: 'idle' },
-  })
+function Field({ id, label, type = 'text', name, required, value, error, onChange, onBlur, autoComplete, inputMode, maxLength }) {
+  return (
+    <div className="ma-field">
+      <label htmlFor={id} className="ma-label">{label}</label>
+      <input
+        id={id}
+        name={name}
+        type={type}
+        className="ma-input"
+        required={required}
+        value={value}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        maxLength={maxLength}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${id}-error` : undefined}
+        onChange={onChange}
+        onBlur={onBlur}
+      />
+      {error && <p id={`${id}-error`} className="ma-error">{error}</p>}
+    </div>
+  )
+}
 
-  const setFeedback = (mode, message, tone) => {
-    setFormFeedback((previousFeedback) => ({
-      ...previousFeedback,
-      [mode]: { message, tone },
-    }))
+const signInInitial = { email: '', password: '' }
+const signUpInitial = {
+  firstName: '', middleName: '', lastName: '',
+  phoneNumber: '', additionalPhoneNumber: '',
+  email: '', password: '',
+}
+
+function AuthPage({ onSignIn }) {
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [signInValues, setSignInValues] = useState(signInInitial)
+  const [signInErrors, setSignInErrors] = useState({})
+  const [signUpValues, setSignUpValues] = useState(signUpInitial)
+  const [signUpErrors, setSignUpErrors] = useState({})
+
+  const values = isSignUp ? signUpValues : signInValues
+  const errors = isSignUp ? signUpErrors : signInErrors
+  const setValues = isSignUp ? setSignUpValues : setSignInValues
+  const setErrors = isSignUp ? setSignUpErrors : setSignInErrors
+
+  const getError = (name, val) => {
+    if (isSignUp) {
+      if (name === 'firstName') return validateName(val, 'First Name')
+      if (name === 'middleName') return val.trim() ? validateName(val, 'Middle Name') : ''
+      if (name === 'lastName') return validateName(val, 'Last Name')
+      if (name === 'phoneNumber') return validatePhone(val, 'Phone Number')
+      if (name === 'additionalPhoneNumber') return val.trim() ? validatePhone(val, 'Additional Phone') : ''
+      if (name === 'email') return validateEmail(val)
+      if (name === 'password') return validatePassword(val)
+    } else {
+      if (name === 'email') return validateEmail(val)
+      if (name === 'password') return !val.trim() ? 'Password is required.' : ''
+    }
+    return ''
   }
 
-  const handleSubmit = async (mode, values) => {
-    const isSignIn = mode === 'sign-in'
-    const endpoint = isSignIn ? '/api/auth/login' : '/api/auth/register'
-    const payload = isSignIn
-      ? {
-          email: values.email,
-          password: values.password,
-        }
-      : values
+  const sanitize = (name, val) => {
+    if (['firstName', 'middleName', 'lastName'].includes(name)) return val.replace(/\d/g, '')
+    if (['phoneNumber', 'additionalPhoneNumber'].includes(name)) return val.replace(/\D/g, '').slice(0, 10)
+    return val
+  }
 
-    setSubmittingMode(mode)
-    setFeedback(mode, '', 'idle')
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    const next = sanitize(name, value)
+    setValues((prev) => ({ ...prev, [name]: next }))
+    setErrors((prev) => ({ ...prev, [name]: getError(name, next) }))
+  }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-      const result = await parseResponseBody(response)
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    setErrors((prev) => ({ ...prev, [name]: getError(name, value) }))
+  }
 
-      if (!response.ok) {
-        throw new Error(getResponseMessage(result, 'Request failed.'))
-      }
-
-      if (isSignIn) {
-        if (result?.token) {
-          onAuthenticated?.(result)
-        }
-
-        if (result?.role === 'Admin') {
-          window.location.assign('/admin')
-          return
-        }
-
-        setFeedback(
-          'sign-in',
-          'Signed in successfully. Admin users are redirected automatically.',
-          'success',
-        )
-        return
-      }
-
-      setFeedback('sign-in', 'Account created successfully. You can sign in now.', 'success')
-      setFeedback('sign-up', '', 'idle')
-      setIsSignUpActive(false)
-    } catch (error) {
-      const message =
-        error instanceof Error && error.message === 'Failed to fetch'
-          ? 'Unable to reach the server. Make sure the backend is running.'
-          : error instanceof Error
-            ? error.message
-            : 'Unable to reach the server.'
-
-      setFeedback(mode, message, 'error')
-    } finally {
-      setSubmittingMode('')
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const nextErrors = {}
+    Object.entries(values).forEach(([name, val]) => {
+      const err = getError(name, val)
+      if (err) nextErrors[name] = err
+    })
+    const requiredSignIn = ['email', 'password']
+    const requiredSignUp = ['firstName', 'lastName', 'phoneNumber', 'email', 'password']
+    const required = isSignUp ? requiredSignUp : requiredSignIn
+    required.forEach((name) => {
+      if (!values[name]?.trim()) nextErrors[name] = `${name.replace(/([A-Z])/g, ' $1').trim()} is required.`
+    })
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length === 0) {
+      onSignIn?.(isSignUp ? {
+        firstName: signUpValues.firstName,
+        lastName: signUpValues.lastName,
+        email: signUpValues.email,
+      } : { firstName: 'User', lastName: '', email: values.email })
     }
+  }
+
+  const switchMode = () => {
+    setIsSignUp((v) => !v)
+    setSignInErrors({})
+    setSignUpErrors({})
   }
 
   return (
     <>
-      <style>{authPageStyles}</style>
-      <main className="auth-page">
-        <div
-          className={`container${isSignUpActive ? ' right-panel-active' : ''}`}
-        >
-          <div className="form-container sign-in-container">
-            <AuthForm
-              mode="sign-in"
-              title="Sign in"
-              fields={signInFields}
-              buttonLabel="SIGN IN"
-              onSubmit={(_, values) => handleSubmit('sign-in', values)}
-              isSubmitting={submittingMode === 'sign-in'}
-              statusMessage={formFeedback['sign-in'].message}
-              statusTone={formFeedback['sign-in'].tone}
-            />
+      <style>{styles}</style>
+      <div className="ma-page">
+
+        {/* Left: image panel */}
+        <div className="ma-image-panel">
+          <img src="/event-hero.png" alt="Elegant event setup" />
+          <div className="ma-image-overlay" />
+          <div className="ma-image-text">
+            <h1>Plan Your Perfect Event!</h1>
+            <p>The platform for creating unforgettable moments, effortlessly.</p>
           </div>
+        </div>
 
-          <div className="form-container sign-up-container">
-            <AuthForm
-              mode="sign-up"
-              title="Create Account"
-              fields={signUpFields}
-              buttonLabel="SIGN UP"
-              onSubmit={(_, values) => handleSubmit('sign-up', values)}
-              isSubmitting={submittingMode === 'sign-up'}
-              statusMessage={formFeedback['sign-up'].message}
-              statusTone={formFeedback['sign-up'].tone}
-            />
-          </div>
+        {/* Right: form panel */}
+        <div className="ma-form-panel">
+          <div className="ma-form-inner">
+            <div className="ma-form-header">
+              <h2>{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
+              <p>{isSignUp ? "Let's get started with your event planning." : 'Enter your details to sign in.'}</p>
+            </div>
 
-          <div className="overlay-container">
-            <div className="overlay">
-              <OverlayPanel
-                side="overlay-left"
-                title="Plan Your Perfect Event!"
-                description="Start crafting your perfect celebration with elegance"
-                buttonLabel="SIGN IN"
-                onClick={() => setIsSignUpActive(false)}
-              />
+            <form className="ma-form" onSubmit={handleSubmit} noValidate>
+              {isSignUp && (
+                <>
+                  <div className="ma-grid-3">
+                    <Field id="firstName" label="First Name" name="firstName" required
+                      value={signUpValues.firstName} error={signUpErrors.firstName}
+                      onChange={handleChange} onBlur={handleBlur} autoComplete="given-name" maxLength={40} />
+                    <Field id="middleName" label="Middle" name="middleName"
+                      value={signUpValues.middleName} error={signUpErrors.middleName}
+                      onChange={handleChange} onBlur={handleBlur} autoComplete="additional-name" maxLength={40} />
+                    <Field id="lastName" label="Last Name" name="lastName" required
+                      value={signUpValues.lastName} error={signUpErrors.lastName}
+                      onChange={handleChange} onBlur={handleBlur} autoComplete="family-name" maxLength={40} />
+                  </div>
+                  <div className="ma-grid-2">
+                    <Field id="phoneNumber" label="Phone" name="phoneNumber" type="tel" required
+                      value={signUpValues.phoneNumber} error={signUpErrors.phoneNumber}
+                      onChange={handleChange} onBlur={handleBlur} autoComplete="tel" inputMode="numeric" maxLength={10} />
+                    <Field id="additionalPhoneNumber" label="Alt Phone (Opt)" name="additionalPhoneNumber" type="tel"
+                      value={signUpValues.additionalPhoneNumber} error={signUpErrors.additionalPhoneNumber}
+                      onChange={handleChange} onBlur={handleBlur} autoComplete="tel-national" inputMode="numeric" maxLength={10} />
+                  </div>
+                </>
+              )}
 
-              <OverlayPanel
-                side="overlay-right"
-                title="Plan Your Perfect Event!"
-                description="Enter your personal details and start your journey with us"
-                buttonLabel="SIGN UP"
-                onClick={() => setIsSignUpActive(true)}
-              />
+              <Field id="email" label="Email Address" name="email" type="email" required
+                value={values.email} error={errors.email}
+                onChange={handleChange} onBlur={handleBlur} autoComplete={isSignUp ? 'new-email' : 'email'} maxLength={254} />
+
+              <Field id="password" label="Password" name="password" type="password" required
+                value={values.password} error={errors.password}
+                onChange={handleChange} onBlur={handleBlur} autoComplete={isSignUp ? 'new-password' : 'current-password'} maxLength={64} />
+
+              <button type="submit" className="ma-submit">
+                {isSignUp ? 'Create Account' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="ma-toggle-wrap">
+              <button type="button" className="ma-toggle-btn" onClick={switchMode}>
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
             </div>
           </div>
         </div>
-      </main>
+
+      </div>
     </>
   )
 }
