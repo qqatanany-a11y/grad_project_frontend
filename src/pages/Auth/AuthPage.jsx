@@ -177,9 +177,16 @@ const styles = `
     box-sizing: border-box;
   }
 
-  .ma-input:focus {
-    border-color: #1c1917;
-    box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.08);
+  .auth-page button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .auth-page button:focus-visible {
+    outline: 3px solid rgba(255, 75, 43, 0.28);
+    outline-offset: 3px;
   }
 
   .ma-input[aria-invalid='true'] {
