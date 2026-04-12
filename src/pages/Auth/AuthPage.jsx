@@ -1,4 +1,11 @@
 import { useState } from 'react'
+import AuthForm from '../../components/auth/AuthForm'
+import OverlayPanel from '../../components/auth/OverlayPanel'
+import {
+  API_BASE_URL,
+  getResponseMessage,
+  parseResponseBody,
+} from '../../lib/apiClient'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const phonePattern = /^\d{10}$/
@@ -22,8 +29,39 @@ const validatePassword = (value) =>
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
 
-  .ma-page {
-    display: flex;
+const createPasswordField = (autoComplete, withValidation = false) => ({
+  name: 'password',
+  type: 'password',
+  placeholder: 'Password',
+  label: 'Password',
+  autoComplete,
+  required: true,
+  maxLength: 64,
+  ...(withValidation ? { validate: validatePassword } : {}),
+})
+
+const signInFields = [emailField, createPasswordField('current-password')]
+
+const signUpFields = [
+  ...[
+    ['firstName', 'First Name', 'given-name'],
+    ['middleName', 'Middle Name', 'additional-name'],
+    ['lastName', 'Last Name', 'family-name'],
+  ].map(([name, label, autoComplete]) =>
+    createNameField(name, label, autoComplete),
+  ),
+  createPhoneField('phoneNumber', 'Phone Number', 'tel', true),
+  createPhoneField(
+    'secondaryPhoneNumber',
+    'Additional Phone Number',
+    'tel-national',
+  ),
+  emailField,
+  createPasswordField('new-password', true),
+]
+
+const authPageStyles = `
+  .auth-page {
     min-height: 100vh;
     width: 100%;
     background: #fff;
@@ -103,10 +141,28 @@ const styles = `
     }
   }
 
-  .ma-form-inner {
+  .auth-page .form-status {
     width: 100%;
-    max-width: 448px;
-    margin: 0 auto;
+    margin: 0 0 14px;
+    color: #6b7280;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .auth-page .form-status.is-success {
+    color: #15803d;
+  }
+
+  .auth-page .form-status.is-error {
+    color: #d13b59;
+  }
+
+  .auth-page .auth-form-sign-up {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-content: center;
   }
 
   .ma-form-header {
@@ -177,9 +233,16 @@ const styles = `
     box-sizing: border-box;
   }
 
-  .ma-input:focus {
-    border-color: #1c1917;
-    box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.08);
+  .auth-page button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .auth-page button:focus-visible {
+    outline: 3px solid rgba(255, 75, 43, 0.28);
+    outline-offset: 3px;
   }
 
   .ma-input[aria-invalid='true'] {
@@ -345,34 +408,116 @@ function AuthPage({ onSignIn }) {
     }
   }
 
-  const switchMode = () => {
-    setIsSignUp((v) => !v)
-    setSignInErrors({})
-    setSignUpErrors({})
+function AuthPage({ onAuthenticated }) {
+  const [isSignUpActive, setIsSignUpActive] = useState(false)
+  const [submittingMode, setSubmittingMode] = useState('')
+  const [formFeedback, setFormFeedback] = useState({
+    'sign-in': { message: '', tone: 'idle' },
+    'sign-up': { message: '', tone: 'idle' },
+  })
+
+  const setFeedback = (mode, message, tone) => {
+    setFormFeedback((previousFeedback) => ({
+      ...previousFeedback,
+      [mode]: { message, tone },
+    }))
+  }
+
+  const handleSubmit = async (mode, values) => {
+    const isSignIn = mode === 'sign-in'
+    const endpoint = isSignIn ? '/api/auth/login' : '/api/auth/register'
+    const payload = isSignIn
+      ? {
+          email: values.email,
+          password: values.password,
+        }
+      : values
+
+    setSubmittingMode(mode)
+    setFeedback(mode, '', 'idle')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      const result = await parseResponseBody(response)
+
+      if (!response.ok) {
+        throw new Error(getResponseMessage(result, 'Request failed.'))
+      }
+
+      if (isSignIn) {
+        if (result?.token) {
+          onAuthenticated?.(result)
+        }
+
+        if (result?.role === 'Admin') {
+          window.location.assign('/admin')
+          return
+        }
+
+        setFeedback(
+          'sign-in',
+          'Signed in successfully. Admin users are redirected automatically.',
+          'success',
+        )
+        return
+      }
+
+      setFeedback('sign-in', 'Account created successfully. You can sign in now.', 'success')
+      setFeedback('sign-up', '', 'idle')
+      setIsSignUpActive(false)
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === 'Failed to fetch'
+          ? 'Unable to reach the server. Make sure the backend is running.'
+          : error instanceof Error
+            ? error.message
+            : 'Unable to reach the server.'
+
+      setFeedback(mode, message, 'error')
+    } finally {
+      setSubmittingMode('')
+    }
   }
 
   return (
     <>
-      <style>{styles}</style>
-      <div className="ma-page">
-
-        {/* Left: image panel */}
-        <div className="ma-image-panel">
-          <img src="/event-hero.png" alt="Elegant event setup" />
-          <div className="ma-image-overlay" />
-          <div className="ma-image-text">
-            <h1>Plan Your Perfect Event!</h1>
-            <p>The platform for creating unforgettable moments, effortlessly.</p>
+      <style>{authPageStyles}</style>
+      <main className="auth-page">
+        <div
+          className={`container${isSignUpActive ? ' right-panel-active' : ''}`}
+        >
+          <div className="form-container sign-in-container">
+            <AuthForm
+              mode="sign-in"
+              title="Sign in"
+              fields={signInFields}
+              buttonLabel="SIGN IN"
+              onSubmit={(_, values) => handleSubmit('sign-in', values)}
+              isSubmitting={submittingMode === 'sign-in'}
+              statusMessage={formFeedback['sign-in'].message}
+              statusTone={formFeedback['sign-in'].tone}
+            />
           </div>
         </div>
 
-        {/* Right: form panel */}
-        <div className="ma-form-panel">
-          <div className="ma-form-inner">
-            <div className="ma-form-header">
-              <h2>{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
-              <p>{isSignUp ? "Let's get started with your event planning." : 'Enter your details to sign in.'}</p>
-            </div>
+          <div className="form-container sign-up-container">
+            <AuthForm
+              mode="sign-up"
+              title="Create Account"
+              fields={signUpFields}
+              buttonLabel="SIGN UP"
+              onSubmit={(_, values) => handleSubmit('sign-up', values)}
+              isSubmitting={submittingMode === 'sign-up'}
+              statusMessage={formFeedback['sign-up'].message}
+              statusTone={formFeedback['sign-up'].tone}
+            />
+          </div>
 
             <form className="ma-form" onSubmit={handleSubmit} noValidate>
               {isSignUp && (

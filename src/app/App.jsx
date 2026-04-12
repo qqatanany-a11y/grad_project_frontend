@@ -1,50 +1,79 @@
 import { useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import RequireAdmin from './RequireAdmin'
+import {
+  clearAuthSession,
+  isAdminSession,
+  persistAuthSession,
+  readAuthSession,
+} from '../lib/authSession'
 import AuthPage from '../pages/Auth/AuthPage'
-import DashboardLayout from '../pages/Dashboard/DashboardLayout'
-import AcademyRequest from '../pages/Dashboard/AcademyRequest'
-import Users from '../pages/Dashboard/Users'
-import ClientsOverview from '../pages/Dashboard/ClientsOverview'
+import AdminDashboardLayout from '../pages/AdminDashboard/AdminDashboardLayout'
+import AdminOverviewPage from '../pages/AdminDashboard/AdminOverviewPage'
+import AdminUsersPage from '../pages/AdminDashboard/AdminUsersPage'
+import AdminCompaniesPage from '../pages/AdminDashboard/AdminCompaniesPage'
+import AdminRegisterAdminPage from '../pages/AdminDashboard/AdminRegisterAdminPage'
 
 function App() {
-  const [view, setView] = useState('auth')
-  const [currentPage, setCurrentPage] = useState('academy-request')
-  const [user, setUser] = useState(null)
+  const [session, setSession] = useState(() => readAuthSession())
 
-  const handleSignIn = (userData) => {
-    setUser(userData)
-    setView('dashboard')
+  const handleAuthenticated = (authResponse) => {
+    persistAuthSession(authResponse)
+    setSession(authResponse)
   }
 
   const handleLogout = () => {
-    setUser(null)
-    setView('auth')
-    setCurrentPage('academy-request')
-  }
-
-  if (view === 'auth') {
-    return <AuthPage onSignIn={handleSignIn} />
-  }
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'users':
-        return <Users />
-      case 'clients-overview':
-        return <ClientsOverview />
-      default:
-        return <AcademyRequest />
-    }
+    clearAuthSession()
+    setSession(null)
   }
 
   return (
-    <DashboardLayout
-      currentPage={currentPage}
-      onNavigate={setCurrentPage}
-      onLogout={handleLogout}
-      user={user}
-    >
-      {renderPage()}
-    </DashboardLayout>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={isAdminSession(session) ? '/admin' : '/auth'}
+              replace
+            />
+          }
+        />
+        <Route
+          path="/auth"
+          element={
+            isAdminSession(session) ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <AuthPage onAuthenticated={handleAuthenticated} />
+            )
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin session={session}>
+              <AdminDashboardLayout
+                session={session}
+                onLogout={handleLogout}
+              />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<AdminOverviewPage session={session} />} />
+          <Route path="users" element={<AdminUsersPage session={session} />} />
+          <Route
+            path="companies"
+            element={<AdminCompaniesPage session={session} />}
+          />
+          <Route
+            path="register-admin"
+            element={<AdminRegisterAdminPage session={session} />}
+          />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
