@@ -15,7 +15,16 @@ const getFieldError = (field, value = '') => {
   return isEmpty || !field.validate ? '' : field.validate(value)
 }
 
-function AuthForm({ mode, title, fields, buttonLabel, onSubmit }) {
+function AuthForm({
+  mode,
+  title,
+  fields,
+  buttonLabel,
+  onSubmit,
+  isSubmitting = false,
+  statusMessage = '',
+  statusTone = 'idle',
+}) {
   const [values, setValues] = useState(() => buildInitialValues(fields))
   const [errors, setErrors] = useState({})
 
@@ -67,6 +76,11 @@ function AuthForm({ mode, title, fields, buttonLabel, onSubmit }) {
   return (
     <form className={`auth-form auth-form-${mode}`} noValidate onSubmit={handleSubmit}>
       <h1>{title}</h1>
+      {statusMessage ? (
+        <p className={`form-status${statusTone !== 'idle' ? ` is-${statusTone}` : ''}`} aria-live="polite">
+          {statusMessage}
+        </p>
+      ) : null}
       {fields.map((field) => {
         const error = errors[field.name]
 
@@ -87,6 +101,7 @@ function AuthForm({ mode, title, fields, buttonLabel, onSubmit }) {
               inputMode={field.inputMode}
               maxLength={field.maxLength}
               required={field.required}
+              disabled={isSubmitting}
               value={values[field.name]}
               onBlur={handleBlur}
               onChange={handleChange}
@@ -99,7 +114,9 @@ function AuthForm({ mode, title, fields, buttonLabel, onSubmit }) {
           </div>
         )
       })}
-      <button type="submit">{buttonLabel}</button>
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'PLEASE WAIT' : buttonLabel}
+      </button>
     </form>
   )
 }

@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import AuthForm from '../../components/auth/AuthForm'
 import OverlayPanel from '../../components/auth/OverlayPanel'
+import {
+  API_BASE_URL,
+  getResponseMessage,
+  parseResponseBody,
+} from '../../lib/apiClient'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const phonePattern = /^\d{10}$/
@@ -81,7 +86,7 @@ const signUpFields = [
   ),
   createPhoneField('phoneNumber', 'Phone Number', 'tel', true),
   createPhoneField(
-    'additionalPhoneNumber',
+    'secondaryPhoneNumber',
     'Additional Phone Number',
     'tel-national',
   ),
@@ -193,6 +198,23 @@ const authPageStyles = `
     margin-bottom: 10px;
   }
 
+  .auth-page .form-status {
+    width: 100%;
+    margin: 0 0 14px;
+    color: #6b7280;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .auth-page .form-status.is-success {
+    color: #15803d;
+  }
+
+  .auth-page .form-status.is-error {
+    color: #d13b59;
+  }
+
   .auth-page .auth-form-sign-up {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -273,6 +295,13 @@ const authPageStyles = `
 
   .auth-page button:active {
     transform: translateY(0);
+  }
+
+  .auth-page button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+    transform: none;
+    box-shadow: none;
   }
 
   .auth-page button:focus-visible {
@@ -390,10 +419,82 @@ const authPageStyles = `
   }
 `
 
-function AuthPage() {
+function AuthPage({ onAuthenticated }) {
   const [isSignUpActive, setIsSignUpActive] = useState(false)
+  const [submittingMode, setSubmittingMode] = useState('')
+  const [formFeedback, setFormFeedback] = useState({
+    'sign-in': { message: '', tone: 'idle' },
+    'sign-up': { message: '', tone: 'idle' },
+  })
 
-  const handleSubmit = () => {}
+  const setFeedback = (mode, message, tone) => {
+    setFormFeedback((previousFeedback) => ({
+      ...previousFeedback,
+      [mode]: { message, tone },
+    }))
+  }
+
+  const handleSubmit = async (mode, values) => {
+    const isSignIn = mode === 'sign-in'
+    const endpoint = isSignIn ? '/api/auth/login' : '/api/auth/register'
+    const payload = isSignIn
+      ? {
+          email: values.email,
+          password: values.password,
+        }
+      : values
+
+    setSubmittingMode(mode)
+    setFeedback(mode, '', 'idle')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      const result = await parseResponseBody(response)
+
+      if (!response.ok) {
+        throw new Error(getResponseMessage(result, 'Request failed.'))
+      }
+
+      if (isSignIn) {
+        if (result?.token) {
+          onAuthenticated?.(result)
+        }
+
+        if (result?.role === 'Admin') {
+          window.location.assign('/admin')
+          return
+        }
+
+        setFeedback(
+          'sign-in',
+          'Signed in successfully. Admin users are redirected automatically.',
+          'success',
+        )
+        return
+      }
+
+      setFeedback('sign-in', 'Account created successfully. You can sign in now.', 'success')
+      setFeedback('sign-up', '', 'idle')
+      setIsSignUpActive(false)
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message === 'Failed to fetch'
+          ? 'Unable to reach the server. Make sure the backend is running.'
+          : error instanceof Error
+            ? error.message
+            : 'Unable to reach the server.'
+
+      setFeedback(mode, message, 'error')
+    } finally {
+      setSubmittingMode('')
+    }
+  }
 
   return (
     <>
@@ -408,7 +509,10 @@ function AuthPage() {
               title="Sign in"
               fields={signInFields}
               buttonLabel="SIGN IN"
-              onSubmit={handleSubmit}
+              onSubmit={(_, values) => handleSubmit('sign-in', values)}
+              isSubmitting={submittingMode === 'sign-in'}
+              statusMessage={formFeedback['sign-in'].message}
+              statusTone={formFeedback['sign-in'].tone}
             />
           </div>
 
@@ -418,7 +522,10 @@ function AuthPage() {
               title="Create Account"
               fields={signUpFields}
               buttonLabel="SIGN UP"
-              onSubmit={handleSubmit}
+              onSubmit={(_, values) => handleSubmit('sign-up', values)}
+              isSubmitting={submittingMode === 'sign-up'}
+              statusMessage={formFeedback['sign-up'].message}
+              statusTone={formFeedback['sign-up'].tone}
             />
           </div>
 
