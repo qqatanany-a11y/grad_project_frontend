@@ -221,6 +221,23 @@ const styles = `
     outline-offset: 3px;
   }
 
+  /* Back button */
+  .ma-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #a8a29e;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+    margin-bottom: 2rem;
+    transition: color 0.15s;
+  }
+  .ma-back-btn:hover { color: #1c1917; }
+
   /* Toggle link */
   .ma-toggle-wrap {
     margin-top: 2rem;
@@ -276,7 +293,7 @@ const signUpInitial = {
   email: '', password: '',
 }
 
-function AuthPage({ onSignIn }) {
+function AuthPage({ onSignIn, onBack }) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [signInValues, setSignInValues] = useState(signInInitial)
   const [signInErrors, setSignInErrors] = useState({})
@@ -369,6 +386,14 @@ function AuthPage({ onSignIn }) {
         {/* Right: form panel */}
         <div className="ma-form-panel">
           <div className="ma-form-inner">
+            {onBack && (
+              <button className="ma-back-btn" onClick={onBack}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4">
+                  <path d="M9 2L4 7l5 5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Back to Home
+              </button>
+            )}
             <div className="ma-form-header">
               <h2>{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
               <p>{isSignUp ? "Let's get started with your event planning." : 'Enter your details to sign in.'}</p>
