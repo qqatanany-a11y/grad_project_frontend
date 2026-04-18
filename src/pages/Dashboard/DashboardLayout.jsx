@@ -200,6 +200,8 @@ const layoutStyles = `
 const pageTitles = {
   'hall-requests': 'Hall Requests',
   'edit-halls': 'Edit Halls',
+  'companies': 'Companies',
+  'bookings': 'Bookings',
   'users': 'Users',
   'clients-overview': 'Clients Overview',
 }
@@ -249,6 +251,29 @@ function DashboardLayout({ children, currentPage, onNavigate, onLogout, onGoHome
                 <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" strokeLinejoin="round" />
               </svg>
               Edit Halls
+            </button>
+
+            <button
+              className={`db-nav-item${currentPage === 'companies' ? ' active' : ''}`}
+              onClick={() => onNavigate('companies')}
+            >
+              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <path d="M2 14V6l6-4 6 4v8H2z" strokeLinejoin="round" />
+                <path d="M6 14v-4h4v4" strokeLinejoin="round" />
+              </svg>
+              Companies
+            </button>
+
+            <button
+              className={`db-nav-item${currentPage === 'bookings' ? ' active' : ''}`}
+              onClick={() => onNavigate('bookings')}
+            >
+              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <rect x="2" y="3" width="12" height="11" rx="1" />
+                <path d="M5 1v4M11 1v4M2 7h12" strokeLinecap="round" />
+                <path d="M5 10h2M9 10h2M5 13h2" strokeLinecap="round" />
+              </svg>
+              Bookings
             </button>
 
             <span className="db-nav-section">Management</span>

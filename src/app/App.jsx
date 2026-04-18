@@ -5,6 +5,8 @@ import AuthPage from '../pages/Auth/AuthPage'
 import DashboardLayout from '../pages/Dashboard/DashboardLayout'
 import HallRequests from '../pages/Dashboard/HallRequests'
 import EditHalls from '../pages/Dashboard/EditHalls'
+import Companies from '../pages/Dashboard/Companies'
+import Bookings from '../pages/Dashboard/Bookings'
 import Users from '../pages/Dashboard/Users'
 import ClientsOverview from '../pages/Dashboard/ClientsOverview'
 
@@ -45,6 +47,8 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'edit-halls': return <EditHalls />
+      case 'companies': return <Companies />
+      case 'bookings': return <Bookings />
       case 'users': return <Users />
       case 'clients-overview': return <ClientsOverview />
       default: return <HallRequests />
