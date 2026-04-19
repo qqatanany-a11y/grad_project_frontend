@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import {
+  sanitizeNameInput,
+  sanitizePhoneInput,
+  validateEmail,
+  validateName,
+  validatePhone,
+} from '../../lib/validation'
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const phonePattern = /^\d{10}$/
-const namePattern = /^[A-Za-z\u0600-\u06FF'-]+$/
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 
 const INITIAL_FORM = {
@@ -16,31 +20,16 @@ const INITIAL_FORM = {
 }
 
 function validateForm(values) {
-  if (!namePattern.test(values.firstName.trim())) {
-    return 'First name must contain letters only.'
-  }
-
-  if (values.middleName.trim() && !namePattern.test(values.middleName.trim())) {
-    return 'Middle name must contain letters only.'
-  }
-
-  if (!namePattern.test(values.lastName.trim())) {
-    return 'Last name must contain letters only.'
-  }
-
-  if (!emailPattern.test(values.email.trim())) {
-    return 'Enter a valid email address.'
-  }
-
-  if (!phonePattern.test(values.phoneNumber.trim())) {
-    return 'Phone number must be exactly 10 digits.'
-  }
-
-  if (!passwordPattern.test(values.password)) {
-    return 'Password must be at least 8 characters and include uppercase, lowercase, and a number.'
-  }
-
-  return ''
+  return (
+    validateName(values.firstName, 'First name') ||
+    validateName(values.middleName, 'Middle name', { required: false }) ||
+    validateName(values.lastName, 'Last name') ||
+    validateEmail(values.email) ||
+    validatePhone(values.phoneNumber, 'Phone number') ||
+    (!passwordPattern.test(values.password)
+      ? 'Password must be at least 8 characters and include uppercase, lowercase, and a number.'
+      : '')
+  )
 }
 
 function AdminRegisterAdminPage({ session }) {
@@ -51,7 +40,11 @@ function AdminRegisterAdminPage({ session }) {
 
   const handleChange = ({ target: { name, value } }) => {
     const nextValue =
-      name === 'phoneNumber' ? value.replace(/\D/g, '').slice(0, 10) : value
+      name === 'firstName' || name === 'middleName' || name === 'lastName'
+        ? sanitizeNameInput(value)
+        : name === 'phoneNumber'
+          ? sanitizePhoneInput(value)
+          : value
 
     setFormValues((currentValues) => ({
       ...currentValues,

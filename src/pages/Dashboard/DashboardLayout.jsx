@@ -1,5 +1,5 @@
 const layoutStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
   .db-root {
     display: flex;
@@ -10,37 +10,34 @@ const layoutStyles = `
   }
 
   .db-sidebar {
-    width: 220px;
+    width: 240px;
     flex-shrink: 0;
     background: #fff;
     border-right: 1px solid #e7e5e4;
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0 auto 0 0;
     height: 100vh;
     z-index: 10;
   }
 
   .db-brand {
-    padding: 1.75rem 1.5rem 1.5rem;
+    padding: 1.75rem 1.5rem 1.25rem;
     border-bottom: 1px solid #e7e5e4;
   }
 
   .db-brand-name {
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    color: #1c1917;
     margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
   .db-brand-sub {
+    margin: 0.25rem 0 0;
     font-size: 0.72rem;
-    color: #a8a29e;
-    font-weight: 300;
-    margin: 2px 0 0;
+    color: #78716c;
   }
 
   .db-nav {
@@ -48,37 +45,38 @@ const layoutStyles = `
     padding: 1rem 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.25rem;
   }
 
   .db-nav-section {
     font-size: 0.62rem;
-    font-weight: 500;
-    text-transform: uppercase;
+    font-weight: 600;
     letter-spacing: 0.12em;
-    color: #d4ceca;
-    padding: 0.75rem 0.75rem 0.4rem;
+    text-transform: uppercase;
+    color: #a8a29e;
+    padding: 0.8rem 0.75rem 0.35rem;
   }
 
   .db-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 400;
-    color: #78716c;
-    cursor: pointer;
-    background: none;
-    border: none;
+    gap: 0.7rem;
     width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    font: inherit;
+    color: #57534e;
+    cursor: pointer;
     text-align: left;
-    font-family: inherit;
-    transition: background 0.1s, color 0.1s;
+    transition: background 0.15s, color 0.15s;
   }
 
-  .db-nav-item:hover { background: #fafaf9; color: #1c1917; }
+  .db-nav-item:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
 
   .db-nav-item.active {
     background: #f5f5f4;
@@ -86,240 +84,321 @@ const layoutStyles = `
     font-weight: 500;
   }
 
-  .db-nav-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
-  .db-nav-item.active .db-nav-icon { opacity: 1; }
+  .db-nav-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
 
   .db-sidebar-footer {
     padding: 1rem 0.75rem;
     border-top: 1px solid #e7e5e4;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  }
+
+  .db-footer-card {
+    padding: 0.85rem;
+    background: #fafaf9;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .db-footer-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a8a29e;
+    margin: 0 0 0.3rem;
+  }
+
+  .db-footer-name {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 500;
+  }
+
+  .db-footer-email {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: #78716c;
+    word-break: break-word;
+  }
+
+  .db-footer-role {
+    margin: 0.45rem 0 0;
+    font-size: 0.73rem;
+    color: #1c1917;
   }
 
   .db-footer-btn {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.82rem;
-    color: #a8a29e;
-    cursor: pointer;
-    background: none;
-    border: none;
     width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    font: inherit;
+    color: #78716c;
+    cursor: pointer;
     text-align: left;
-    font-family: inherit;
-    transition: color 0.1s, background 0.1s;
+    transition: background 0.15s, color 0.15s;
   }
-  .db-footer-btn:hover { color: #1c1917; background: #fafaf9; }
+
+  .db-footer-btn:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
 
   .db-main {
-    margin-left: 220px;
+    margin-left: 240px;
     flex: 1;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
   }
 
   .db-topbar {
-    background: #fff;
-    border-bottom: 1px solid #e7e5e4;
-    padding: 0 2.5rem;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 5;
+    height: 60px;
+    padding: 0 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #e7e5e4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .db-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
   }
 
   .db-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.8rem;
-    color: #a8a29e;
-    background: none;
+    gap: 0.35rem;
     border: none;
+    background: none;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    font: inherit;
+    color: #78716c;
     cursor: pointer;
-    font-family: inherit;
-    padding: 0.3rem 0.5rem;
-    border-radius: 4px;
-    transition: color 0.15s, background 0.1s;
-    margin-right: 0.75rem;
-    flex-shrink: 0;
   }
-  .db-back-btn:hover { color: #1c1917; background: #fafaf9; }
 
-  .db-topbar-left { display: flex; align-items: center; }
+  .db-back-btn:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
 
   .db-topbar-title {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #1c1917;
     margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
-  .db-topbar-user {
+  .db-topbar-meta {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.7rem;
   }
 
-  .db-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #1c1917;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-
-  .db-username {
-    font-size: 0.82rem;
-    color: #78716c;
-    font-weight: 300;
+  .db-pill {
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    color: #57534e;
+    background: #fff;
   }
 
   .db-content {
     flex: 1;
-    padding: 2.5rem;
-    max-width: 1100px;
+    padding: 2rem;
+    max-width: 1200px;
     width: 100%;
+  }
+
+  @media (max-width: 1024px) {
+    .db-sidebar {
+      position: static;
+      width: 100%;
+      height: auto;
+    }
+
+    .db-root {
+      flex-direction: column;
+    }
+
+    .db-main {
+      margin-left: 0;
+    }
   }
 `
 
 const pageTitles = {
-  'hall-requests': 'Hall Requests',
-  'edit-halls': 'Edit Halls',
-  'companies': 'Companies',
-  'bookings': 'Bookings',
-  'users': 'Users',
-  'clients-overview': 'Clients Overview',
+  'owner-requests': 'Company Requests',
+  'venue-requests': 'Venue Requests',
+  venues: 'Venues',
+  companies: 'Companies',
+  bookings: 'Bookings',
+  users: 'Users',
+  'edit-requests': 'Edit Requests',
 }
 
-function DashboardLayout({ children, currentPage, onNavigate, onLogout, onGoHome, user }) {
-  const initials = user?.firstName
-    ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
-    : 'AD'
-  const displayName = user?.firstName
-    ? `${user.firstName} ${user.lastName ?? ''}`.trim()
-    : 'Admin'
+function getNavigation(role) {
+  if (role === 'Admin') {
+    return [
+      {
+        section: 'Admin',
+        items: [
+          { id: 'owner-requests', label: 'Company Requests', icon: 'list' },
+          { id: 'venue-requests', label: 'Venue Requests', icon: 'list' },
+          { id: 'venues', label: 'Venues', icon: 'venue' },
+          { id: 'companies', label: 'Companies', icon: 'company' },
+          { id: 'users', label: 'Users', icon: 'users' },
+          { id: 'edit-requests', label: 'Edit Requests', icon: 'edit' },
+        ],
+      },
+    ]
+  }
+
+  if (role === 'Owner') {
+    return [
+      {
+        section: 'Owner',
+        items: [
+          { id: 'venues', label: 'My Venues', icon: 'venue' },
+          { id: 'bookings', label: 'Booking Requests', icon: 'booking' },
+          { id: 'edit-requests', label: 'My Edit Requests', icon: 'edit' },
+        ],
+      },
+    ]
+  }
+
+  return [
+    {
+      section: 'User',
+      items: [
+        { id: 'bookings', label: 'My Bookings', icon: 'booking' },
+      ],
+    },
+  ]
+}
+
+function renderIcon(icon) {
+  switch (icon) {
+    case 'company':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M2 14V3.5h8V14M10 6h4v8M5 6h2M5 9h2M5 12h2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'users':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <circle cx="6" cy="5" r="2.5" />
+          <path d="M1.5 13.5c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5" strokeLinecap="round" />
+          <path d="M11 5.5c1.3 0 2.3 1 2.3 2.3S12.3 10 11 10" strokeLinecap="round" />
+        </svg>
+      )
+    case 'booking':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <rect x="2" y="3" width="12" height="11" rx="1" />
+          <path d="M5 1.5V5M11 1.5V5M2 7h12" strokeLinecap="round" />
+        </svg>
+      )
+    case 'edit':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M11.5 2.5l2 2L6 12H4v-2L11.5 2.5z" strokeLinejoin="round" />
+          <path d="M9 3.5l3 3" strokeLinecap="round" />
+        </svg>
+      )
+    case 'venue':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M2 14V6l6-4 6 4v8H2z" strokeLinejoin="round" />
+          <path d="M6 14v-3.5h4V14" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'list':
+    default:
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M5 4h8M5 8h8M5 12h8" strokeLinecap="round" />
+          <circle cx="2.5" cy="4" r=".8" fill="currentColor" stroke="none" />
+          <circle cx="2.5" cy="8" r=".8" fill="currentColor" stroke="none" />
+          <circle cx="2.5" cy="12" r=".8" fill="currentColor" stroke="none" />
+        </svg>
+      )
+  }
+}
+
+function DashboardLayout({
+  children,
+  currentPage,
+  onNavigate,
+  onLogout,
+  onGoHome,
+  user,
+}) {
+  const navigation = getNavigation(user?.role)
+  const displayName = user?.fullName || user?.email || 'Dashboard User'
 
   return (
     <>
       <style>{layoutStyles}</style>
       <div className="db-root">
-
         <aside className="db-sidebar">
           <div className="db-brand">
             <p className="db-brand-name">EventPlan</p>
-            <p className="db-brand-sub">Admin Dashboard</p>
+            <p className="db-brand-sub">{user?.role || 'Guest'} dashboard</p>
           </div>
 
           <nav className="db-nav">
-            <span className="db-nav-section">Halls</span>
-
-            <button
-              className={`db-nav-item${currentPage === 'hall-requests' ? ' active' : ''}`}
-              onClick={() => onNavigate('hall-requests')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <path d="M2 12.5h12M2 9h12M2 5.5h12" strokeLinecap="round" />
-                <circle cx="5" cy="5.5" r="1" fill="currentColor" stroke="none" />
-                <circle cx="5" cy="9" r="1" fill="currentColor" stroke="none" />
-                <circle cx="5" cy="12.5" r="1" fill="currentColor" stroke="none" />
-              </svg>
-              Hall Requests
-            </button>
-
-            <button
-              className={`db-nav-item${currentPage === 'edit-halls' ? ' active' : ''}`}
-              onClick={() => onNavigate('edit-halls')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <rect x="2" y="5" width="12" height="9" rx="1" />
-                <path d="M5 5V3.5a3 3 0 0 1 6 0V5" strokeLinecap="round" />
-                <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" strokeLinejoin="round" />
-              </svg>
-              Edit Halls
-            </button>
-
-            <button
-              className={`db-nav-item${currentPage === 'companies' ? ' active' : ''}`}
-              onClick={() => onNavigate('companies')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <path d="M2 14V6l6-4 6 4v8H2z" strokeLinejoin="round" />
-                <path d="M6 14v-4h4v4" strokeLinejoin="round" />
-              </svg>
-              Companies
-            </button>
-
-            <button
-              className={`db-nav-item${currentPage === 'bookings' ? ' active' : ''}`}
-              onClick={() => onNavigate('bookings')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <rect x="2" y="3" width="12" height="11" rx="1" />
-                <path d="M5 1v4M11 1v4M2 7h12" strokeLinecap="round" />
-                <path d="M5 10h2M9 10h2M5 13h2" strokeLinecap="round" />
-              </svg>
-              Bookings
-            </button>
-
-            <span className="db-nav-section">Management</span>
-
-            <button
-              className={`db-nav-item${currentPage === 'users' ? ' active' : ''}`}
-              onClick={() => onNavigate('users')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <circle cx="6" cy="5" r="2.5" />
-                <path d="M1 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" strokeLinecap="round" />
-                <path d="M11.5 7c1.1 0 2 .9 2 2s-.9 2-2 2" strokeLinecap="round" />
-                <path d="M13 13.5c.9-.4 1.5-1.3 1.5-2.5" strokeLinecap="round" />
-              </svg>
-              Users
-            </button>
-
-            <button
-              className={`db-nav-item${currentPage === 'clients-overview' ? ' active' : ''}`}
-              onClick={() => onNavigate('clients-overview')}
-            >
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" />
-                <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" />
-                <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" />
-                <rect x="9" y="9" width="5.5" height="5.5" rx="1" />
-              </svg>
-              Clients Overview
-            </button>
+            {navigation.map((group) => (
+              <div key={group.section}>
+                <div className="db-nav-section">{group.section}</div>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    className={`db-nav-item${currentPage === item.id ? ' active' : ''}`}
+                    onClick={() => onNavigate(item.id)}
+                  >
+                    {renderIcon(item.icon)}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
           </nav>
 
           <div className="db-sidebar-footer">
+            <div className="db-footer-card">
+              <p className="db-footer-label">Signed in as</p>
+              <p className="db-footer-name">{displayName}</p>
+              <p className="db-footer-email">{user?.email || 'No email'}</p>
+              <p className="db-footer-role">Role: {user?.role || 'Unknown'}</p>
+            </div>
+
             <button className="db-footer-btn" onClick={onGoHome}>
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <path d="M2 6.5L8 2l6 4.5V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.5z" strokeLinejoin="round" />
-                <path d="M6 15V9h4v6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Homepage
+              {renderIcon('venue')}
+              <span>Homepage</span>
             </button>
             <button className="db-footer-btn" onClick={onLogout}>
-              <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" strokeLinecap="round" />
-                <path d="M10.5 11L14 8l-3.5-3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M14 8H6" strokeLinecap="round" />
-              </svg>
-              Sign out
+              {renderIcon('list')}
+              <span>Sign out</span>
             </button>
           </div>
         </aside>
@@ -331,21 +410,20 @@ function DashboardLayout({ children, currentPage, onNavigate, onLogout, onGoHome
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4">
                   <path d="M9 2L4 7l5 5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Back
+                Home
               </button>
-              <h1 className="db-topbar-title">{pageTitles[currentPage] ?? 'Dashboard'}</h1>
+              <h1 className="db-topbar-title">
+                {pageTitles[currentPage] ?? 'Dashboard'}
+              </h1>
             </div>
-            <div className="db-topbar-user">
-              <div className="db-avatar">{initials}</div>
-              <span className="db-username">{displayName}</span>
+
+            <div className="db-topbar-meta">
+              <span className="db-pill">{user?.role || 'Guest'}</span>
             </div>
           </header>
 
-          <main className="db-content">
-            {children}
-          </main>
+          <main className="db-content">{children}</main>
         </div>
-
       </div>
     </>
   )

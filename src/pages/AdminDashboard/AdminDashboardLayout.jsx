@@ -71,10 +71,6 @@ function AdminDashboardLayout({ session, onLogout }) {
           </div>
           <div className="admin-topbar-meta">
             <span className="admin-pill">Role: {session?.role ?? 'Admin'}</span>
-            <span className="admin-pill">
-              Backend:{' '}
-              {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5019'}
-            </span>
           </div>
         </header>
 

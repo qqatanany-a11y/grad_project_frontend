@@ -1,4 +1,10 @@
 import { useState, useEffect } from 'react'
+import { apiRequest } from '../../lib/apiClient'
+import {
+  sanitizeNameInput,
+  validateEmail,
+  validateName,
+} from '../../lib/validation'
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -379,6 +385,19 @@ const styles = `
   .hp-hall-card {
     background: #fff;
     padding: 2rem;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.18s ease, transform 0.18s ease;
+  }
+
+  .hp-hall-card:hover,
+  .hp-hall-card:focus-visible {
+    background: #fafaf9;
+    transform: translateY(-2px);
+    outline: none;
   }
 
   .hp-hall-name {
@@ -413,6 +432,120 @@ const styles = `
     border: 1px solid #e7e5e4;
     color: #78716c;
     border-radius: 2px;
+  }
+
+  .hp-hall-hint {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    color: #a8a29e;
+  }
+
+  .hp-venue-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(28,25,23,0.46);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .hp-venue-panel {
+    width: min(720px, 100%);
+    background: #fff;
+    border: 1px solid #e7e5e4;
+    box-shadow: 0 24px 60px rgba(28,25,23,0.18);
+  }
+
+  .hp-venue-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid #f5f5f4;
+  }
+
+  .hp-venue-panel-title {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: #1c1917;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
+  }
+
+  .hp-venue-panel-subtitle {
+    font-size: 0.86rem;
+    color: #78716c;
+    line-height: 1.5;
+  }
+
+  .hp-venue-close {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    width: 2.3rem;
+    height: 2.3rem;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .hp-venue-body {
+    padding: 1.5rem;
+  }
+
+  .hp-venue-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .hp-venue-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: #f5f5f4;
+    color: #57534e;
+    font-size: 0.76rem;
+  }
+
+  .hp-venue-description {
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: #44403c;
+    margin-bottom: 1.35rem;
+  }
+
+  .hp-venue-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .hp-venue-detail {
+    padding: 0.95rem 1rem;
+    background: #fafaf9;
+    border: 1px solid #f5f5f4;
+  }
+
+  .hp-venue-detail-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .hp-venue-detail-value {
+    font-size: 0.9rem;
+    color: #1c1917;
+    line-height: 1.6;
   }
 
   .hp-request-cta {
@@ -530,6 +663,16 @@ const styles = `
 
   .hp-cf-input:focus, .hp-cf-textarea:focus { border-color: #1c1917; }
 
+  .hp-cf-input[aria-invalid='true'], .hp-cf-textarea[aria-invalid='true'] {
+    border-color: #dc2626;
+  }
+
+  .hp-cf-error {
+    margin: 0;
+    font-size: 0.72rem;
+    color: #dc2626;
+  }
+
   .hp-cf-submit {
     height: 2.875rem;
     background: #1c1917;
@@ -597,19 +740,43 @@ const styles = `
     .hp-request-cta { flex-direction: column; }
     .hp-footer { padding: 2rem; flex-direction: column; align-items: flex-start; }
     .hp-hero-title { font-size: 2.2rem; }
+    .hp-venue-detail-grid { grid-template-columns: 1fr; }
+    .hp-venue-panel-head { padding: 1.25rem 1.25rem 1rem; }
+    .hp-venue-body { padding: 1.25rem; }
   }
 `
 
-const halls = [
-  { name: 'Main Hall A', capacity: 500, floor: '1st Floor', features: 'Projector · Sound System · Stage', tag: 'Large Events' },
-  { name: 'Conference Room B', capacity: 80, floor: '2nd Floor', features: 'Video Conferencing · Whiteboard', tag: 'Meetings' },
-  { name: 'Seminar Hall C', capacity: 200, floor: '3rd Floor', features: 'Stage · Microphone · Lighting', tag: 'Seminars' },
+const fallbackVenues = [
+  {
+    id: 1,
+    name: 'Main Venue A',
+    capacity: 500,
+    city: 'Amman',
+    description: 'Large events',
+    companyName: 'EventPlan',
+  },
+  {
+    id: 2,
+    name: 'Conference Venue B',
+    capacity: 80,
+    city: 'Amman',
+    description: 'Meetings',
+    companyName: 'EventPlan',
+  },
+  {
+    id: 3,
+    name: 'Seminar Venue C',
+    capacity: 200,
+    city: 'Amman',
+    description: 'Seminars',
+    companyName: 'EventPlan',
+  },
 ]
 
 const navLinks = [
   { id: 'hero', label: 'Home' },
   { id: 'about', label: 'About Us' },
-  { id: 'halls', label: 'Our Halls' },
+  { id: 'halls', label: 'Our Venues' },
   { id: 'contact', label: 'Contact' },
 ]
 
@@ -617,11 +784,24 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-function HomePage({ onNavigate }) {
+function formatVenuePrice(value) {
+  const amount = Number(value)
+
+  if (!Number.isFinite(amount)) {
+    return '--'
+  }
+
+  return `${amount} JOD`
+}
+
+function HomePage({ onNavigate, session }) {
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [cfValues, setCfValues] = useState({ name: '', email: '', message: '' })
+  const [cfErrors, setCfErrors] = useState({})
   const [cfSent, setCfSent] = useState(false)
+  const [venues, setVenues] = useState(fallbackVenues)
+  const [selectedVenue, setSelectedVenue] = useState(null)
 
   useEffect(() => {
     const onScroll = () => {
@@ -639,9 +819,76 @@ function HomePage({ onNavigate }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const loadVenues = async () => {
+      try {
+        const data = await apiRequest('/api/Venues/all')
+        if (Array.isArray(data) && data.length > 0) {
+          setVenues(data)
+        }
+      } catch {
+        setVenues(fallbackVenues)
+      }
+    }
+
+    loadVenues()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedVenue) {
+      return undefined
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedVenue(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [selectedVenue])
+
+  const getContactFieldError = (name, value) => {
+    if (name === 'name') return validateName(value, 'Name')
+    if (name === 'email') return validateEmail(value)
+    return ''
+  }
+
+  const handleCfChange = ({ target: { name, value } }) => {
+    const nextValue = name === 'name' ? sanitizeNameInput(value) : value
+
+    setCfValues((currentValues) => ({
+      ...currentValues,
+      [name]: nextValue,
+    }))
+
+    if (cfErrors[name]) {
+      setCfErrors((currentErrors) => ({
+        ...currentErrors,
+        [name]: getContactFieldError(name, nextValue),
+      }))
+    }
+  }
+
   const handleCfSubmit = (e) => {
     e.preventDefault()
+    const nextErrors = {}
+
+    ;['name', 'email'].forEach((fieldName) => {
+      const fieldError = getContactFieldError(fieldName, cfValues[fieldName])
+      if (fieldError) {
+        nextErrors[fieldName] = fieldError
+      }
+    })
+
+    setCfErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      return
+    }
+
     setCfSent(true)
+    setCfErrors({})
     setCfValues({ name: '', email: '', message: '' })
   }
 
@@ -668,13 +915,16 @@ function HomePage({ onNavigate }) {
               className="hp-nav-link"
               onClick={() => onNavigate('add-hall')}
             >
-              Request a Hall
+              Register Company
             </button>
           </div>
 
           <div className="hp-nav-right">
-            <button className="hp-login-btn" onClick={() => onNavigate('auth')}>
-              Log In
+            <button
+              className="hp-login-btn"
+              onClick={() => onNavigate(session ? 'venues' : 'auth')}
+            >
+              {session ? 'Dashboard' : 'Log In'}
             </button>
           </div>
         </nav>
@@ -694,13 +944,13 @@ function HomePage({ onNavigate }) {
             </h1>
 
             <p className="hp-hero-desc">
-              A modern platform for managing event halls, reviewing booking requests,
-              and delivering unforgettable experiences — all in one place.
+              A modern platform for managing venues, company registration requests,
+              and event bookings from one connected backend.
             </p>
 
             <div className="hp-hero-cta">
               <button className="hp-cta-primary" onClick={() => onNavigate('add-hall')}>
-                Request a Hall
+                Register Company
               </button>
               <button className="hp-cta-secondary" onClick={() => scrollTo('about')}>
                 Learn More
@@ -709,8 +959,8 @@ function HomePage({ onNavigate }) {
 
             <div className="hp-hero-stats">
               <div className="hp-stat">
-                <span className="hp-stat-num">3+</span>
-                <span className="hp-stat-label">Halls</span>
+                <span className="hp-stat-num">{venues.length}+</span>
+                <span className="hp-stat-label">Venues</span>
               </div>
               <div className="hp-stat">
                 <span className="hp-stat-num">50+</span>
@@ -773,7 +1023,7 @@ function HomePage({ onNavigate }) {
                   },
                   {
                     title: 'Modern Facilities',
-                    desc: 'Equipped halls with the latest technology for presentations and events.',
+                    desc: 'Equipped venues with the latest technology for presentations and events.',
                     icon: (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78716c" strokeWidth="1.4">
                         <rect x="1.5" y="3" width="13" height="9" rx="1" />
@@ -783,7 +1033,7 @@ function HomePage({ onNavigate }) {
                   },
                   {
                     title: 'Fast Approvals',
-                    desc: 'Submit your hall request and receive a response within 24 hours.',
+                    desc: 'Submit your company registration and receive a response after admin review.',
                     icon: (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78716c" strokeWidth="1.4">
                         <circle cx="8" cy="8" r="6.5" />
@@ -805,8 +1055,8 @@ function HomePage({ onNavigate }) {
 
             <div className="hp-about-visual">
               {[
-                { num: '500+', desc: 'Maximum hall capacity for grand events' },
-                { num: '24h', desc: 'Average request approval time' },
+                { num: '500+', desc: 'Maximum venue capacity for grand events' },
+                { num: '24h', desc: 'Average company-registration review time' },
                 { num: '100%', desc: 'Client satisfaction rate' },
               ].map(s => (
                 <div key={s.num} className="hp-about-stat-card">
@@ -820,38 +1070,105 @@ function HomePage({ onNavigate }) {
 
         {/* ── Halls ── */}
         <section id="halls" className="hp-section">
-          <span className="hp-section-tag">Our Halls</span>
+          <span className="hp-section-tag">Our Venues</span>
           <h2 className="hp-section-title">
             Spaces for Every <strong>Occasion</strong>
           </h2>
           <p className="hp-section-lead">
-            From large-scale conferences to intimate seminars, our halls are designed
+            From large-scale conferences to intimate seminars, our venues are designed
             to accommodate every type of event with style and comfort.
           </p>
 
           <div className="hp-halls-grid">
-            {halls.map(h => (
-              <div key={h.name} className="hp-hall-card">
-                <p className="hp-hall-name">{h.name}</p>
-                <p className="hp-hall-cap">Up to {h.capacity} guests · {h.floor}</p>
-                <p className="hp-hall-features">{h.features}</p>
-                <span className="hp-hall-tag">{h.tag}</span>
-              </div>
+            {venues.map(venue => (
+              <button
+                key={venue.id ?? venue.name}
+                type="button"
+                className="hp-hall-card"
+                onClick={() => setSelectedVenue(venue)}
+              >
+                <p className="hp-hall-name">{venue.name}</p>
+                <p className="hp-hall-cap">Up to {venue.capacity ?? 0} guests · {venue.city || 'No city'}</p>
+                <p className="hp-hall-features">{venue.description || venue.companyName || 'No description provided'}</p>
+                <span className="hp-hall-tag">{venue.companyName || 'Venue'}</span>
+                <span className="hp-hall-hint">Click to view details</span>
+              </button>
             ))}
           </div>
 
           <div className="hp-request-cta">
             <div className="hp-request-cta-text">
-              <h3>Ready to Book a Hall?</h3>
-              <p>Submit a request and our team will get back to you within 24 hours.</p>
+              <h3>Want to register your company?</h3>
+              <p>Submit your company registration and the admin can review it from the connected dashboard.</p>
             </div>
             <button className="hp-request-cta-btn" onClick={() => onNavigate('add-hall')}>
-              Request a Hall →
+              Register Company →
             </button>
           </div>
         </section>
 
         {/* ── Contact ── */}
+        {selectedVenue ? (
+          <div className="hp-venue-overlay" onClick={() => setSelectedVenue(null)}>
+            <div className="hp-venue-panel" onClick={(event) => event.stopPropagation()}>
+              <div className="hp-venue-panel-head">
+                <div>
+                  <h3 className="hp-venue-panel-title">{selectedVenue.name || 'Venue details'}</h3>
+                  <p className="hp-venue-panel-subtitle">
+                    {selectedVenue.companyName || 'Venue'} - {selectedVenue.city || 'No city'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="hp-venue-close"
+                  onClick={() => setSelectedVenue(null)}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="hp-venue-body">
+                <div className="hp-venue-meta">
+                  <span className="hp-venue-chip">Up to {selectedVenue.capacity ?? 0} guests</span>
+                  <span className="hp-venue-chip">{formatVenuePrice(selectedVenue.minimalPrice)} min price</span>
+                  <span className="hp-venue-chip">{selectedVenue.city || 'No city'}</span>
+                </div>
+
+                <p className="hp-venue-description">
+                  {selectedVenue.description || 'No description provided for this venue yet.'}
+                </p>
+
+                <div className="hp-venue-detail-grid">
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Company</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.companyName || '--'}</span>
+                  </div>
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Capacity</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.capacity ?? 0} guests</span>
+                  </div>
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">City</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.city || '--'}</span>
+                  </div>
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Address</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.address || '--'}</span>
+                  </div>
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Minimal Price</span>
+                    <span className="hp-venue-detail-value">{formatVenuePrice(selectedVenue.minimalPrice)}</span>
+                  </div>
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Venue Name</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.name || '--'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <section id="contact" className="hp-section hp-section-alt">
           <span className="hp-section-tag">Contact</span>
           <h2 className="hp-section-title">
@@ -900,11 +1217,13 @@ function HomePage({ onNavigate }) {
               ) : (
                 <>
                   <div className="hp-cf-row">
-                    <input className="hp-cf-input" placeholder="Your Name" value={cfValues.name}
-                      onChange={e => setCfValues(p => ({ ...p, name: e.target.value }))} />
-                    <input className="hp-cf-input" type="email" placeholder="Email Address" value={cfValues.email}
-                      onChange={e => setCfValues(p => ({ ...p, email: e.target.value }))} />
+                    <input className="hp-cf-input" name="name" placeholder="Your Name" value={cfValues.name}
+                      onChange={handleCfChange} aria-invalid={cfErrors.name ? 'true' : 'false'} />
+                    <input className="hp-cf-input" name="email" type="email" placeholder="Email Address" value={cfValues.email}
+                      onChange={handleCfChange} aria-invalid={cfErrors.email ? 'true' : 'false'} />
                   </div>
+                  {cfErrors.name ? <p className="hp-cf-error">{cfErrors.name}</p> : null}
+                  {cfErrors.email ? <p className="hp-cf-error">{cfErrors.email}</p> : null}
                   <textarea className="hp-cf-textarea" placeholder="Your message..." rows={5}
                     value={cfValues.message}
                     onChange={e => setCfValues(p => ({ ...p, message: e.target.value }))} />
@@ -922,7 +1241,7 @@ function HomePage({ onNavigate }) {
             {navLinks.map(l => (
               <button key={l.id} className="hp-footer-link" onClick={() => scrollTo(l.id)}>{l.label}</button>
             ))}
-            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Request a Hall</button>
+            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Register Company</button>
           </div>
           <span className="hp-footer-copy">© 2026 EventPlan. All rights reserved.</span>
         </footer>
@@ -933,3 +1252,5 @@ function HomePage({ onNavigate }) {
 }
 
 export default HomePage
+
+

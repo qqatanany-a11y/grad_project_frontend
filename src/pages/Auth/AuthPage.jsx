@@ -1,18 +1,14 @@
 import { useState } from 'react'
+import { apiRequest } from '../../lib/apiClient'
+import {
+  sanitizeNameInput,
+  sanitizePhoneInput,
+  validateEmail,
+  validateName,
+  validatePhone,
+} from '../../lib/validation'
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const phonePattern = /^\d{10}$/
-const namePattern = /^[A-Za-z\u0600-\u06FF'-]+$/
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-
-const validateName = (value, label) =>
-  namePattern.test(value.trim()) ? '' : `${label} can only contain letters.`
-
-const validatePhone = (value, label) =>
-  phonePattern.test(value.trim()) ? '' : `${label} must be 10 digits only.`
-
-const validateEmail = (value) =>
-  emailPattern.test(value.trim()) ? '' : 'Enter a valid email address.'
 
 const validatePassword = (value) =>
   passwordPattern.test(value)
@@ -299,6 +295,8 @@ function AuthPage({ onSignIn, onBack }) {
   const [signInErrors, setSignInErrors] = useState({})
   const [signUpValues, setSignUpValues] = useState(signUpInitial)
   const [signUpErrors, setSignUpErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const values = isSignUp ? signUpValues : signInValues
   const errors = isSignUp ? signUpErrors : signInErrors
@@ -322,8 +320,8 @@ function AuthPage({ onSignIn, onBack }) {
   }
 
   const sanitize = (name, val) => {
-    if (['firstName', 'middleName', 'lastName'].includes(name)) return val.replace(/\d/g, '')
-    if (['phoneNumber', 'additionalPhoneNumber'].includes(name)) return val.replace(/\D/g, '').slice(0, 10)
+    if (['firstName', 'middleName', 'lastName'].includes(name)) return sanitizeNameInput(val)
+    if (['phoneNumber', 'additionalPhoneNumber'].includes(name)) return sanitizePhoneInput(val)
     return val
   }
 
@@ -336,10 +334,11 @@ function AuthPage({ onSignIn, onBack }) {
 
   const handleBlur = (e) => {
     const { name, value } = e.target
-    setErrors((prev) => ({ ...prev, [name]: getError(name, value) }))
+    const next = sanitize(name, value)
+    setErrors((prev) => ({ ...prev, [name]: getError(name, next) }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const nextErrors = {}
     Object.entries(values).forEach(([name, val]) => {
@@ -353,12 +352,45 @@ function AuthPage({ onSignIn, onBack }) {
       if (!values[name]?.trim()) nextErrors[name] = `${name.replace(/([A-Z])/g, ' $1').trim()} is required.`
     })
     setErrors(nextErrors)
-    if (Object.keys(nextErrors).length === 0) {
-      onSignIn?.(isSignUp ? {
-        firstName: signUpValues.firstName,
-        lastName: signUpValues.lastName,
-        email: signUpValues.email,
-      } : { firstName: 'User', lastName: '', email: values.email })
+
+    if (Object.keys(nextErrors).length > 0) {
+      return
+    }
+
+    setSubmitting(true)
+    setSubmitError('')
+
+    try {
+      const payload = isSignUp
+        ? {
+            firstName: signUpValues.firstName.trim(),
+            lastName: signUpValues.lastName.trim(),
+            email: signUpValues.email.trim(),
+            phoneNumber: signUpValues.phoneNumber.trim(),
+            secondaryPhoneNumber:
+              signUpValues.additionalPhoneNumber.trim() || null,
+            password: signUpValues.password,
+          }
+        : {
+            email: signInValues.email.trim(),
+            password: signInValues.password,
+          }
+
+      const authUser = await apiRequest(
+        isSignUp ? '/api/auth/register' : '/api/auth/login',
+        {
+          method: 'POST',
+          body: payload,
+        },
+      )
+
+      onSignIn?.(authUser)
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : 'Authentication failed.',
+      )
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -366,6 +398,7 @@ function AuthPage({ onSignIn, onBack }) {
     setIsSignUp((v) => !v)
     setSignInErrors({})
     setSignUpErrors({})
+    setSubmitError('')
   }
 
   return (
@@ -432,8 +465,16 @@ function AuthPage({ onSignIn, onBack }) {
                 value={values.password} error={errors.password}
                 onChange={handleChange} onBlur={handleBlur} autoComplete={isSignUp ? 'new-password' : 'current-password'} maxLength={64} />
 
-              <button type="submit" className="ma-submit">
-                {isSignUp ? 'Create Account' : 'Sign In'}
+              {submitError ? <p className="ma-error">{submitError}</p> : null}
+
+              <button type="submit" className="ma-submit" disabled={submitting}>
+                {submitting
+                  ? isSignUp
+                    ? 'Creating...'
+                    : 'Signing in...'
+                  : isSignUp
+                    ? 'Create Account'
+                    : 'Sign In'}
               </button>
             </form>
 

@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import {
+  sanitizeNameInput,
+  sanitizePhoneInput,
+  validateEmail,
+  validateName,
+  validatePhone,
+} from '../../lib/validation'
 
 const EMPTY_FORM = {
   firstName: '',
@@ -16,6 +23,13 @@ const createEditableUser = (user) => ({
   email: user?.email ?? '',
   phoneNumber: user?.phoneNumber ?? '',
 })
+
+const getUserValidationMessage = (values) =>
+  validateName(values.firstName, 'First name', { required: false }) ||
+  validateName(values.middleName, 'Middle name', { required: false }) ||
+  validateName(values.lastName, 'Last name', { required: false }) ||
+  validateEmail(values.email, { required: false }) ||
+  validatePhone(values.phoneNumber, 'Phone number', { required: false })
 
 function AdminUsersPage({ session }) {
   const [users, setUsers] = useState([])
@@ -101,6 +115,12 @@ function AdminUsersPage({ session }) {
         return
       }
 
+      const emailError = validateEmail(email)
+      if (emailError) {
+        setFeedback({ tone: 'error', message: emailError })
+        return
+      }
+
       await lookupUser(`/api/admin/email/${encodeURIComponent(email)}`)
       return
     }
@@ -116,9 +136,16 @@ function AdminUsersPage({ session }) {
   }
 
   const handleInputChange = ({ target: { name, value } }) => {
+    const nextValue =
+      name === 'firstName' || name === 'middleName' || name === 'lastName'
+        ? sanitizeNameInput(value)
+        : name === 'phoneNumber'
+          ? sanitizePhoneInput(value)
+          : value
+
     setFormValues((currentValues) => ({
       ...currentValues,
-      [name]: value,
+      [name]: nextValue,
     }))
   }
 
@@ -134,6 +161,12 @@ function AdminUsersPage({ session }) {
 
     if (!selectedUser?.id) {
       setFeedback({ tone: 'error', message: 'Select a user before updating.' })
+      return
+    }
+
+    const validationMessage = getUserValidationMessage(formValues)
+    if (validationMessage) {
+      setFeedback({ tone: 'error', message: validationMessage })
       return
     }
 
@@ -461,6 +494,8 @@ function AdminUsersPage({ session }) {
                     <input
                       id="user-phone"
                       name="phoneNumber"
+                      inputMode="numeric"
+                      maxLength={10}
                       value={formValues.phoneNumber}
                       onChange={handleInputChange}
                     />
