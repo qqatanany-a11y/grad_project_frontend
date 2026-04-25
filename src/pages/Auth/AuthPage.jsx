@@ -284,7 +284,7 @@ function Field({ id, label, type = 'text', name, required, value, error, onChang
 
 const signInInitial = { email: '', password: '' }
 const signUpInitial = {
-  firstName: '', middleName: '', lastName: '',
+  firstName: '', lastName: '',
   phoneNumber: '', additionalPhoneNumber: '',
   email: '', password: '',
 }
@@ -306,7 +306,6 @@ function AuthPage({ onSignIn, onBack }) {
   const getError = (name, val) => {
     if (isSignUp) {
       if (name === 'firstName') return validateName(val, 'First Name')
-      if (name === 'middleName') return val.trim() ? validateName(val, 'Middle Name') : ''
       if (name === 'lastName') return validateName(val, 'Last Name')
       if (name === 'phoneNumber') return validatePhone(val, 'Phone Number')
       if (name === 'additionalPhoneNumber') return val.trim() ? validatePhone(val, 'Additional Phone') : ''
@@ -320,7 +319,7 @@ function AuthPage({ onSignIn, onBack }) {
   }
 
   const sanitize = (name, val) => {
-    if (['firstName', 'middleName', 'lastName'].includes(name)) return sanitizeNameInput(val)
+    if (['firstName', 'lastName'].includes(name)) return sanitizeNameInput(val)
     if (['phoneNumber', 'additionalPhoneNumber'].includes(name)) return sanitizePhoneInput(val)
     return val
   }
@@ -435,13 +434,10 @@ function AuthPage({ onSignIn, onBack }) {
             <form className="ma-form" onSubmit={handleSubmit} noValidate>
               {isSignUp && (
                 <>
-                  <div className="ma-grid-3">
+                  <div className="ma-grid-2">
                     <Field id="firstName" label="First Name" name="firstName" required
                       value={signUpValues.firstName} error={signUpErrors.firstName}
                       onChange={handleChange} onBlur={handleBlur} autoComplete="given-name" maxLength={40} />
-                    <Field id="middleName" label="Middle" name="middleName"
-                      value={signUpValues.middleName} error={signUpErrors.middleName}
-                      onChange={handleChange} onBlur={handleBlur} autoComplete="additional-name" maxLength={40} />
                     <Field id="lastName" label="Last Name" name="lastName" required
                       value={signUpValues.lastName} error={signUpErrors.lastName}
                       onChange={handleChange} onBlur={handleBlur} autoComplete="family-name" maxLength={40} />
@@ -450,7 +446,7 @@ function AuthPage({ onSignIn, onBack }) {
                     <Field id="phoneNumber" label="Phone" name="phoneNumber" type="tel" required
                       value={signUpValues.phoneNumber} error={signUpErrors.phoneNumber}
                       onChange={handleChange} onBlur={handleBlur} autoComplete="tel" inputMode="numeric" maxLength={10} />
-                    <Field id="additionalPhoneNumber" label="Alt Phone (Opt)" name="additionalPhoneNumber" type="tel"
+                    <Field id="additionalPhoneNumber" label="secndory phone" name="additionalPhoneNumber" type="tel"
                       value={signUpValues.additionalPhoneNumber} error={signUpErrors.additionalPhoneNumber}
                       onChange={handleChange} onBlur={handleBlur} autoComplete="tel-national" inputMode="numeric" maxLength={10} />
                   </div>
