@@ -9,25 +9,26 @@ import {
 } from '../../lib/validation'
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
   .ahr-root {
     min-height: 100vh;
-    background: #fafaf9;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    color: #1c1917;
+    background: #f8f7ff;
+    font-family: 'Inter', sans-serif;
+    color: #1e1b4b;
     display: flex;
     flex-direction: column;
   }
 
   .ahr-topbar {
-    background: #fff;
-    border-bottom: 1px solid #e7e5e4;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
     padding: 0 2rem;
-    height: 56px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(79,70,229,0.06);
   }
 
   .ahr-brand,
@@ -39,17 +40,28 @@ const styles = `
   }
 
   .ahr-brand {
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #1c1917;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #4f46e5, #f43f5e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .ahr-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    color: #78716c;
+    gap: 0.4rem;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.4rem 0.875rem;
+    border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
   }
+
+  .ahr-back-btn:hover { color: #4f46e5; background: rgba(79,70,229,0.07); }
 
   .ahr-body {
     flex: 1;
@@ -61,32 +73,35 @@ const styles = `
   .ahr-card {
     width: 100%;
     max-width: 720px;
-    background: #fff;
-    border: 1px solid #e7e5e4;
-    padding: 2rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 8px 40px rgba(79,70,229,0.08);
   }
 
   .ahr-card-title {
     margin: 0 0 0.5rem;
-    font-size: 1.45rem;
-    font-weight: 500;
-    letter-spacing: -0.02em;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #1e1b4b;
   }
 
   .ahr-card-sub {
-    margin: 0 0 1.75rem;
-    font-size: 0.9rem;
-    color: #78716c;
+    margin: 0 0 2rem;
+    font-size: 0.95rem;
+    color: #64748b;
     line-height: 1.7;
   }
 
   .ahr-section-label {
     margin: 0 0 1rem;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #a8a29e;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #4f46e5;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
   }
 
   .ahr-grid-2 {
@@ -98,113 +113,130 @@ const styles = `
   .ahr-field {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
     margin-bottom: 1rem;
   }
 
   .ahr-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #78716c;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
   }
 
   .ahr-input,
   .ahr-textarea {
     width: 100%;
-    border: 1px solid #e7e5e4;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
     background: #fff;
-    color: #1c1917;
+    color: #1e1b4b;
     font: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
     box-sizing: border-box;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    outline: none;
   }
 
   .ahr-input {
     height: 3rem;
-    padding: 0 0.85rem;
+    padding: 0 0.875rem;
   }
 
   .ahr-textarea {
     min-height: 5rem;
-    padding: 0.8rem 0.85rem;
+    padding: 0.8rem 0.875rem;
     resize: vertical;
   }
 
   .ahr-input:focus,
   .ahr-textarea:focus {
-    outline: none;
-    border-color: #1c1917;
-    box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.08);
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 4px rgba(79,70,229,0.1);
   }
 
   .ahr-input[aria-invalid="true"],
   .ahr-textarea[aria-invalid="true"] {
-    border-color: #dc2626;
+    border-color: #f43f5e;
+    box-shadow: 0 0 0 4px rgba(244,63,94,0.1);
   }
 
   .ahr-error {
     margin: 0;
     font-size: 0.75rem;
-    color: #dc2626;
+    color: #f43f5e;
+    font-weight: 500;
   }
 
   .ahr-divider {
     border: none;
-    border-top: 1px solid #e7e5e4;
+    border-top: 1px solid #e2e8f0;
     margin: 1rem 0 1.5rem;
   }
 
   .ahr-submit {
     width: 100%;
-    height: 3.15rem;
+    height: 3.25rem;
     margin-top: 0.5rem;
     border: none;
-    background: #1c1917;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4f46e5, #3730a3);
     color: #fff;
     font: inherit;
-    font-weight: 500;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 6px 20px rgba(79,70,229,0.38);
+    transition: transform 0.2s, box-shadow 0.2s;
   }
 
-  .ahr-submit:hover {
-    background: #292524;
-  }
+  .ahr-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(79,70,229,0.48); }
 
   .ahr-submit:disabled {
     cursor: wait;
-    opacity: 0.75;
+    opacity: 0.5;
+    transform: none;
   }
 
   .ahr-success {
-    border: 1px solid #bbf7d0;
-    background: #f0fdf4;
-    padding: 1.5rem;
+    border: 1px solid rgba(22,163,74,0.25);
+    border-radius: 16px;
+    background: rgba(22,163,74,0.07);
+    padding: 2rem;
   }
 
   .ahr-success-title {
     margin: 0 0 0.5rem;
-    color: #166534;
-    font-size: 1rem;
-    font-weight: 600;
+    color: #16A34A;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   .ahr-success-sub {
-    margin: 0 0 1rem;
-    color: #166534;
+    margin: 0 0 1.25rem;
+    color: #15803d;
     line-height: 1.7;
+    font-size: 0.9rem;
   }
 
   .ahr-new-btn {
-    height: 2.6rem;
-    padding: 0 1.25rem;
-    border: 1px solid #bbf7d0;
-    background: #fff;
-    color: #166534;
+    height: 2.75rem;
+    padding: 0 1.5rem;
+    border: 2px solid rgba(22,163,74,0.3);
+    border-radius: 10px;
+    background: transparent;
+    color: #16A34A;
     font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
     cursor: pointer;
+    transition: background 0.15s;
   }
+
+  .ahr-new-btn:hover { background: rgba(22,163,74,0.1); }
 
   @media (max-width: 760px) {
     .ahr-grid-2 {

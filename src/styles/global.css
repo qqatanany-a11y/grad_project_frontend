@@ -1,7 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 :root {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #1f1f2e;
-  background: #fff7f8;
+  --primary: #4f46e5;
+  --primary-dark: #3730a3;
+  --accent: #f43f5e;
+  --gold: #f59e0b;
+  --bg: #ffffff;
+  --bg-alt: #f8f7ff;
+  --text: #1e1b4b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #f43f5e;
+  font-family: 'Inter', sans-serif;
+  color: #1e1b4b;
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

@@ -1,205 +1,68 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { makeDashStyles } from './dashboardPageStyles'
 
-const styles = `
-  .or-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .or-input,
-  .or-select {
-    height: 2.75rem;
-    padding: 0 0.85rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font: inherit;
-    color: #1c1917;
-  }
-
-  .or-input {
-    flex: 1;
-    min-width: 220px;
-  }
-
-  .or-input:focus,
-  .or-select:focus {
-    outline: none;
-    border-color: #1c1917;
-  }
-
-  .or-button {
-    height: 2.75rem;
-    padding: 0 1.2rem;
-    border: none;
-    background: #1c1917;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .or-button:hover {
-    background: #292524;
-  }
-
-  .or-status {
-    margin-bottom: 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .or-status.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .or-table {
-    background: #fff;
-    border: 1px solid #e7e5e4;
-  }
-
+const styles = makeDashStyles('or') + `
   .or-row {
     display: grid;
     grid-template-columns: 1.4fr 1.4fr 1fr 1fr 150px 60px;
     gap: 1rem;
     align-items: center;
-    padding: 0.95rem 1rem;
-    border-bottom: 1px solid #f5f5f4;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
   }
-
-  .or-row:last-child {
-    border-bottom: none;
-  }
-
-  .or-row.header {
-    background: #fafaf9;
-    padding: 0.6rem 1rem;
-  }
-
+  .or-row:last-child { border-bottom: none; }
+  .or-row:not(.header):hover { background: rgba(79,70,229,0.03); }
+  .or-row.header { background: #f8f7ff; padding: 0.7rem 1.25rem; }
   .or-label {
-    margin: 0;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: #a8a29e;
+    margin: 0; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8;
   }
-
-  .or-main {
-    margin: 0 0 0.2rem;
-    font-size: 0.88rem;
-    font-weight: 500;
-  }
-
-  .or-sub {
-    margin: 0;
-    font-size: 0.76rem;
-    color: #78716c;
-  }
-
-  .or-cell {
-    font-size: 0.82rem;
-    color: #57534e;
-  }
-
-  .or-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 88px;
-    padding: 0.25rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-  }
-
-  .or-badge.pending {
-    background: #fffbeb;
-    color: #a16207;
-  }
-
-  .or-badge.approved {
-    background: #f0fdf4;
-    color: #166534;
-  }
-
-  .or-badge.rejected {
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .or-actions {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-  }
-
+  .or-main { margin: 0 0 0.2rem; font-size: 0.9rem; font-weight: 700; color: #1e1b4b; }
+  .or-sub { margin: 0; font-size: 0.8rem; color: #64748b; }
+  .or-cell { font-size: 0.82rem; color: #64748b; }
+  .or-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
   .or-mini {
-    padding: 0.35rem 0.7rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font: inherit;
-    font-size: 0.75rem;
-    cursor: pointer;
+    padding: 0.35rem 0.75rem; border-radius: 8px; border: 1.5px solid;
+    font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
   }
-
+  .or-mini:hover { transform: translateY(-1px); }
   .or-mini.approve {
-    color: #166534;
-    border-color: #bbf7d0;
+    color: #15803d; border-color: rgba(22,163,74,0.3);
+    background: rgba(22,163,74,0.08);
   }
-
+  .or-mini.approve:hover { background: rgba(22,163,74,0.15); }
   .or-mini.reject {
-    color: #991b1b;
-    border-color: #fecaca;
+    color: #be123c; border-color: rgba(244,63,94,0.3);
+    background: rgba(244,63,94,0.07);
   }
-
+  .or-mini.reject:hover { background: rgba(244,63,94,0.14); }
   .or-expand {
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: #78716c;
+    border: 1.5px solid #e2e8f0; background: none; border-radius: 8px;
+    cursor: pointer; color: #64748b; font: inherit; font-size: 0.75rem;
+    font-weight: 600; padding: 0.35rem 0.6rem;
+    transition: background 0.15s, color 0.15s;
   }
-
+  .or-expand:hover { background: rgba(79,70,229,0.07); color: #4f46e5; }
   .or-detail {
-    padding: 1rem;
-    background: #fafaf9;
+    padding: 1.25rem; background: rgba(79,70,229,0.03);
     border-top: 1px solid #f1f5f9;
   }
-
   .or-detail-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.9rem;
   }
-
   .or-detail-item label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: #a8a29e;
+    display: block; margin-bottom: 0.25rem; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
   }
-
-  .or-empty {
-    padding: 2.5rem 1rem;
-    text-align: center;
-    color: #78716c;
-  }
-
+  .or-detail-item span { font-size: 0.875rem; color: #1e1b4b; font-weight: 500; }
   @media (max-width: 1100px) {
-    .or-row {
-      grid-template-columns: 1fr;
-    }
-
-    .or-row.header {
-      display: none;
-    }
+    .or-row { grid-template-columns: 1fr; }
+    .or-row.header { display: none; }
   }
 `
 
@@ -324,7 +187,7 @@ function CompanyRequests({ session }) {
 
       <div className="or-toolbar">
         <input
-          className="or-input"
+          className="or-input or-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by company, venue, representative, or email..."
@@ -339,7 +202,7 @@ function CompanyRequests({ session }) {
           <option>Approved</option>
           <option>Rejected</option>
         </select>
-        <button className="or-button" onClick={loadRequests} disabled={loading}>
+        <button className="or-button secondary" onClick={loadRequests} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>

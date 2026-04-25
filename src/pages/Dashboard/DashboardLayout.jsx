@@ -1,135 +1,168 @@
 const layoutStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  @keyframes dbSlideIn {
+    from { opacity: 0; transform: translateX(-18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes dbFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes dbFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
 
   .db-root {
     display: flex;
     min-height: 100vh;
-    background: #fafaf9;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    color: #1c1917;
+    background: #f8f7ff;
+    font-family: 'Inter', sans-serif;
+    color: #1e1b4b;
   }
 
   .db-sidebar {
-    width: 240px;
+    width: 256px;
     flex-shrink: 0;
-    background: #fff;
-    border-right: 1px solid #e7e5e4;
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
     display: flex;
     flex-direction: column;
     position: fixed;
     inset: 0 auto 0 0;
     height: 100vh;
     z-index: 10;
+    box-shadow: 4px 0 24px rgba(79,70,229,0.06);
+    animation: dbSlideIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
   }
 
   .db-brand {
     padding: 1.75rem 1.5rem 1.25rem;
-    border-bottom: 1px solid #e7e5e4;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   .db-brand-name {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #4f46e5, #f43f5e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .db-brand-sub {
-    margin: 0.25rem 0 0;
+    margin: 0.3rem 0 0;
     font-size: 0.72rem;
-    color: #78716c;
+    color: #64748b;
+    font-weight: 500;
   }
 
   .db-nav {
     flex: 1;
-    padding: 1rem 0.75rem;
+    padding: 1rem 0.875rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.2rem;
+    overflow-y: auto;
   }
 
   .db-nav-section {
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #a8a29e;
-    padding: 0.8rem 0.75rem 0.35rem;
+    color: #94a3b8;
+    padding: 0.9rem 0.75rem 0.4rem;
   }
 
   .db-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.75rem;
     width: 100%;
-    padding: 0.65rem 0.8rem;
+    padding: 0.7rem 0.9rem;
     border: none;
     background: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font: inherit;
-    color: #57534e;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+    animation: dbFadeUp 0.35s ease both;
   }
+  .db-nav-item:nth-child(1) { animation-delay: 0.05s; }
+  .db-nav-item:nth-child(2) { animation-delay: 0.10s; }
+  .db-nav-item:nth-child(3) { animation-delay: 0.15s; }
+  .db-nav-item:nth-child(4) { animation-delay: 0.20s; }
+  .db-nav-item:nth-child(5) { animation-delay: 0.25s; }
+  .db-nav-item:nth-child(6) { animation-delay: 0.30s; }
 
   .db-nav-item:hover {
-    background: #fafaf9;
-    color: #1c1917;
+    background: rgba(79,70,229,0.07);
+    color: #4f46e5;
+    transform: translateX(3px);
   }
 
   .db-nav-item.active {
-    background: #f5f5f4;
-    color: #1c1917;
-    font-weight: 500;
+    background: rgba(79,70,229,0.1);
+    color: #4f46e5;
+    font-weight: 700;
   }
 
   .db-nav-icon {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    opacity: 0.8;
   }
 
   .db-sidebar-footer {
-    padding: 1rem 0.75rem;
-    border-top: 1px solid #e7e5e4;
+    padding: 1rem 0.875rem;
+    border-top: 1px solid #e2e8f0;
   }
 
   .db-footer-card {
-    padding: 0.85rem;
-    background: #fafaf9;
-    border: 1px solid #f1f5f9;
-    border-radius: 8px;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f0ff, #fdf2f8);
+    border: 1px solid rgba(79,70,229,0.12);
+    border-radius: 14px;
     margin-bottom: 0.75rem;
   }
 
   .db-footer-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #a8a29e;
+    color: #94a3b8;
     margin: 0 0 0.3rem;
   }
 
   .db-footer-name {
     margin: 0;
-    font-size: 0.86rem;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e1b4b;
+    letter-spacing: -0.01em;
   }
 
   .db-footer-email {
-    margin: 0.25rem 0 0;
+    margin: 0.2rem 0 0;
     font-size: 0.75rem;
-    color: #78716c;
+    color: #64748b;
     word-break: break-word;
   }
 
   .db-footer-role {
-    margin: 0.45rem 0 0;
-    font-size: 0.73rem;
-    color: #1c1917;
+    margin: 0.4rem 0 0;
+    font-size: 0.72rem;
+    color: #4f46e5;
+    font-weight: 600;
   }
 
   .db-footer-btn {
@@ -137,42 +170,47 @@ const layoutStyles = `
     align-items: center;
     gap: 0.6rem;
     width: 100%;
-    padding: 0.6rem 0.8rem;
+    padding: 0.6rem 0.9rem;
     border: none;
     background: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font: inherit;
-    color: #78716c;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
     cursor: pointer;
     text-align: left;
     transition: background 0.15s, color 0.15s;
   }
 
   .db-footer-btn:hover {
-    background: #fafaf9;
-    color: #1c1917;
+    background: rgba(79,70,229,0.07);
+    color: #4f46e5;
   }
 
   .db-main {
-    margin-left: 240px;
+    margin-left: 256px;
     flex: 1;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: #f8f7ff;
+    animation: dbFadeIn 0.4s ease 0.1s both;
   }
 
   .db-topbar {
     position: sticky;
     top: 0;
     z-index: 5;
-    height: 60px;
+    height: 64px;
     padding: 0 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid #e7e5e4;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    box-shadow: 0 2px 16px rgba(79,70,229,0.06);
   }
 
   .db-topbar-left {
@@ -187,23 +225,27 @@ const layoutStyles = `
     gap: 0.35rem;
     border: none;
     background: none;
-    padding: 0.35rem 0.5rem;
-    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
     font: inherit;
-    color: #78716c;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #64748b;
     cursor: pointer;
+    transition: color 0.15s, background 0.15s;
   }
 
   .db-back-btn:hover {
-    background: #fafaf9;
-    color: #1c1917;
+    background: rgba(79,70,229,0.07);
+    color: #4f46e5;
   }
 
   .db-topbar-title {
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 800;
     letter-spacing: -0.02em;
+    color: #1e1b4b;
   }
 
   .db-topbar-meta {
@@ -213,12 +255,13 @@ const layoutStyles = `
   }
 
   .db-pill {
-    padding: 0.35rem 0.6rem;
-    border: 1px solid #e7e5e4;
+    padding: 0.35rem 0.875rem;
+    border: 1px solid rgba(79,70,229,0.2);
     border-radius: 999px;
     font-size: 0.72rem;
-    color: #57534e;
-    background: #fff;
+    font-weight: 700;
+    color: #4f46e5;
+    background: rgba(79,70,229,0.08);
   }
 
   .db-content {

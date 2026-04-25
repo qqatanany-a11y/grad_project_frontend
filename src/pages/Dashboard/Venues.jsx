@@ -1,187 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { makeDashStyles } from './dashboardPageStyles'
 
-const styles = `
-  .vp-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .vp-input,
-  .vp-select,
-  .vp-textarea {
-    width: 100%;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-    font: inherit;
-    box-sizing: border-box;
-  }
-
-  .vp-input,
-  .vp-select {
-    height: 2.75rem;
-    padding: 0 0.85rem;
-  }
-
-  .vp-textarea {
-    min-height: 5rem;
-    padding: 0.8rem 0.85rem;
-    resize: vertical;
-  }
-
-  .vp-search {
-    flex: 1;
-    min-width: 240px;
-  }
-
-  .vp-input:focus,
-  .vp-select:focus,
-  .vp-textarea:focus {
-    outline: none;
-    border-color: #1c1917;
-    box-shadow: 0 0 0 2px rgba(28, 25, 23, 0.08);
-  }
-
-  .vp-button {
-    height: 2.75rem;
-    padding: 0 1.2rem;
-    border: none;
-    background: #1c1917;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .vp-button.secondary {
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-  }
-
-  .vp-status {
-    margin-bottom: 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .vp-status.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .vp-panel {
-    margin-bottom: 1rem;
-    padding: 1.25rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .vp-panel-title {
-    margin: 0 0 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-  }
-
-  .vp-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .vp-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .vp-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #78716c;
-  }
-
-  .vp-actions {
-    display: flex;
-    gap: 0.6rem;
-    margin-top: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .vp-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
-  }
-
-  .vp-card {
-    padding: 1.2rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .vp-card-title {
-    margin: 0 0 0.35rem;
-    font-size: 0.96rem;
-    font-weight: 600;
-  }
-
-  .vp-card-copy {
-    margin: 0 0 0.7rem;
-    color: #57534e;
-    line-height: 1.6;
-    font-size: 0.84rem;
-  }
-
-  .vp-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: #f5f5f4;
-    color: #57534e;
-    margin-right: 0.4rem;
-    margin-bottom: 0.4rem;
-  }
-
-  .vp-chip.active {
-    background: #f0fdf4;
-    color: #166534;
-  }
-
-  .vp-chip.inactive {
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .vp-card-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.9rem;
-  }
-
-  .vp-empty {
-    padding: 2.5rem 1rem;
-    text-align: center;
-    color: #78716c;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  @media (max-width: 760px) {
-    .vp-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-`
+const styles = makeDashStyles('vp')
 
 const emptyForm = {
   name: '',
@@ -408,7 +229,7 @@ function Venues({ session }) {
               }
             }}
           >
-            {showForm ? 'Cancel' : 'Add Venue'}
+            {showForm ? 'Cancel' : '+ Add Venue'}
           </button>
         ) : null}
       </div>
@@ -475,7 +296,7 @@ function Venues({ session }) {
             ) : null}
           </div>
 
-          <div className="vp-field">
+          <div className="vp-field" style={{ marginTop: '1rem' }}>
             <label className="vp-label">Description</label>
             <textarea className="vp-textarea" name="description" value={formValues.description} onChange={handleChange} />
           </div>
@@ -493,7 +314,7 @@ function Venues({ session }) {
 
       {filteredVenues.length === 0 ? (
         <div className="vp-empty">
-          {loading ? 'Loading venues...' : 'No venues were returned by the backend.'}
+          {loading ? 'Loading venues...' : 'No venues found.'}
         </div>
       ) : (
         <div className="vp-cards">
@@ -507,13 +328,13 @@ function Venues({ session }) {
                   {venue.isActive ? 'Active' : 'Inactive'}
                 </span>
                 <span className="vp-chip">{venue.city || 'No city'}</span>
-                <span className="vp-chip">{venue.capacity ?? 0} capacity</span>
-                <span className="vp-chip">{venue.minimalPrice ?? 0} min price</span>
+                <span className="vp-chip">{venue.capacity ?? 0} guests</span>
+                <span className="vp-chip">From {venue.minimalPrice ?? 0}</span>
               </div>
 
-              <p className="vp-card-copy">Address: {venue.address || '--'}</p>
+              <p className="vp-card-copy" style={{ marginTop: '0.5rem' }}>📍 {venue.address || '--'}</p>
               {venue.companyName ? (
-                <p className="vp-card-copy">Company: {venue.companyName}</p>
+                <p className="vp-card-copy">🏢 {venue.companyName}</p>
               ) : null}
 
               {isOwner ? (

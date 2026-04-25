@@ -1,343 +1,101 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { makeDashStyles } from './dashboardPageStyles'
 
-const styles = `
-  .er-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .er-input,
-  .er-textarea {
-    width: 100%;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-    font: inherit;
-    box-sizing: border-box;
-  }
-
-  .er-input {
-    flex: 1;
-    min-width: 220px;
-    height: 2.75rem;
-    padding: 0 0.85rem;
-  }
-
-  .er-textarea {
-    min-height: 5rem;
-    padding: 0.8rem 0.85rem;
-    resize: vertical;
-  }
-
-  .er-input:focus,
-  .er-textarea:focus {
-    outline: none;
-    border-color: #1c1917;
-  }
-
-  .er-button {
-    height: 2.75rem;
-    padding: 0 1.15rem;
-    border: none;
-    background: #1c1917;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .er-button.secondary {
-    background: #fff;
-    border: 1px solid #e7e5e4;
-    color: #1c1917;
-  }
-
-  .er-status {
-    margin-bottom: 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .er-status.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .er-panel {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .er-panel-title {
-    margin: 0 0 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-  }
-
-  .er-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .er-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .er-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #78716c;
-  }
-
-  .er-table {
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
+const styles = makeDashStyles('er') + `
   .er-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1.2fr 160px;
-    gap: 1rem;
-    align-items: center;
-    padding: 0.95rem 1rem;
-    border-bottom: 1px solid #f5f5f4;
+    gap: 1rem; align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
   }
-
-  .er-row:last-child {
-    border-bottom: none;
-  }
-
-  .er-row.header {
-    background: #fafaf9;
-    padding: 0.6rem 1rem;
-  }
-
+  .er-row:last-child { border-bottom: none; }
+  .er-row:not(.header):hover { background: rgba(79,70,229,0.03); }
+  .er-row.header { background: #f8f7ff; padding: 0.7rem 1.25rem; }
   .er-head {
-    margin: 0;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #a8a29e;
+    margin: 0; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8;
   }
-
-  .er-main {
-    margin: 0 0 0.25rem;
-    font-size: 0.88rem;
-    font-weight: 600;
-  }
-
-  .er-copy {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #57534e;
-  }
-
-  .er-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 92px;
-    padding: 0.25rem 0.65rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-  }
-
-  .er-badge.pending {
-    background: #fffbeb;
-    color: #a16207;
-  }
-
-  .er-badge.approved {
-    background: #f0fdf4;
-    color: #166534;
-  }
-
-  .er-badge.rejected {
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .er-actions {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-  }
-
-  .er-inline {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-  }
-
+  .er-main { margin: 0 0 0.25rem; font-size: 0.9rem; font-weight: 700; color: #1e1b4b; }
+  .er-copy { margin: 0; font-size: 0.82rem; color: #64748b; }
+  .er-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 1rem; }
+  .er-inline { display: flex; gap: 0.4rem; flex-wrap: wrap; }
   .er-detail {
-    padding: 1rem;
-    background: #fafaf9;
+    padding: 1.25rem 1.5rem; background: rgba(79,70,229,0.03);
     border-top: 1px solid #f1f5f9;
   }
-
-  .er-detail-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .er-summary-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
+  .er-detail-stack { display: flex; flex-direction: column; gap: 1rem; }
+  .er-summary-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .er-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    background: #fff;
-    border: 1px solid #e7e5e4;
-    font-size: 0.76rem;
-    color: #57534e;
+    display: inline-flex; align-items: center; padding: 0.35rem 0.8rem;
+    border-radius: 999px; background: #f8f7ff;
+    border: 1.5px solid #e2e8f0; font-size: 0.76rem; color: #64748b; font-weight: 500;
   }
-
   .er-pill.strong {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #1d4ed8;
-    font-weight: 600;
+    background: rgba(79,70,229,0.08); border-color: rgba(79,70,229,0.2);
+    color: #4f46e5; font-weight: 700;
   }
-
-  .er-readable-grid,
-  .er-simple-grid {
+  .er-readable-grid, .er-simple-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.85rem;
   }
-
-  .er-change-card,
-  .er-simple-card {
-    padding: 0.95rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
+  .er-change-card, .er-simple-card {
+    padding: 1rem; border: 1.5px solid #e2e8f0;
+    background: #fff; border-radius: 12px;
+    transition: border-color 0.2s, background 0.2s;
   }
-
   .er-change-card.changed {
-    border-color: #bfdbfe;
-    background: #eff6ff;
+    border-color: rgba(79,70,229,0.3); background: rgba(79,70,229,0.04);
   }
-
-  .er-change-label,
-  .er-simple-label {
-    display: block;
-    margin-bottom: 0.35rem;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: #a8a29e;
+  .er-change-label, .er-simple-label {
+    display: block; margin-bottom: 0.35rem; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
   }
-
   .er-change-row {
-    display: grid;
-    grid-template-columns: 76px 1fr;
-    gap: 0.6rem;
-    margin-top: 0.5rem;
-    align-items: start;
+    display: grid; grid-template-columns: 76px 1fr;
+    gap: 0.6rem; margin-top: 0.5rem; align-items: start;
   }
-
   .er-change-key {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #78716c;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: 0.7rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.08em;
   }
-
-  .er-change-value,
-  .er-simple-value {
-    font-size: 0.84rem;
-    line-height: 1.6;
-    color: #1c1917;
-    word-break: break-word;
+  .er-change-value, .er-simple-value {
+    font-size: 0.875rem; line-height: 1.6; color: #1e1b4b; word-break: break-word;
+    font-weight: 500;
   }
-
   .er-change-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0.8rem;
-    padding: 0.28rem 0.65rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-top: 0.8rem; padding: 0.28rem 0.65rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
   }
-
   .er-change-status.changed {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: rgba(79,70,229,0.1); color: #4f46e5;
+    border: 1px solid rgba(79,70,229,0.2);
   }
-
   .er-change-status.same {
-    background: #f5f5f4;
-    color: #57534e;
+    background: #f1f5f9; color: #94a3b8;
+    border: 1px solid #e2e8f0;
   }
-
   .er-section-title {
-    margin: 0;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #1c1917;
+    margin: 0; font-size: 0.95rem; font-weight: 800;
+    color: #1e1b4b; letter-spacing: -0.02em;
   }
-
   .er-note {
-    padding: 0.85rem 1rem;
-    border: 1px dashed #d6d3d1;
-    background: #fff;
-    color: #78716c;
-    font-size: 0.82rem;
-    line-height: 1.6;
+    padding: 0.9rem 1.1rem; border: 1.5px dashed rgba(79,70,229,0.2);
+    background: rgba(79,70,229,0.04); color: #64748b;
+    font-size: 0.875rem; line-height: 1.6; border-radius: 10px;
   }
-
   .er-json {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 0.8rem;
-    line-height: 1.7;
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    font-size: 0.8rem; line-height: 1.7; color: #64748b;
   }
-
-  .er-empty {
-    padding: 2.5rem 1rem;
-    text-align: center;
-    color: #78716c;
-  }
-
   @media (max-width: 1100px) {
-    .er-grid,
-    .er-row {
-      grid-template-columns: 1fr;
-    }
-
-    .er-change-row {
-      grid-template-columns: 1fr;
-      gap: 0.25rem;
-    }
-
-    .er-row.header {
-      display: none;
-    }
+    .er-row { grid-template-columns: 1fr; }
+    .er-row.header { display: none; }
+    .er-change-row { grid-template-columns: 1fr; gap: 0.25rem; }
   }
 `
 
@@ -822,7 +580,7 @@ function EditRequests({ session }) {
 
       <div className="er-toolbar">
         <input
-          className="er-input"
+          className="er-input er-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search venue edit requests by owner, status, or ID..."
@@ -847,7 +605,7 @@ function EditRequests({ session }) {
 
         {filteredRequests.length === 0 ? (
           <div className="er-empty">
-            {loading ? 'Loading venue edit requests...' : 'No venue edit requests were returned by the backend.'}
+            {loading ? 'Loading edit requests...' : 'No venue edit requests found.'}
           </div>
         ) : (
           filteredRequests.map((request) => {
@@ -856,50 +614,40 @@ function EditRequests({ session }) {
 
             return (
               <div key={request.id}>
-                <div className="er-row">
+                <div
+                  className="er-row"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => toggleExpanded(request)}
+                >
                   <div>
-                    <p className="er-main">Request #{request.id}</p>
-                    <p className="er-copy">Target ID: {request.targetId ?? '--'}</p>
+                    <p className="er-main">#{request.id}</p>
+                    {request.targetId ? <p className="er-copy">Venue #{request.targetId}</p> : null}
                   </div>
-
                   <div className="er-copy">{request.ownerName || '--'}</div>
                   <div className="er-copy">{formatRequestType(request.type)}</div>
                   <div className="er-copy">{formatDate(request.createdAt)}</div>
-
                   <div>
                     {isAdmin && status === 'pending' ? (
                       <div className="er-inline">
                         <button
                           className="er-button secondary"
-                          onClick={() => handleDecision(request.id, 'approve')}
+                          style={{ height: '2.25rem', padding: '0 0.85rem', fontSize: '0.8rem' }}
+                          onClick={(event) => { event.stopPropagation(); handleDecision(request.id, 'approve') }}
                           disabled={busyId === request.id}
                         >
                           Approve
                         </button>
                         <button
-                          className="er-button secondary"
-                          onClick={() => handleDecision(request.id, 'reject')}
+                          className="er-button danger"
+                          style={{ height: '2.25rem', padding: '0 0.85rem', fontSize: '0.8rem' }}
+                          onClick={(event) => { event.stopPropagation(); handleDecision(request.id, 'reject') }}
                           disabled={busyId === request.id}
                         >
                           Reject
                         </button>
-                        <button
-                          className="er-button secondary"
-                          onClick={() => toggleExpanded(request)}
-                        >
-                          {isExpanded ? 'Hide' : 'View'}
-                        </button>
                       </div>
                     ) : (
-                      <div className="er-inline">
-                        <span className={`er-badge ${status}`}>{request.status}</span>
-                        <button
-                          className="er-button secondary"
-                          onClick={() => toggleExpanded(request)}
-                        >
-                          {isExpanded ? 'Hide' : 'View'}
-                        </button>
-                      </div>
+                      <span className={`er-badge ${status}`}>{request.status}</span>
                     )}
                   </div>
                 </div>
@@ -907,14 +655,6 @@ function EditRequests({ session }) {
                 {isExpanded ? (
                   <div className="er-detail">
                     {renderRequestDetails(request)}
-                    {request.rejectionReason ? (
-                      <>
-                        <p className="er-main" style={{ marginTop: '1rem' }}>
-                          Rejection Reason
-                        </p>
-                        <p className="er-copy">{request.rejectionReason}</p>
-                      </>
-                    ) : null}
                   </div>
                 ) : null}
               </div>

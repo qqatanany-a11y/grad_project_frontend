@@ -7,159 +7,53 @@ import {
   validateName,
   validatePhone,
 } from '../../lib/validation'
+import { makeDashStyles } from './dashboardPageStyles'
 
-const styles = `
-  .up-toolbar,
-  .up-inline {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .up-input {
-    flex: 1;
-    min-width: 220px;
-    height: 2.75rem;
-    padding: 0 0.85rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-    font: inherit;
-  }
-
-  .up-input:focus {
-    outline: none;
-    border-color: #1c1917;
-  }
-
-  .up-button {
-    height: 2.75rem;
-    padding: 0 1.1rem;
-    border: none;
-    background: #1c1917;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .up-button.secondary {
-    background: #fff;
-    border: 1px solid #e7e5e4;
-    color: #1c1917;
-  }
-
-  .up-status {
-    margin-bottom: 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .up-status.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
+const styles = makeDashStyles('up') + `
   .up-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
   }
-
   .up-card {
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    padding: 1rem;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    border-radius: 16px; padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(79,70,229,0.07);
+    animation: upFadeUp 0.4s ease both;
   }
-
   .up-card-title {
-    margin: 0 0 1rem;
-    font-size: 0.95rem;
-    font-weight: 600;
+    margin: 0 0 1.25rem; font-size: 1rem; font-weight: 800;
+    color: #1e1b4b; letter-spacing: -0.02em;
   }
-
-  .up-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
+  .up-list { display: flex; flex-direction: column; gap: 0.6rem; }
   .up-row {
-    padding: 0.9rem;
-    border: 1px solid #f1f5f9;
-    background: #fafaf9;
-    cursor: pointer;
+    padding: 1rem 1.1rem; border: 1.5px solid #e2e8f0;
+    background: #fafbff; border-radius: 12px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
   }
-
+  .up-row:hover {
+    background: rgba(79,70,229,0.04);
+    border-color: rgba(79,70,229,0.2);
+  }
   .up-row.active {
-    border-color: #1c1917;
-    background: #fff;
+    border-color: #4f46e5;
+    background: rgba(79,70,229,0.06);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
   }
-
-  .up-name {
-    margin: 0 0 0.25rem;
-    font-size: 0.88rem;
-    font-weight: 600;
-  }
-
-  .up-copy {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #57534e;
-  }
-
-  .up-badges {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 0.5rem;
-  }
-
+  .up-name { margin: 0 0 0.2rem; font-size: 0.9rem; font-weight: 700; color: #1e1b4b; }
+  .up-copy { margin: 0; font-size: 0.82rem; color: #64748b; }
+  .up-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
   .up-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: #f5f5f4;
-    color: #57534e;
+    display: inline-flex; align-items: center;
+    padding: 0.22rem 0.6rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
+    background: rgba(79,70,229,0.08); color: #4f46e5;
+    border: 1px solid rgba(79,70,229,0.15);
   }
-
-  .up-empty {
-    padding: 2rem 1rem;
-    text-align: center;
-    color: #78716c;
-  }
-
-  .up-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin-bottom: 0.9rem;
-  }
-
-  .up-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #78716c;
-  }
-
-  .up-actions {
-    display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-  }
-
+  .up-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.9rem; }
+  .up-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1.25rem; }
   @media (max-width: 980px) {
-    .up-grid {
-      grid-template-columns: 1fr;
-    }
+    .up-grid { grid-template-columns: 1fr; }
   }
 `
 
@@ -370,12 +264,12 @@ function Users({ session }) {
 
       <div className="up-toolbar">
         <input
-          className="up-input"
+          className="up-input up-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Filter loaded users by name, email, or phone..."
         />
-        <button className="up-button" onClick={() => loadUsers(selectedUser?.id)} disabled={loading}>
+        <button className="up-button secondary" onClick={() => loadUsers(selectedUser?.id)} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
@@ -465,12 +359,12 @@ function Users({ session }) {
 
               <div className="up-actions">
                 <button className="up-button" type="submit" disabled={busyAction === 'update'}>
-                  {busyAction === 'update' ? 'Saving...' : 'Update'}
+                  {busyAction === 'update' ? 'Saving...' : 'Update User'}
                 </button>
               </div>
             </form>
           ) : (
-            <div className="up-empty">Select a user to edit or manage it.</div>
+            <div className="up-empty">Select a user from the list to edit.</div>
           )}
         </section>
       </div>

@@ -1,134 +1,53 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { makeDashStyles } from './dashboardPageStyles'
 
-const styles = `
-  .cp-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .cp-input {
-    flex: 1;
-    min-width: 240px;
-    height: 2.75rem;
-    padding: 0 0.85rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-    font: inherit;
-  }
-
-  .cp-input:focus {
-    outline: none;
-    border-color: #1c1917;
-  }
-
-  .cp-button {
-    height: 2.75rem;
-    padding: 0 1.2rem;
-    border: none;
-    background: #1c1917;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .cp-status {
-    margin-bottom: 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
-
-  .cp-status.error {
-    border-color: #fecaca;
-    background: #fef2f2;
-    color: #991b1b;
-  }
-
-  .cp-list {
-    display: grid;
-    gap: 1rem;
-  }
-
+const styles = makeDashStyles('cp') + `
   .cp-card {
-    border: 1px solid #e7e5e4;
-    background: #fff;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(79,70,229,0.07);
+    transition: box-shadow 0.2s;
+    animation: cpFadeUp 0.4s ease both;
+    overflow: hidden;
   }
-
+  .cp-card:hover { box-shadow: 0 8px 28px rgba(79,70,229,0.12); }
   .cp-card-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem;
-    cursor: pointer;
+    display: flex; justify-content: space-between;
+    gap: 1rem; padding: 1.25rem 1.5rem; cursor: pointer;
+    transition: background 0.15s;
   }
-
+  .cp-card-head:hover { background: rgba(79,70,229,0.03); }
   .cp-card-title {
-    margin: 0 0 0.3rem;
-    font-size: 0.95rem;
-    font-weight: 600;
+    margin: 0 0 0.3rem; font-size: 1rem; font-weight: 800;
+    color: #1e1b4b; letter-spacing: -0.02em;
   }
-
-  .cp-card-copy {
-    margin: 0;
-    font-size: 0.82rem;
-    color: #57534e;
-  }
-
+  .cp-card-copy { margin: 0; font-size: 0.875rem; color: #64748b; }
   .cp-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.6rem;
-    border-radius: 999px;
-    background: #f5f5f4;
-    color: #57534e;
-    font-size: 0.72rem;
-    font-weight: 600;
+    display: inline-flex; align-items: center;
+    padding: 0.3rem 0.8rem; border-radius: 999px;
+    background: rgba(79,70,229,0.08); color: #4f46e5;
+    font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+    border: 1px solid rgba(79,70,229,0.16);
   }
-
-  .cp-expand {
-    padding: 0 1rem 1rem;
-  }
-
+  .cp-expand { padding: 0 1.5rem 1.5rem; }
   .cp-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.85rem;
+    margin-bottom: 1rem;
   }
-
   .cp-detail {
-    padding: 0.9rem;
-    border: 1px solid #f1f5f9;
-    background: #fafaf9;
+    padding: 1rem; border: 1.5px solid #e2e8f0;
+    background: #f8f7ff; border-radius: 12px;
   }
-
   .cp-detail label {
-    display: block;
-    margin-bottom: 0.3rem;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #a8a29e;
+    display: block; margin-bottom: 0.3rem; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
   }
-
-  .cp-venues {
-    margin-top: 1rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .cp-empty {
-    padding: 2.5rem 1rem;
-    text-align: center;
-    color: #78716c;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-  }
+  .cp-detail span { font-size: 0.875rem; color: #1e1b4b; font-weight: 500; }
+  .cp-venues { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .cp-list { display: grid; gap: 1rem; }
 `
 
 function normalizeCompany(company) {
@@ -205,12 +124,12 @@ function Companies({ session }) {
 
       <div className="cp-toolbar">
         <input
-          className="cp-input"
+          className="cp-input cp-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search companies by name, email, or location..."
         />
-        <button className="cp-button" onClick={loadCompanies} disabled={loading}>
+        <button className="cp-button secondary" onClick={loadCompanies} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
@@ -223,7 +142,7 @@ function Companies({ session }) {
 
       {filteredCompanies.length === 0 ? (
         <div className="cp-empty">
-          {loading ? 'Loading companies...' : 'No companies were returned by the backend.'}
+          {loading ? 'Loading companies...' : 'No companies found.'}
         </div>
       ) : (
         <div className="cp-list">
