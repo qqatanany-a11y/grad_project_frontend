@@ -1,67 +1,160 @@
 import { useState } from 'react'
 import HomePage from '../pages/Home/HomePage'
-import AddHallRequest from '../pages/Public/AddHallRequest'
+import CompanyRegistration from '../pages/Public/CompanyRegistration'
 import AuthPage from '../pages/Auth/AuthPage'
 import DashboardLayout from '../pages/Dashboard/DashboardLayout'
-import HallRequests from '../pages/Dashboard/HallRequests'
-import EditHalls from '../pages/Dashboard/EditHalls'
+import CompanyRequests from '../pages/Dashboard/CompanyRequests'
+import VenueRequests from '../pages/Dashboard/VenueRequests'
+import Venues from '../pages/Dashboard/Venues'
 import Companies from '../pages/Dashboard/Companies'
 import Bookings from '../pages/Dashboard/Bookings'
 import Users from '../pages/Dashboard/Users'
-import ClientsOverview from '../pages/Dashboard/ClientsOverview'
+import EditRequests from '../pages/Dashboard/EditRequests'
+import {
+  clearAuthSession,
+  persistAuthSession,
+  readAuthSession,
+} from '../lib/authSession'
+
+function getAllowedPagesForRole(role) {
+  if (role === 'Admin') {
+    return ['owner-requests', 'venue-requests', 'venues', 'companies', 'users', 'edit-requests']
+  }
+
+  if (role === 'Owner') {
+    return ['venues', 'bookings', 'edit-requests']
+  }
+
+  if (role === 'User') {
+    return ['bookings']
+  }
+
+  return ['venues']
+}
+
+function getDefaultPageForRole(role) {
+  if (role === 'Admin') {
+    return 'owner-requests'
+  }
+
+  if (role === 'Owner') {
+    return 'venues'
+  }
+
+  if (role === 'User') {
+    return 'bookings'
+  }
+
+  return 'venues'
+}
+
+function resolvePageForRole(role, page) {
+  return getAllowedPagesForRole(role).includes(page)
+    ? page
+    : getDefaultPageForRole(role)
+}
 
 function App() {
-  const [view, setView] = useState('home')
-  const [currentPage, setCurrentPage] = useState('hall-requests')
-  const [user, setUser] = useState(null)
+  const initialSession = readAuthSession()
+  const [session, setSession] = useState(initialSession)
+  const [view, setView] = useState(initialSession ? 'dashboard' : 'home')
+  const [currentPage, setCurrentPage] = useState(
+    getDefaultPageForRole(initialSession?.role),
+  )
 
-  const handleSignIn = (userData) => {
-    setUser(userData)
+  const handleSignIn = (authUser) => {
+    persistAuthSession(authUser)
+    setSession(authUser)
+    setCurrentPage(getDefaultPageForRole(authUser?.role))
     setView('dashboard')
   }
 
   const handleLogout = () => {
-    setUser(null)
+    clearAuthSession()
+    setSession(null)
+    setCurrentPage(getDefaultPageForRole())
     setView('auth')
-    setCurrentPage('hall-requests')
   }
 
   const handleGoHome = () => {
-    setUser(null)
     setView('home')
-    setCurrentPage('hall-requests')
   }
 
   const navigate = (to) => {
-    if (to === 'home') { setView('home'); return }
-    if (to === 'add-hall') { setView('add-hall'); return }
-    if (to === 'auth') { setView('auth'); return }
+    if (to === 'home') {
+      setView('home')
+      return
+    }
+
+    if (to === 'add-hall' || to === 'owner-request') {
+      setView('owner-request')
+      return
+    }
+
+    if (to === 'auth') {
+      setView('auth')
+      return
+    }
+
+    if (!session) {
+      setView('auth')
+      return
+    }
+
     setView('dashboard')
-    setCurrentPage(to)
+    setCurrentPage(resolvePageForRole(session?.role, to))
   }
 
-  if (view === 'home') return <HomePage onNavigate={navigate} />
-  if (view === 'add-hall') return <AddHallRequest onNavigate={navigate} />
-  if (view === 'auth') return <AuthPage onSignIn={handleSignIn} onBack={() => setView('home')} />
+  if (view === 'home') {
+    return <HomePage onNavigate={navigate} session={session} />
+  }
+
+  if (view === 'owner-request') {
+    return <CompanyRegistration onNavigate={navigate} />
+  }
+
+  if (view === 'auth' || !session) {
+    return (
+      <AuthPage
+        onSignIn={handleSignIn}
+        onBack={() => setView(session ? 'dashboard' : 'home')}
+      />
+    )
+  }
+
+  const resolvedPage = resolvePageForRole(session?.role, currentPage)
+
+  const handleDashboardNavigate = (nextPage) => {
+    setCurrentPage(resolvePageForRole(session?.role, nextPage))
+  }
 
   const renderPage = () => {
-    switch (currentPage) {
-      case 'edit-halls': return <EditHalls />
-      case 'companies': return <Companies />
-      case 'bookings': return <Bookings />
-      case 'users': return <Users />
-      case 'clients-overview': return <ClientsOverview />
-      default: return <HallRequests />
+    switch (resolvedPage) {
+      case 'companies':
+        return <Companies session={session} />
+      case 'bookings':
+        return <Bookings session={session} />
+      case 'venue-requests':
+        return <VenueRequests session={session} />
+      case 'users':
+        return <Users session={session} />
+      case 'edit-requests':
+        return <EditRequests session={session} />
+      case 'venues':
+        return <Venues session={session} />
+      case 'owner-requests':
+      default:
+        return <CompanyRequests session={session} />
     }
   }
 
   return (
     <DashboardLayout
-      currentPage={currentPage}
-      onNavigate={setCurrentPage}
+      currentPage={resolvedPage}
+      onNavigate={handleDashboardNavigate}
       onLogout={handleLogout}
       onGoHome={handleGoHome}
-      user={user}
+      user={session}
     >
       {renderPage()}
     </DashboardLayout>

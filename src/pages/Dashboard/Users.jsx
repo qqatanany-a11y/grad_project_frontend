@@ -1,379 +1,478 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { apiRequest } from '../../lib/apiClient'
+import {
+  sanitizeNameInput,
+  sanitizePhoneInput,
+  validateEmail,
+  validateName,
+  validatePhone,
+} from '../../lib/validation'
 
 const styles = `
-  .us-toolbar {
+  .up-toolbar,
+  .up-inline {
     display: flex;
-    align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
     flex-wrap: wrap;
-  }
-
-  .us-search {
-    flex: 1;
-    min-width: 200px;
-    height: 2.5rem;
-    padding: 0 0.875rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font-size: 0.85rem;
-    color: #1c1917;
-    font-family: inherit;
-    font-weight: 300;
-    outline: none;
-    border-radius: 2px;
-    transition: border-color 0.15s;
-  }
-  .us-search:focus { border-color: #1c1917; }
-
-  .us-role-select {
-    height: 2.5rem;
-    padding: 0 0.875rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font-size: 0.82rem;
-    color: #78716c;
-    font-family: inherit;
-    outline: none;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .us-role-select:focus { border-color: #1c1917; }
-
-  .us-add-btn {
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    background: #1c1917;
-    color: #fff;
-    border: none;
-    font-size: 0.82rem;
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.15s;
-    white-space: nowrap;
-  }
-  .us-add-btn:hover { background: #292524; }
-
-  .us-add-panel {
-    background: #fafaf9;
-    border: 1px solid #e7e5e4;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .us-panel-title {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: #1c1917;
-    margin: 0 0 1.25rem;
-  }
-
-  .us-form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
     margin-bottom: 1rem;
   }
 
-  .us-field {
+  .up-input {
+    flex: 1;
+    min-width: 220px;
+    height: 2.75rem;
+    padding: 0 0.85rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #1c1917;
+    font: inherit;
+  }
+
+  .up-input:focus {
+    outline: none;
+    border-color: #1c1917;
+  }
+
+  .up-button {
+    height: 2.75rem;
+    padding: 0 1.1rem;
+    border: none;
+    background: #1c1917;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .up-button.secondary {
+    background: #fff;
+    border: 1px solid #e7e5e4;
+    color: #1c1917;
+  }
+
+  .up-status {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+  }
+
+  .up-status.error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  .up-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1rem;
+  }
+
+  .up-card {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    padding: 1rem;
+  }
+
+  .up-card-title {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .up-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .up-row {
+    padding: 0.9rem;
+    border: 1px solid #f1f5f9;
+    background: #fafaf9;
+    cursor: pointer;
+  }
+
+  .up-row.active {
+    border-color: #1c1917;
+    background: #fff;
+  }
+
+  .up-name {
+    margin: 0 0 0.25rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .up-copy {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #57534e;
+  }
+
+  .up-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  .up-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #f5f5f4;
+    color: #57534e;
+  }
+
+  .up-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #78716c;
+  }
+
+  .up-field {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    margin-bottom: 0.9rem;
   }
 
-  .us-label {
-    font-size: 0.68rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #78716c;
-  }
-
-  .us-input, .us-select {
-    height: 2.75rem;
-    padding: 0 0.875rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font-size: 0.85rem;
-    color: #1c1917;
-    font-family: inherit;
-    font-weight: 300;
-    outline: none;
-    border-radius: 0;
-    transition: border-color 0.15s;
-    box-sizing: border-box;
-    width: 100%;
-  }
-  .us-input:focus, .us-select:focus { border-color: #1c1917; }
-
-  .us-panel-actions { display: flex; gap: 0.625rem; }
-
-  .us-btn-primary {
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    background: #1c1917;
-    color: #fff;
-    border: none;
-    font-size: 0.82rem;
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: background 0.15s;
-  }
-  .us-btn-primary:hover { background: #292524; }
-
-  .us-btn-secondary {
-    height: 2.5rem;
-    padding: 0 1.25rem;
-    background: #fff;
-    color: #78716c;
-    border: 1px solid #e7e5e4;
-    font-size: 0.82rem;
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: border-color 0.15s;
-  }
-  .us-btn-secondary:hover { border-color: #1c1917; color: #1c1917; }
-
-  .us-count {
-    font-size: 0.8rem;
-    color: #a8a29e;
-    font-weight: 300;
-    margin-bottom: 1rem;
-  }
-
-  .us-table {
-    background: #fff;
-    border: 1px solid #e7e5e4;
-    overflow: hidden;
-  }
-
-  .us-row {
-    display: grid;
-    grid-template-columns: 2fr 2fr 1fr 1fr 50px;
-    align-items: center;
-    padding: 0.875rem 1.25rem;
-    gap: 1rem;
-    border-bottom: 1px solid #e7e5e4;
-    transition: background 0.1s;
-  }
-  .us-row:last-child { border-bottom: none; }
-  .us-row:not(.header):hover { background: #fafaf9; }
-  .us-row.header { background: #fafaf9; padding: 0.6rem 1.25rem; }
-
-  .us-col-label {
-    font-size: 0.68rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: #a8a29e;
-    margin: 0;
-  }
-
-  .us-user-row {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-  }
-
-  .us-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #e7e5e4;
-    color: #78716c;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .up-label {
     font-size: 0.7rem;
-    font-weight: 500;
-    flex-shrink: 0;
-  }
-
-  .us-name {
-    font-size: 0.875rem;
-    font-weight: 400;
-    color: #1c1917;
-    margin: 0;
-  }
-
-  .us-cell {
-    font-size: 0.82rem;
-    color: #78716c;
-    font-weight: 300;
-  }
-
-  .us-role-badge {
-    display: inline-block;
-    font-size: 0.68rem;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    padding: 0.2rem 0.55rem;
-    border-radius: 2px;
+    color: #78716c;
   }
-  .us-role-badge.admin { background: #f0fdf4; color: #16a34a; }
-  .us-role-badge.manager { background: #eff6ff; color: #2563eb; }
-  .us-role-badge.staff { background: #fafaf9; color: #78716c; }
 
-  .us-del-btn {
-    background: none;
-    border: none;
-    color: #d4ceca;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 2px;
-    transition: color 0.1s;
+  .up-actions {
     display: flex;
-    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
   }
-  .us-del-btn:hover { color: #ef4444; }
 
-  .us-empty {
-    padding: 3rem;
-    text-align: center;
-    color: #a8a29e;
-    font-size: 0.85rem;
-    font-weight: 300;
+  @media (max-width: 980px) {
+    .up-grid {
+      grid-template-columns: 1fr;
+    }
   }
 `
 
-const STORAGE_KEY = 'dashboard_users'
-
-const seedUsers = [
-  { id: 1, name: 'Ahmed Al-Rashid', email: 'ahmed@example.com', role: 'Admin', joined: '2026-01-15' },
-  { id: 2, name: 'Sara Mohammed', email: 'sara@example.com', role: 'Manager', joined: '2026-02-01' },
-  { id: 3, name: 'Omar Al-Farsi', email: 'omar@example.com', role: 'Staff', joined: '2026-02-20' },
-  { id: 4, name: 'Lena Hassan', email: 'lena@example.com', role: 'Staff', joined: '2026-03-05' },
-]
-
-function load() {
-  try { const v = localStorage.getItem(STORAGE_KEY); if (v) return JSON.parse(v) } catch {}
-  return seedUsers
+const emptyForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phoneNumber: '',
 }
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+function buildDisplayName(user) {
+  return [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Unnamed user'
 }
 
-function initials(name) {
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+function formatDate(value) {
+  if (!value) return '--'
+
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
-const ROLES = ['All', 'Admin', 'Manager', 'Staff']
+function getUserValidationMessage(values) {
+  return (
+    validateName(values.firstName, 'First name', { required: false }) ||
+    validateName(values.lastName, 'Last name', { required: false }) ||
+    validateEmail(values.email, { required: false }) ||
+    validatePhone(values.phoneNumber, 'Phone number', { required: false })
+  )
+}
 
-function Users() {
-  const [users, setUsers] = useState(load)
+function Users({ session }) {
+  const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState('All')
-  const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', role: 'Staff', joined: '' })
+  const [lookupEmail, setLookupEmail] = useState('')
+  const [lookupId, setLookupId] = useState('')
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [formValues, setFormValues] = useState(emptyForm)
+  const [loading, setLoading] = useState(true)
+  const [busyAction, setBusyAction] = useState('')
+  const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
 
-  const save = (updated) => { setUsers(updated); localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) }
-
-  const addUser = () => {
-    if (!form.name.trim() || !form.email.trim()) return
-    save([...users, { ...form, id: Date.now(), joined: form.joined || new Date().toISOString().slice(0, 10) }])
-    setForm({ name: '', email: '', role: 'Staff', joined: '' })
-    setShowAdd(false)
+  const applySelectedUser = (user) => {
+    setSelectedUser(user)
+    setFormValues({
+      firstName: user?.firstName ?? '',
+      lastName: user?.lastName ?? '',
+      email: user?.email ?? '',
+      phoneNumber: user?.phoneNumber ?? '',
+    })
   }
 
-  const deleteUser = (id) => save(users.filter(u => u.id !== id))
+  const loadUsers = async (preferredUserId) => {
+    setLoading(true)
 
-  const filtered = users.filter(u => {
-    const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-    const matchRole = roleFilter === 'All' || u.role === roleFilter
-    return matchSearch && matchRole
-  })
+    try {
+      const data = await apiRequest('/api/admin/users', {
+        token: session?.token,
+      })
+
+      const nextUsers = Array.isArray(data) ? data : []
+      setUsers(nextUsers)
+
+      const nextSelectedUser =
+        nextUsers.find((user) => user.id === preferredUserId) ??
+        nextUsers.find((user) => user.id === selectedUser?.id) ??
+        nextUsers[0] ??
+        null
+
+      applySelectedUser(nextSelectedUser)
+      setFeedback({ tone: 'idle', message: '' })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to load users.',
+      })
+      setUsers([])
+      applySelectedUser(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (session?.role === 'Admin') {
+      loadUsers()
+    }
+  }, [session?.role, session?.token])
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return users.filter((user) => {
+      if (!query) return true
+
+      return (
+        buildDisplayName(user).toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        user.phoneNumber?.toLowerCase().includes(query)
+      )
+    })
+  }, [search, users])
+
+  const lookupUser = async (path) => {
+    setBusyAction('lookup')
+
+    try {
+      const user = await apiRequest(path, { token: session?.token })
+      applySelectedUser(user)
+      setFeedback({
+        tone: 'idle',
+        message: `Loaded user #${user?.id ?? ''}.`,
+      })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Lookup failed.',
+      })
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  const handleLookupEmail = async () => {
+    if (!lookupEmail.trim()) {
+      setFeedback({ tone: 'error', message: 'Enter an email to search.' })
+      return
+    }
+
+    const emailError = validateEmail(lookupEmail)
+    if (emailError) {
+      setFeedback({ tone: 'error', message: emailError })
+      return
+    }
+
+    await lookupUser(`/api/admin/users/email/${encodeURIComponent(lookupEmail.trim())}`)
+  }
+
+  const handleLookupId = async () => {
+    const userId = Number(lookupId)
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      setFeedback({ tone: 'error', message: 'Enter a valid user ID.' })
+      return
+    }
+
+    await lookupUser(`/api/admin/users/${userId}`)
+  }
+
+  const handleUpdate = async (event) => {
+    event.preventDefault()
+
+    if (!selectedUser?.id) {
+      setFeedback({ tone: 'error', message: 'Select a user first.' })
+      return
+    }
+
+    const validationMessage = getUserValidationMessage(formValues)
+    if (validationMessage) {
+      setFeedback({ tone: 'error', message: validationMessage })
+      return
+    }
+
+    setBusyAction('update')
+
+    try {
+      await apiRequest(`/api/admin/users/${selectedUser.id}`, {
+        method: 'PUT',
+        token: session?.token,
+        body: formValues,
+      })
+
+      setFeedback({
+        tone: 'idle',
+        message: `User #${selectedUser.id} updated successfully.`,
+      })
+      await loadUsers(selectedUser.id)
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Update failed.',
+      })
+    } finally {
+      setBusyAction('')
+    }
+  }
+
+  const handleChange = ({ target: { name, value } }) => {
+    const nextValue =
+      name === 'firstName' || name === 'lastName'
+        ? sanitizeNameInput(value)
+        : name === 'phoneNumber'
+          ? sanitizePhoneInput(value)
+          : value
+
+    setFormValues((currentValues) => ({ ...currentValues, [name]: nextValue }))
+  }
+
+  if (session?.role !== 'Admin') {
+    return <div className="up-status error">This page is available for admins only.</div>
+  }
 
   return (
     <>
       <style>{styles}</style>
 
-      <div className="us-toolbar">
+      <div className="up-toolbar">
         <input
-          type="text" className="us-search" placeholder="Search users..."
-          value={search} onChange={e => setSearch(e.target.value)}
+          className="up-input"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Filter loaded users by name, email, or phone..."
         />
-        <select className="us-role-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-          {ROLES.map(r => <option key={r}>{r}</option>)}
-        </select>
-        <button className="us-add-btn" onClick={() => setShowAdd(v => !v)}>
-          {showAdd ? 'Cancel' : '+ Add User'}
+        <button className="up-button" onClick={() => loadUsers(selectedUser?.id)} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
-      {showAdd && (
-        <div className="us-add-panel">
-          <p className="us-panel-title">New User</p>
-          <div className="us-form-grid">
-            <div className="us-field">
-              <label className="us-label">Full Name</label>
-              <input className="us-input" value={form.name}
-                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="User's full name" />
-            </div>
-            <div className="us-field">
-              <label className="us-label">Email</label>
-              <input className="us-input" type="email" value={form.email}
-                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="email@example.com" />
-            </div>
-            <div className="us-field">
-              <label className="us-label">Role</label>
-              <select className="us-select" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                <option>Admin</option>
-                <option>Manager</option>
-                <option>Staff</option>
-              </select>
-            </div>
-            <div className="us-field">
-              <label className="us-label">Join Date</label>
-              <input className="us-input" type="date" value={form.joined}
-                onChange={e => setForm(p => ({ ...p, joined: e.target.value }))} />
-            </div>
-          </div>
-          <div className="us-panel-actions">
-            <button className="us-btn-primary" onClick={addUser}>Add User</button>
-            <button className="us-btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-          </div>
+      <div className="up-inline">
+        <input
+          className="up-input"
+          type="email"
+          value={lookupEmail}
+          onChange={(event) => setLookupEmail(event.target.value)}
+          placeholder="Lookup user by email..."
+        />
+        <button className="up-button secondary" onClick={handleLookupEmail} disabled={busyAction === 'lookup'}>
+          Search Email
+        </button>
+
+        <input
+          className="up-input"
+          value={lookupId}
+          onChange={(event) => setLookupId(event.target.value)}
+          placeholder="Lookup user by ID..."
+        />
+        <button className="up-button secondary" onClick={handleLookupId} disabled={busyAction === 'lookup'}>
+          Search ID
+        </button>
+      </div>
+
+      {feedback.message ? (
+        <div className={`up-status${feedback.tone === 'error' ? ' error' : ''}`}>
+          {feedback.message}
         </div>
-      )}
+      ) : null}
 
-      <p className="us-count">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</p>
+      <div className="up-grid">
+        <section className="up-card">
+          <p className="up-card-title">Users</p>
 
-      <div className="us-table">
-        <div className="us-row header">
-          <p className="us-col-label">Name</p>
-          <p className="us-col-label">Email</p>
-          <p className="us-col-label">Role</p>
-          <p className="us-col-label">Joined</p>
-          <p className="us-col-label"></p>
-        </div>
-
-        {filtered.length === 0 && <div className="us-empty">No users found.</div>}
-
-        {filtered.map(u => (
-          <div key={u.id} className="us-row">
-            <div className="us-user-row">
-              <div className="us-avatar">{initials(u.name)}</div>
-              <p className="us-name">{u.name}</p>
+          {filteredUsers.length === 0 ? (
+            <div className="up-empty">
+              {loading ? 'Loading users...' : 'No users found.'}
             </div>
-            <span className="us-cell">{u.email}</span>
-            <span className={`us-role-badge ${u.role.toLowerCase()}`}>{u.role}</span>
-            <span className="us-cell">{formatDate(u.joined)}</span>
-            <button className="us-del-btn" onClick={() => deleteUser(u.id)}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4">
-                <path d="M2 3.5h10M5.5 3.5V2.5h3V3.5M5 6l.5 5M9 6l-.5 5" strokeLinecap="round" />
-                <path d="M3 3.5l.8 8a.5.5 0 0 0 .5.5h5.4a.5.5 0 0 0 .5-.5l.8-8" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        ))}
+          ) : (
+            <div className="up-list">
+              {filteredUsers.map((user) => (
+                <article
+                  key={user.id}
+                  className={`up-row${selectedUser?.id === user.id ? ' active' : ''}`}
+                  onClick={() => applySelectedUser(user)}
+                >
+                  <p className="up-name">{buildDisplayName(user)}</p>
+                  <p className="up-copy">{user.email || '--'}</p>
+                  <div className="up-badges">
+                    <span className="up-badge">#{user.id}</span>
+                    <span className="up-badge">{user.phoneNumber || 'No phone'}</span>
+                    <span className="up-badge">Joined {formatDate(user.createdAt)}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="up-card">
+          <p className="up-card-title">Selected User</p>
+
+          {selectedUser ? (
+            <form onSubmit={handleUpdate}>
+              <div className="up-field">
+                <label className="up-label">First Name</label>
+                <input className="up-input" name="firstName" value={formValues.firstName} onChange={handleChange} />
+              </div>
+
+              <div className="up-field">
+                <label className="up-label">Last Name</label>
+                <input className="up-input" name="lastName" value={formValues.lastName} onChange={handleChange} />
+              </div>
+
+              <div className="up-field">
+                <label className="up-label">Email</label>
+                <input className="up-input" name="email" type="email" value={formValues.email} onChange={handleChange} />
+              </div>
+
+              <div className="up-field">
+                <label className="up-label">Phone Number</label>
+                <input className="up-input" name="phoneNumber" inputMode="numeric" maxLength={10} value={formValues.phoneNumber} onChange={handleChange} />
+              </div>
+
+              <div className="up-actions">
+                <button className="up-button" type="submit" disabled={busyAction === 'update'}>
+                  {busyAction === 'update' ? 'Saving...' : 'Update'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="up-empty">Select a user to edit or manage it.</div>
+          )}
+        </section>
       </div>
     </>
   )

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { apiRequest } from '../../lib/apiClient'
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -12,7 +13,6 @@ const styles = `
     scroll-behavior: smooth;
   }
 
-  /* ─── Navbar ─── */
   .hp-nav {
     position: fixed;
     top: 0;
@@ -89,9 +89,9 @@ const styles = `
     transition: background 0.15s;
     letter-spacing: 0.02em;
   }
+
   .hp-login-btn:hover { background: #292524; }
 
-  /* ─── Hero ─── */
   .hp-hero {
     min-height: 100vh;
     display: grid;
@@ -103,7 +103,7 @@ const styles = `
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 5rem 5rem 5rem 5rem;
+    padding: 5rem;
   }
 
   .hp-hero-badge {
@@ -143,7 +143,7 @@ const styles = `
     color: #78716c;
     line-height: 1.7;
     margin-bottom: 2.5rem;
-    max-width: 400px;
+    max-width: 460px;
   }
 
   .hp-hero-cta {
@@ -166,6 +166,7 @@ const styles = `
     transition: background 0.15s;
     letter-spacing: 0.02em;
   }
+
   .hp-cta-primary:hover { background: #292524; }
 
   .hp-cta-secondary {
@@ -181,6 +182,7 @@ const styles = `
     border-radius: 4px;
     transition: border-color 0.15s, background 0.1s;
   }
+
   .hp-cta-secondary:hover { border-color: #1c1917; background: #fafaf9; }
 
   .hp-hero-stats {
@@ -189,6 +191,7 @@ const styles = `
     margin-top: 3rem;
     padding-top: 2rem;
     border-top: 1px solid #e7e5e4;
+    flex-wrap: wrap;
   }
 
   .hp-stat { display: flex; flex-direction: column; gap: 3px; }
@@ -244,11 +247,10 @@ const styles = `
 
   .hp-hero-caption p {
     font-size: 0.82rem;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.78);
     font-weight: 300;
   }
 
-  /* ─── Sections shared ─── */
   .hp-section {
     padding: 6rem 5rem;
   }
@@ -283,11 +285,10 @@ const styles = `
     font-weight: 300;
     color: #78716c;
     line-height: 1.7;
-    max-width: 560px;
+    max-width: 620px;
     margin-bottom: 3rem;
   }
 
-  /* ─── About ─── */
   .hp-about-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -366,19 +367,30 @@ const styles = `
     line-height: 1.4;
   }
 
-  /* ─── Halls / Request ─── */
   .hp-halls-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: #e7e5e4;
     border: 1px solid #e7e5e4;
-    margin-bottom: 2.5rem;
   }
 
   .hp-hall-card {
     background: #fff;
     padding: 2rem;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.18s ease, transform 0.18s ease;
+  }
+
+  .hp-hall-card:hover,
+  .hp-hall-card:focus-visible {
+    background: #fafaf9;
+    transform: translateY(-2px);
+    outline: none;
   }
 
   .hp-hall-name {
@@ -415,52 +427,122 @@ const styles = `
     border-radius: 2px;
   }
 
-  .hp-request-cta {
-    background: #1c1917;
-    padding: 3rem;
+  .hp-hall-hint {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    color: #a8a29e;
+  }
+
+  .hp-venue-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(28,25,23,0.46);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
+    justify-content: center;
+    padding: 1.5rem;
   }
 
-  .hp-request-cta-text h3 {
-    font-size: 1.25rem;
-    font-weight: 300;
-    color: #fff;
-    margin-bottom: 0.4rem;
-    letter-spacing: -0.02em;
-  }
-
-  .hp-request-cta-text p {
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.55);
-    font-weight: 300;
-  }
-
-  .hp-request-cta-btn {
-    height: 3rem;
-    padding: 0 2rem;
+  .hp-venue-panel {
+    width: min(720px, 100%);
     background: #fff;
-    color: #1c1917;
-    border: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-    flex-shrink: 0;
+    border: 1px solid #e7e5e4;
+    box-shadow: 0 24px 60px rgba(28,25,23,0.18);
   }
-  .hp-request-cta-btn:hover { background: #fafaf9; }
 
-  /* ─── Contact ─── */
-  .hp-contact-grid {
+  .hp-venue-panel-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid #f5f5f4;
+  }
+
+  .hp-venue-panel-title {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: #1c1917;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.35rem;
+  }
+
+  .hp-venue-panel-subtitle {
+    font-size: 0.86rem;
+    color: #78716c;
+    line-height: 1.5;
+  }
+
+  .hp-venue-close {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    width: 2.3rem;
+    height: 2.3rem;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .hp-venue-body {
+    padding: 1.5rem;
+  }
+
+  .hp-venue-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .hp-venue-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: #f5f5f4;
+    color: #57534e;
+    font-size: 0.76rem;
+  }
+
+  .hp-venue-description {
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: #44403c;
+    margin-bottom: 1.35rem;
+  }
+
+  .hp-venue-detail-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
-    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .hp-venue-detail {
+    padding: 0.95rem 1rem;
+    background: #fafaf9;
+    border: 1px solid #f5f5f4;
+  }
+
+  .hp-venue-detail-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .hp-venue-detail-value {
+    font-size: 0.9rem;
+    color: #1c1917;
+    line-height: 1.6;
+  }
+
+  .hp-contact-grid {
+    max-width: 680px;
   }
 
   .hp-contact-item {
@@ -497,54 +579,6 @@ const styles = `
     color: #1c1917;
   }
 
-  .hp-contact-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .hp-cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
-
-  .hp-cf-input, .hp-cf-textarea {
-    width: 100%;
-    height: 2.875rem;
-    padding: 0 0.875rem;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    font-size: 0.85rem;
-    color: #1c1917;
-    font-family: inherit;
-    font-weight: 300;
-    outline: none;
-    border-radius: 0;
-    transition: border-color 0.15s;
-    box-sizing: border-box;
-  }
-
-  .hp-cf-textarea {
-    height: auto;
-    padding: 0.75rem 0.875rem;
-    resize: vertical;
-    min-height: 5rem;
-  }
-
-  .hp-cf-input:focus, .hp-cf-textarea:focus { border-color: #1c1917; }
-
-  .hp-cf-submit {
-    height: 2.875rem;
-    background: #1c1917;
-    color: #fff;
-    border: none;
-    font-size: 0.875rem;
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 0;
-    transition: background 0.15s;
-    font-weight: 400;
-  }
-  .hp-cf-submit:hover { background: #292524; }
-
-  /* ─── Footer ─── */
   .hp-footer {
     background: #1c1917;
     padding: 2.5rem 5rem;
@@ -578,6 +612,7 @@ const styles = `
     transition: color 0.15s;
     padding: 0;
   }
+
   .hp-footer-link:hover { color: rgba(255,255,255,0.8); }
 
   .hp-footer-copy {
@@ -592,24 +627,47 @@ const styles = `
     .hp-hero-left { padding: 3rem 2rem; }
     .hp-hero-right { min-height: 300px; }
     .hp-section { padding: 4rem 2rem; }
-    .hp-about-grid, .hp-contact-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .hp-about-grid { grid-template-columns: 1fr; gap: 2rem; }
     .hp-halls-grid { grid-template-columns: 1fr; }
-    .hp-request-cta { flex-direction: column; }
     .hp-footer { padding: 2rem; flex-direction: column; align-items: flex-start; }
     .hp-hero-title { font-size: 2.2rem; }
+    .hp-venue-detail-grid { grid-template-columns: 1fr; }
+    .hp-venue-panel-head { padding: 1.25rem 1.25rem 1rem; }
+    .hp-venue-body { padding: 1.25rem; }
   }
 `
 
-const halls = [
-  { name: 'Main Hall A', capacity: 500, floor: '1st Floor', features: 'Projector · Sound System · Stage', tag: 'Large Events' },
-  { name: 'Conference Room B', capacity: 80, floor: '2nd Floor', features: 'Video Conferencing · Whiteboard', tag: 'Meetings' },
-  { name: 'Seminar Hall C', capacity: 200, floor: '3rd Floor', features: 'Stage · Microphone · Lighting', tag: 'Seminars' },
+const fallbackVenues = [
+  {
+    id: 1,
+    name: 'Grand Celebration Hall',
+    capacity: 500,
+    city: 'Amman',
+    description: 'Ideal for weddings, large celebrations, and premium evening events.',
+    companyName: 'Eventes',
+  },
+  {
+    id: 2,
+    name: 'Executive Conference Space',
+    capacity: 80,
+    city: 'Amman',
+    description: 'Perfect for meetings, presentations, workshops, and business discussions.',
+    companyName: 'Eventes',
+  },
+  {
+    id: 3,
+    name: 'Seminar And Training Studio',
+    capacity: 200,
+    city: 'Amman',
+    description: 'Designed for seminars, training programs, lectures, and community events.',
+    companyName: 'Eventes',
+  },
 ]
 
 const navLinks = [
   { id: 'hero', label: 'Home' },
-  { id: 'about', label: 'About Us' },
-  { id: 'halls', label: 'Our Halls' },
+  { id: 'about', label: 'About' },
+  { id: 'halls', label: 'Venues' },
   { id: 'contact', label: 'Contact' },
 ]
 
@@ -617,45 +675,93 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-function HomePage({ onNavigate }) {
+function formatVenuePrice(value) {
+  const amount = Number(value)
+
+  if (!Number.isFinite(amount)) {
+    return '--'
+  }
+
+  return `${amount} JOD`
+}
+
+function getVenueCompanyName(venue) {
+  return venue.companyName || 'Eventes'
+}
+
+function getVenueSummary(venue) {
+  return (
+    venue.description ||
+    'A flexible venue prepared for business events, celebrations, and memorable guest experiences.'
+  )
+}
+
+function HomePage({ onNavigate, session }) {
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
-  const [cfValues, setCfValues] = useState({ name: '', email: '', message: '' })
-  const [cfSent, setCfSent] = useState(false)
+  const [venues, setVenues] = useState(fallbackVenues)
+  const [selectedVenue, setSelectedVenue] = useState(null)
 
   useEffect(() => {
     const onScroll = () => {
       setScrolled(window.scrollY > 20)
-      const sections = navLinks.map(l => l.id)
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const el = document.getElementById(sections[i])
-        if (el && window.scrollY + 80 >= el.offsetTop) {
-          setActiveSection(sections[i])
+
+      const sections = navLinks.map((link) => link.id)
+      for (let index = sections.length - 1; index >= 0; index -= 1) {
+        const section = document.getElementById(sections[index])
+        if (section && window.scrollY + 80 >= section.offsetTop) {
+          setActiveSection(sections[index])
           break
         }
       }
     }
+
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const handleCfSubmit = (e) => {
-    e.preventDefault()
-    setCfSent(true)
-    setCfValues({ name: '', email: '', message: '' })
-  }
+  useEffect(() => {
+    const loadVenues = async () => {
+      try {
+        const data = await apiRequest('/api/Venues/all')
+        if (Array.isArray(data) && data.length > 0) {
+          setVenues(data)
+        }
+      } catch {
+        setVenues(fallbackVenues)
+      }
+    }
+
+    loadVenues()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedVenue) {
+      return undefined
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedVenue(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [selectedVenue])
 
   return (
     <>
       <style>{styles}</style>
-      <div className="hp-root">
 
-        {/* ── Navbar ── */}
+      <div className="hp-root">
         <nav className={`hp-nav${scrolled ? ' scrolled' : ''}`}>
-          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>EventPlan</button>
+          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>
+            Eventes
+          </button>
 
           <div className="hp-nav-links">
-            {navLinks.map(link => (
+            {navLinks.map((link) => (
               <button
                 key={link.id}
                 className={`hp-nav-link${activeSection === link.id ? ' active' : ''}`}
@@ -664,65 +770,68 @@ function HomePage({ onNavigate }) {
                 {link.label}
               </button>
             ))}
-            <button
-              className="hp-nav-link"
-              onClick={() => onNavigate('add-hall')}
-            >
-              Request a Hall
+
+            <button className="hp-nav-link" onClick={() => onNavigate('add-hall')}>
+              Register Company
             </button>
           </div>
 
           <div className="hp-nav-right">
-            <button className="hp-login-btn" onClick={() => onNavigate('auth')}>
-              Log In
+            <button
+              className="hp-login-btn"
+              onClick={() => onNavigate(session ? 'venues' : 'auth')}
+            >
+              {session ? 'Dashboard' : 'Log In'}
             </button>
           </div>
         </nav>
 
-        {/* ── Hero ── */}
         <section id="hero" className="hp-hero">
           <div className="hp-hero-left">
             <span className="hp-hero-badge">
               <span className="hp-hero-badge-dot" />
-              Event Management Platform
+              Smart Venue And Event Management
             </span>
 
             <h1 className="hp-hero-title">
-              Plan Your<br />
-              <strong>Perfect Event</strong><br />
-              Effortlessly
+              Find The Right Venue.
+              <br />
+              <strong>Plan Better Events</strong>
+              <br />
+              With Confidence
             </h1>
 
             <p className="hp-hero-desc">
-              A modern platform for managing event halls, reviewing booking requests,
-              and delivering unforgettable experiences — all in one place.
+              Eventes is a professional platform that helps users explore venues,
+              helps companies present their spaces clearly, and helps admins manage
+              registrations and bookings through one organized system.
             </p>
 
             <div className="hp-hero-cta">
               <button className="hp-cta-primary" onClick={() => onNavigate('add-hall')}>
-                Request a Hall
+                Register Company
               </button>
-              <button className="hp-cta-secondary" onClick={() => scrollTo('about')}>
-                Learn More
+              <button className="hp-cta-secondary" onClick={() => scrollTo('halls')}>
+                Explore Venues
               </button>
             </div>
 
             <div className="hp-hero-stats">
               <div className="hp-stat">
-                <span className="hp-stat-num">3+</span>
-                <span className="hp-stat-label">Halls</span>
+                <span className="hp-stat-num">{venues.length}+</span>
+                <span className="hp-stat-label">Venue Options</span>
               </div>
               <div className="hp-stat">
-                <span className="hp-stat-num">50+</span>
-                <span className="hp-stat-label">Events</span>
+                <span className="hp-stat-num">1</span>
+                <span className="hp-stat-label">Unified Platform</span>
               </div>
               <div className="hp-stat">
-                <span className="hp-stat-num">200+</span>
-                <span className="hp-stat-label">Clients</span>
+                <span className="hp-stat-num">24/7</span>
+                <span className="hp-stat-label">Online Access</span>
               </div>
               <div className="hp-stat">
-                <span className="hp-stat-num">5★</span>
-                <span className="hp-stat-label">Rating</span>
+                <span className="hp-stat-num">Fast</span>
+                <span className="hp-stat-label">Admin Review</span>
               </div>
             </div>
           </div>
@@ -730,41 +839,43 @@ function HomePage({ onNavigate }) {
           <div className="hp-hero-right">
             <img
               src="/event-hero.png"
-              alt="Elegant event venue"
+              alt="Professional venue presentation"
               className="hp-hero-img"
-              onError={e => {
-                e.target.style.display = 'none'
-                e.target.parentElement.style.background =
+              onError={(event) => {
+                event.target.style.display = 'none'
+                event.target.parentElement.style.background =
                   'linear-gradient(135deg, #292524 0%, #57534e 60%, #a8a29e 100%)'
               }}
             />
             <div className="hp-hero-overlay" />
             <div className="hp-hero-caption">
-              <h3>Elegant Spaces,<br />Flawless Events</h3>
-              <p>From intimate gatherings to grand ceremonies</p>
+              <h3>Professional spaces, smoother planning</h3>
+              <p>From meetings to celebrations, Eventes helps users choose with clarity.</p>
             </div>
           </div>
         </section>
 
-        {/* ── About ── */}
         <section id="about" className="hp-section hp-section-alt">
           <div className="hp-about-grid">
             <div>
-              <span className="hp-section-tag">About Us</span>
+              <span className="hp-section-tag">About Eventes</span>
               <h2 className="hp-section-title">
-                Where <strong>Vision</strong><br />Meets Venue
+                A Clearer Way To
+                <br />
+                <strong>Manage Events</strong>
               </h2>
               <p className="hp-section-lead">
-                EventPlan is dedicated to making event management seamless. Whether you're
-                planning a corporate conference, an academic seminar, or a grand celebration —
-                we provide the perfect space and the tools to make it happen.
+                Eventes is a graduation project built to simplify the event journey.
+                Users can browse venues more easily, companies can submit their
+                business details professionally, and admins can review requests and
+                organize operations through one connected dashboard.
               </p>
 
               <div className="hp-about-features">
                 {[
                   {
-                    title: 'Expert Management',
-                    desc: 'Our admin team reviews every request personally to ensure the best experience.',
+                    title: 'Easy Venue Discovery',
+                    desc: 'Users can review venue names, capacities, prices, and locations in a cleaner and easier experience.',
                     icon: (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78716c" strokeWidth="1.4">
                         <path d="M8 1.5L14 5v6l-6 3.5L2 11V5L8 1.5z" strokeLinejoin="round" />
@@ -772,8 +883,8 @@ function HomePage({ onNavigate }) {
                     ),
                   },
                   {
-                    title: 'Modern Facilities',
-                    desc: 'Equipped halls with the latest technology for presentations and events.',
+                    title: 'Simple Company Registration',
+                    desc: 'Venue owners can submit their company information for review and join the platform with a clear workflow.',
                     icon: (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78716c" strokeWidth="1.4">
                         <rect x="1.5" y="3" width="13" height="9" rx="1" />
@@ -782,8 +893,8 @@ function HomePage({ onNavigate }) {
                     ),
                   },
                   {
-                    title: 'Fast Approvals',
-                    desc: 'Submit your hall request and receive a response within 24 hours.',
+                    title: 'Organized Admin Control',
+                    desc: 'Admins can manage venue requests, monitor company registrations, and keep booking data structured.',
                     icon: (
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#78716c" strokeWidth="1.4">
                         <circle cx="8" cy="8" r="6.5" />
@@ -791,12 +902,12 @@ function HomePage({ onNavigate }) {
                       </svg>
                     ),
                   },
-                ].map(f => (
-                  <div key={f.title} className="hp-feature-item">
-                    <div className="hp-feature-icon">{f.icon}</div>
+                ].map((feature) => (
+                  <div key={feature.title} className="hp-feature-item">
+                    <div className="hp-feature-icon">{feature.icon}</div>
                     <div className="hp-feature-text">
-                      <h4>{f.title}</h4>
-                      <p>{f.desc}</p>
+                      <h4>{feature.title}</h4>
+                      <p>{feature.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -805,128 +916,204 @@ function HomePage({ onNavigate }) {
 
             <div className="hp-about-visual">
               {[
-                { num: '500+', desc: 'Maximum hall capacity for grand events' },
-                { num: '24h', desc: 'Average request approval time' },
-                { num: '100%', desc: 'Client satisfaction rate' },
-              ].map(s => (
-                <div key={s.num} className="hp-about-stat-card">
-                  <span className="hp-about-stat-num">{s.num}</span>
-                  <p className="hp-about-stat-desc">{s.desc}</p>
+                {
+                  num: '01',
+                  desc: 'Browse venue details in one place instead of searching across scattered channels.',
+                },
+                {
+                  num: '02',
+                  desc: 'Register companies through a direct, guided process built for owners and admins.',
+                },
+                {
+                  num: '03',
+                  desc: 'Support better decisions with clearer information and a more professional presentation.',
+                },
+              ].map((item) => (
+                <div key={item.num} className="hp-about-stat-card">
+                  <span className="hp-about-stat-num">{item.num}</span>
+                  <p className="hp-about-stat-desc">{item.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Halls ── */}
         <section id="halls" className="hp-section">
-          <span className="hp-section-tag">Our Halls</span>
+          <span className="hp-section-tag">Featured Venues</span>
           <h2 className="hp-section-title">
-            Spaces for Every <strong>Occasion</strong>
+            Spaces Designed For
+            <br />
+            <strong>Real Events</strong>
           </h2>
           <p className="hp-section-lead">
-            From large-scale conferences to intimate seminars, our halls are designed
-            to accommodate every type of event with style and comfort.
+            Explore venues suitable for conferences, seminars, celebrations,
+            workshops, and private gatherings. Eventes presents venue information
+            in a clearer format so users can compare options quickly and confidently.
           </p>
 
           <div className="hp-halls-grid">
-            {halls.map(h => (
-              <div key={h.name} className="hp-hall-card">
-                <p className="hp-hall-name">{h.name}</p>
-                <p className="hp-hall-cap">Up to {h.capacity} guests · {h.floor}</p>
-                <p className="hp-hall-features">{h.features}</p>
-                <span className="hp-hall-tag">{h.tag}</span>
-              </div>
+            {venues.map((venue) => (
+              <button
+                key={venue.id ?? venue.name}
+                type="button"
+                className="hp-hall-card"
+                onClick={() => setSelectedVenue(venue)}
+              >
+                <p className="hp-hall-name">{venue.name}</p>
+                <p className="hp-hall-cap">
+                  Up to {venue.capacity ?? 0} guests | {venue.city || 'Amman'}
+                </p>
+                <p className="hp-hall-features">{getVenueSummary(venue)}</p>
+                <span className="hp-hall-tag">{getVenueCompanyName(venue)}</span>
+                <span className="hp-hall-hint">Click to view details</span>
+              </button>
             ))}
-          </div>
-
-          <div className="hp-request-cta">
-            <div className="hp-request-cta-text">
-              <h3>Ready to Book a Hall?</h3>
-              <p>Submit a request and our team will get back to you within 24 hours.</p>
-            </div>
-            <button className="hp-request-cta-btn" onClick={() => onNavigate('add-hall')}>
-              Request a Hall →
-            </button>
           </div>
         </section>
 
-        {/* ── Contact ── */}
+        {selectedVenue ? (
+          <div className="hp-venue-overlay" onClick={() => setSelectedVenue(null)}>
+            <div className="hp-venue-panel" onClick={(event) => event.stopPropagation()}>
+              <div className="hp-venue-panel-head">
+                <div>
+                  <h3 className="hp-venue-panel-title">
+                    {selectedVenue.name || 'Venue Details'}
+                  </h3>
+                  <p className="hp-venue-panel-subtitle">
+                    {getVenueCompanyName(selectedVenue)} - {selectedVenue.city || 'Amman'}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="hp-venue-close"
+                  onClick={() => setSelectedVenue(null)}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="hp-venue-body">
+                <div className="hp-venue-meta">
+                  <span className="hp-venue-chip">Up to {selectedVenue.capacity ?? 0} guests</span>
+                  <span className="hp-venue-chip">
+                    Starting from {formatVenuePrice(selectedVenue.minimalPrice)}
+                  </span>
+                  <span className="hp-venue-chip">{selectedVenue.city || 'Amman'}</span>
+                </div>
+
+                <p className="hp-venue-description">{getVenueSummary(selectedVenue)}</p>
+
+                <div className="hp-venue-detail-grid">
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Hosted By</span>
+                    <span className="hp-venue-detail-value">
+                      {getVenueCompanyName(selectedVenue)}
+                    </span>
+                  </div>
+
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Guest Capacity</span>
+                    <span className="hp-venue-detail-value">
+                      {selectedVenue.capacity ?? 0} guests
+                    </span>
+                  </div>
+
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">City</span>
+                    <span className="hp-venue-detail-value">
+                      {selectedVenue.city || 'Amman'}
+                    </span>
+                  </div>
+
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Address</span>
+                    <span className="hp-venue-detail-value">
+                      {selectedVenue.address || 'Address details are available from the venue provider.'}
+                    </span>
+                  </div>
+
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Starting Price</span>
+                    <span className="hp-venue-detail-value">
+                      {formatVenuePrice(selectedVenue.minimalPrice)}
+                    </span>
+                  </div>
+
+                  <div className="hp-venue-detail">
+                    <span className="hp-venue-detail-label">Venue Name</span>
+                    <span className="hp-venue-detail-value">
+                      {selectedVenue.name || '--'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <section id="contact" className="hp-section hp-section-alt">
           <span className="hp-section-tag">Contact</span>
           <h2 className="hp-section-title">
-            Get in <strong>Touch</strong>
+            Contact <strong>Eventes</strong>
           </h2>
 
           <div className="hp-contact-grid">
-            <div>
-              <p className="hp-section-lead" style={{ marginBottom: '2rem' }}>
-                Have questions? Reach out to us and we'll be happy to help you plan your next event.
-              </p>
+            <p className="hp-section-lead" style={{ marginBottom: '2rem' }}>
+              Eventes is built to make venue discovery and event organization more
+              professional, more readable, and easier for every user. If you would
+              like to know more about the project or company registration, contact us directly.
+            </p>
 
-              {[
-                {
-                  label: 'Email',
-                  value: 'info@eventplan.sa',
-                  icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><rect x="1" y="3" width="13" height="9" rx="1" /><path d="M1 4l6.5 5L14 4" strokeLinecap="round" /></svg>,
-                },
-                {
-                  label: 'Phone',
-                  value: '+966 11 000 0000',
-                  icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><path d="M3 1.5A1 1 0 0 0 2 2.5v1c0 5.523 4.477 10 10 10h1a1 1 0 0 0 1-1v-1.5a1 1 0 0 0-.75-.97l-2-.5a1 1 0 0 0-1.07.38l-.5.75a8 8 0 0 1-3.34-3.34l.75-.5a1 1 0 0 0 .38-1.07l-.5-2A1 1 0 0 0 6 3H3z" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-                },
-                {
-                  label: 'Location',
-                  value: 'Riyadh, Saudi Arabia',
-                  icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><path d="M7.5 1.5A4.5 4.5 0 0 0 3 6c0 3 4.5 7.5 4.5 7.5S12 9 12 6a4.5 4.5 0 0 0-4.5-4.5z" /><circle cx="7.5" cy="6" r="1.5" /></svg>,
-                },
-              ].map(item => (
-                <div key={item.label} className="hp-contact-item">
-                  <div className="hp-contact-icon">{item.icon}</div>
-                  <div>
-                    <p className="hp-contact-label">{item.label}</p>
-                    <p className="hp-contact-value">{item.value}</p>
-                  </div>
+            {[
+              {
+                label: 'Email',
+                value: 'eventes@gmail.com',
+                icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><rect x="1" y="3" width="13" height="9" rx="1" /><path d="M1 4l6.5 5L14 4" strokeLinecap="round" /></svg>,
+              },
+              {
+                label: 'Phone',
+                value: '0782182081',
+                icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><path d="M3 1.5A1 1 0 0 0 2 2.5v1c0 5.523 4.477 10 10 10h1a1 1 0 0 0 1-1v-1.5a1 1 0 0 0-.75-.97l-2-.5a1 1 0 0 0-1.07.38l-.5.75a8 8 0 0 1-3.34-3.34l.75-.5a1 1 0 0 0 .38-1.07l-.5-2A1 1 0 0 0 6 3H3z" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+              },
+              {
+                label: 'Location',
+                value: 'Amman, Jordan',
+                icon: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#78716c" strokeWidth="1.3"><path d="M7.5 1.5A4.5 4.5 0 0 0 3 6c0 3 4.5 7.5 4.5 7.5S12 9 12 6a4.5 4.5 0 0 0-4.5-4.5z" /><circle cx="7.5" cy="6" r="1.5" /></svg>,
+              },
+            ].map((item) => (
+              <div key={item.label} className="hp-contact-item">
+                <div className="hp-contact-icon">{item.icon}</div>
+                <div>
+                  <p className="hp-contact-label">{item.label}</p>
+                  <p className="hp-contact-value">{item.value}</p>
                 </div>
-              ))}
-            </div>
-
-            <form className="hp-contact-form" onSubmit={handleCfSubmit}>
-              {cfSent ? (
-                <div style={{ padding: '2rem', background: '#f0fdf4', border: '1px solid #bbf7d0', textAlign: 'center' }}>
-                  <p style={{ fontSize: '0.9rem', fontWeight: 500, color: '#16a34a', marginBottom: '0.3rem' }}>Message Sent!</p>
-                  <p style={{ fontSize: '0.82rem', color: '#4ade80', fontWeight: 300 }}>We'll get back to you shortly.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="hp-cf-row">
-                    <input className="hp-cf-input" placeholder="Your Name" value={cfValues.name}
-                      onChange={e => setCfValues(p => ({ ...p, name: e.target.value }))} />
-                    <input className="hp-cf-input" type="email" placeholder="Email Address" value={cfValues.email}
-                      onChange={e => setCfValues(p => ({ ...p, email: e.target.value }))} />
-                  </div>
-                  <textarea className="hp-cf-textarea" placeholder="Your message..." rows={5}
-                    value={cfValues.message}
-                    onChange={e => setCfValues(p => ({ ...p, message: e.target.value }))} />
-                  <button type="submit" className="hp-cf-submit">Send Message</button>
-                </>
-              )}
-            </form>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* ── Footer ── */}
         <footer className="hp-footer">
-          <span className="hp-footer-brand">EventPlan</span>
-          <div className="hp-footer-links">
-            {navLinks.map(l => (
-              <button key={l.id} className="hp-footer-link" onClick={() => scrollTo(l.id)}>{l.label}</button>
-            ))}
-            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Request a Hall</button>
-          </div>
-          <span className="hp-footer-copy">© 2026 EventPlan. All rights reserved.</span>
-        </footer>
+          <span className="hp-footer-brand">Eventes</span>
 
+          <div className="hp-footer-links">
+            {navLinks.map((link) => (
+              <button
+                key={link.id}
+                className="hp-footer-link"
+                onClick={() => scrollTo(link.id)}
+              >
+                {link.label}
+              </button>
+            ))}
+
+            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>
+              Register Company
+            </button>
+          </div>
+
+          <span className="hp-footer-copy">© 2026 Eventes. All rights reserved.</span>
+        </footer>
       </div>
     </>
   )
