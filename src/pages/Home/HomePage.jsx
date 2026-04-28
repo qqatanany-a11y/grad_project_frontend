@@ -4,6 +4,7 @@ import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
   formatVenueTimeSlot,
   getVenueTimeSlots,
+  parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
 
 const styles = `
@@ -742,10 +743,96 @@ const styles = `
     font-size: 0.86rem;
     line-height: 1.6;
   }
+  .hp-booking-stepper {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .hp-booking-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    border: 1.5px solid rgba(79,70,229,0.12);
+    background: rgba(255,255,255,0.82);
+  }
+  .hp-booking-step.active {
+    border-color: rgba(79,70,229,0.28);
+    background: rgba(79,70,229,0.09);
+    box-shadow: 0 10px 24px rgba(79,70,229,0.08);
+  }
+  .hp-booking-step.done {
+    border-color: rgba(245,158,11,0.24);
+    background: rgba(245,158,11,0.08);
+  }
+  .hp-booking-step-num {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(79,70,229,0.12);
+    color: var(--primary);
+    font-size: 0.82rem;
+    font-weight: 900;
+  }
+  .hp-booking-step.active .hp-booking-step-num {
+    background: linear-gradient(135deg, #4f46e5, #3730a3);
+    color: #fff;
+  }
+  .hp-booking-step.done .hp-booking-step-num {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+  }
+  .hp-booking-step-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  .hp-booking-step-label {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .hp-booking-step-desc {
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .hp-booking-stage {
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(79,70,229,0.1);
+    background: rgba(255,255,255,0.78);
+  }
+  .hp-booking-stage-head {
+    margin-bottom: 1rem;
+  }
+  .hp-booking-stage-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .hp-booking-stage-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
   .hp-booking-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
+  }
+  .hp-booking-grid.wide {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .hp-booking-field {
     display: flex;
@@ -773,6 +860,21 @@ const styles = `
   .hp-booking-input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(79,70,229,0.1);
+  }
+  .hp-booking-input.file {
+    height: auto;
+    min-height: 2.85rem;
+    padding: 0.68rem 0.9rem;
+  }
+  .hp-booking-note {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(79,70,229,0.16);
+    background: rgba(79,70,229,0.04);
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
   }
   .hp-booking-slot-list {
     display: grid;
@@ -818,6 +920,109 @@ const styles = `
     font-size: 0.88rem;
     font-weight: 800;
     color: var(--primary);
+  }
+  .hp-booking-option-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .hp-booking-option-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.95rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .hp-booking-option-card.selected {
+    border-color: rgba(79,70,229,0.28);
+    background: rgba(79,70,229,0.05);
+  }
+  .hp-booking-option-main {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .hp-booking-option-main input {
+    margin-top: 0.2rem;
+  }
+  .hp-booking-option-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .hp-booking-option-copy {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .hp-booking-option-price {
+    white-space: nowrap;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+  .hp-booking-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .hp-booking-summary-card {
+    padding: 0.95rem 1rem;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+  }
+  .hp-booking-summary-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hp-booking-summary-value {
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .hp-booking-review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .hp-booking-file-meta {
+    margin-top: 0.35rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+  .hp-booking-success {
+    padding: 1.1rem;
+    border-radius: 16px;
+    border: 1.5px solid rgba(16,185,129,0.2);
+    background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(79,70,229,0.06));
+  }
+  .hp-booking-success-title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .hp-booking-success-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.6;
   }
   .hp-booking-status {
     margin-top: 1rem;
@@ -937,7 +1142,8 @@ const styles = `
     .hp-cta-banner { padding: 4rem 1.5rem; }
     .hp-cta-banner h2 { font-size: 2rem; }
     .hp-venue-detail-grid { grid-template-columns: 1fr; }
-    .hp-booking-grid { grid-template-columns: 1fr; }
+    .hp-booking-stepper { grid-template-columns: 1fr; }
+    .hp-booking-grid, .hp-booking-grid.wide, .hp-booking-summary-grid, .hp-booking-review-grid { grid-template-columns: 1fr; }
     .hp-venue-panel-head { padding: 1.25rem; }
     .hp-venue-body { padding: 1.25rem; }
   }
@@ -1024,6 +1230,17 @@ const navLinks = [
   { id: 'about',  label: 'About' },
 ]
 
+const emptyBookingForm = {
+  date: '',
+  timeSlotId: '',
+  startTime: '',
+  endTime: '',
+  guestsCount: '',
+  venueServiceOptionIds: [],
+  brideIdDocumentDataUrl: '',
+  bridegroomIdDocumentDataUrl: '',
+}
+
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
@@ -1032,6 +1249,25 @@ function formatVenuePrice(value) {
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '--'
   return `${amount} JOD`
+}
+
+function formatBookingDate(value) {
+  if (!value) return '--'
+
+  return new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.onerror = () => reject(new Error('Unable to read the selected file.'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function getVenueCategoryValue(venue) {
@@ -1139,15 +1375,28 @@ function useScrollAnimation(watchValue) {
   }, [watchValue])
 }
 
-function HomePage({ onNavigate, session }) {
+function HomePage({ onNavigate, onStartBooking, session }) {
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [venues, setVenues] = useState(fallbackVenues)
   const [venueTypeFilter, setVenueTypeFilter] = useState('All')
   const [selectedVenue, setSelectedVenue] = useState(null)
-  const [bookingForm, setBookingForm] = useState({ date: '', timeSlotId: '' })
-  const [bookingBusy, setBookingBusy] = useState(false)
+  const [bookingStep, setBookingStep] = useState(1)
+  const [bookingForm, setBookingForm] = useState(emptyBookingForm)
+  const [bookingSubmitting, setBookingSubmitting] = useState(false)
+  const [bookingLoadingOptions, setBookingLoadingOptions] = useState(false)
+  const [bookingServiceOptions, setBookingServiceOptions] = useState([])
+  const [bookingDocumentNames, setBookingDocumentNames] = useState({
+    bride: '',
+    bridegroom: '',
+  })
   const [bookingFeedback, setBookingFeedback] = useState({ tone: 'idle', message: '' })
+  const isBookingUser = session?.role === 'User'
+  const bookingSteps = [
+    { number: 1, label: 'Details', desc: 'Date, guests, and time' },
+    { number: 2, label: 'Add-ons', desc: 'Optional venue services' },
+    { number: 3, label: 'Review', desc: 'Documents and confirmation' },
+  ]
 
   useEffect(() => {
     const onScroll = () => {
@@ -1177,9 +1426,37 @@ function HomePage({ onNavigate, session }) {
     loadVenues()
   }, [])
 
+  const resetBookingWizard = () => {
+    setBookingStep(1)
+    setBookingForm(emptyBookingForm)
+    setBookingSubmitting(false)
+    setBookingLoadingOptions(false)
+    setBookingServiceOptions([])
+    setBookingDocumentNames({ bride: '', bridegroom: '' })
+    setBookingFeedback({ tone: 'idle', message: '' })
+  }
+
+  const closeVenueDetails = () => {
+    setSelectedVenue(null)
+    resetBookingWizard()
+  }
+
   useEffect(() => {
     if (!selectedVenue) return undefined
-    const handleEscape = (e) => { if (e.key === 'Escape') setSelectedVenue(null) }
+    const handleEscape = (e) => {
+      if (e.key !== 'Escape') {
+        return
+      }
+
+      setSelectedVenue(null)
+      setBookingStep(1)
+      setBookingForm(emptyBookingForm)
+      setBookingSubmitting(false)
+      setBookingLoadingOptions(false)
+      setBookingServiceOptions([])
+      setBookingDocumentNames({ bride: '', bridegroom: '' })
+      setBookingFeedback({ tone: 'idle', message: '' })
+    }
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [selectedVenue])
@@ -1213,41 +1490,294 @@ function HomePage({ onNavigate, session }) {
   )
 
   useEffect(() => {
-    setBookingForm({ date: '', timeSlotId: '' })
-    setBookingBusy(false)
-    setBookingFeedback({ tone: 'idle', message: '' })
-  }, [selectedVenue?.id])
+    if (!selectedVenue?.id || !isBookingUser) {
+      setBookingServiceOptions([])
+      return undefined
+    }
 
-  const submitVenueBooking = async () => {
-    if (!selectedVenue?.id) {
+    let isCancelled = false
+
+    const loadBookingServiceOptions = async () => {
+      setBookingLoadingOptions(true)
+
+      try {
+        const data = await apiRequest(`/api/venues/${selectedVenue.id}/service-options`, {
+          token: session?.token,
+        })
+
+        if (isCancelled) return
+
+        const nextOptions = Array.isArray(data) ? data : []
+        setBookingServiceOptions(nextOptions)
+        setBookingForm((currentForm) => ({
+          ...currentForm,
+          venueServiceOptionIds: currentForm.venueServiceOptionIds.filter((optionId) =>
+            nextOptions.some((option) => String(option.id) === String(optionId)),
+          ),
+        }))
+      } catch {
+        if (!isCancelled) {
+          setBookingServiceOptions([])
+        }
+      } finally {
+        if (!isCancelled) {
+          setBookingLoadingOptions(false)
+        }
+      }
+    }
+
+    loadBookingServiceOptions()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [isBookingUser, selectedVenue?.id, session?.token])
+
+  const selectedBookingServices = useMemo(() => {
+    return bookingServiceOptions.filter((option) =>
+      bookingForm.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
+    )
+  }, [bookingForm.venueServiceOptionIds, bookingServiceOptions])
+
+  const servicesTotal = useMemo(() => {
+    return selectedBookingServices.reduce((sum, option) => sum + Number(option.price || 0), 0)
+  }, [selectedBookingServices])
+
+  const estimatedBasePrice = useMemo(() => {
+    if (!selectedVenue) return null
+
+    if (selectedVenueTimeSlots.length > 0) {
+      return selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
+    }
+
+    const pricingType = getPricingTypeValue(selectedVenue)
+    const pricePerHour = getVenuePriceValue(selectedVenue)
+
+    if (pricingType !== 'Hourly' || pricePerHour === null || pricePerHour <= 0) {
+      return null
+    }
+
+    const startMinutes = parseTimeToMinutes(bookingForm.startTime)
+    const endMinutes = parseTimeToMinutes(bookingForm.endTime)
+
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+      return null
+    }
+
+    return ((endMinutes - startMinutes) / 60) * pricePerHour
+  }, [
+    bookingForm.endTime,
+    bookingForm.startTime,
+    selectedBookingSlot,
+    selectedVenue,
+    selectedVenueTimeSlots.length,
+  ])
+
+  const estimatedTotal =
+    estimatedBasePrice === null ? null : estimatedBasePrice + servicesTotal
+
+  const selectedBookingTimeLabel = useMemo(() => {
+    if (selectedBookingSlot) {
+      return formatVenueTimeSlot(selectedBookingSlot)
+    }
+
+    if (bookingForm.startTime && bookingForm.endTime) {
+      return formatVenueTimeSlot({
+        startTime: bookingForm.startTime,
+        endTime: bookingForm.endTime,
+      })
+    }
+
+    return '--'
+  }, [bookingForm.endTime, bookingForm.startTime, selectedBookingSlot])
+
+  const clearBookingFeedback = () => {
+    setBookingFeedback({ tone: 'idle', message: '' })
+  }
+
+  const openVenueDetails = (venue) => {
+    resetBookingWizard()
+    setSelectedVenue(venue)
+  }
+
+  const handleBookingFieldChange = ({ target: { name, value } }) => {
+    clearBookingFeedback()
+    setBookingForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }))
+  }
+
+  const handleBookingOptionToggle = (optionId) => {
+    clearBookingFeedback()
+    setBookingForm((currentForm) => {
+      const alreadySelected = currentForm.venueServiceOptionIds.some(
+        (selectedId) => String(selectedId) === String(optionId),
+      )
+
+      return {
+        ...currentForm,
+        venueServiceOptionIds: alreadySelected
+          ? currentForm.venueServiceOptionIds.filter(
+              (selectedId) => String(selectedId) !== String(optionId),
+            )
+          : [...currentForm.venueServiceOptionIds, optionId],
+      }
+    })
+  }
+
+  const handleBookingDocumentChange = async (kind, event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      clearBookingFeedback()
+      setBookingDocumentNames((currentNames) => ({ ...currentNames, [kind]: '' }))
+      setBookingForm((currentForm) => ({
+        ...currentForm,
+        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']: '',
+      }))
       return
     }
 
-    if (session?.role !== 'User') {
+    if (file.size > 5 * 1024 * 1024) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Bookings are available for signed-in user accounts only.',
+        message: 'Each document must be 5 MB or smaller.',
       })
+      event.target.value = ''
+      return
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+
+      clearBookingFeedback()
+      setBookingDocumentNames((currentNames) => ({ ...currentNames, [kind]: file.name }))
+      setBookingForm((currentForm) => ({
+        ...currentForm,
+        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']:
+          dataUrl,
+      }))
+    } catch (error) {
+      setBookingFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to read the document.',
+      })
+    }
+  }
+
+  const validateBookingDetailsStep = () => {
+    if (!selectedVenue?.id) {
+      return 'Choose a venue before continuing.'
+    }
+
+    if (!bookingForm.date) {
+      return 'Choose a booking date before continuing.'
+    }
+
+    const guestsCount = Number(bookingForm.guestsCount)
+
+    if (!Number.isFinite(guestsCount) || guestsCount <= 0) {
+      return 'Enter a valid guests count before continuing.'
+    }
+
+    if (selectedVenueTimeSlots.length > 0 && !selectedBookingSlot) {
+      return 'Choose one of the active venue time slots before continuing.'
+    }
+
+    if (selectedVenueTimeSlots.length === 0) {
+      const startMinutes = parseTimeToMinutes(bookingForm.startTime)
+      const endMinutes = parseTimeToMinutes(bookingForm.endTime)
+
+      if (startMinutes === null || endMinutes === null) {
+        return 'Enter both start and end times before continuing.'
+      }
+
+      if (endMinutes <= startMinutes) {
+        return 'End time must be later than start time.'
+      }
+    }
+
+    return null
+  }
+
+  const goToBookingStep = (nextStep) => {
+    const validationMessage = validateBookingDetailsStep()
+
+    if (validationMessage) {
+      setBookingFeedback({
+        tone: 'error',
+        message: validationMessage,
+      })
+      return
+    }
+
+    clearBookingFeedback()
+    setBookingStep(nextStep)
+  }
+
+  const startVenueBookingFlow = () => {
+    if (isBookingUser) {
+      goToBookingStep(2)
+      return
+    }
+
+    if (!selectedVenue?.id) {
       return
     }
 
     if (!bookingForm.date) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Choose a booking date before submitting.',
+        message: 'Choose a booking date before continuing.',
       })
       return
     }
 
-    if (!selectedBookingSlot) {
+    if (selectedVenueTimeSlots.length > 0 && !selectedBookingSlot) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Choose one of the active venue time slots before submitting.',
+        message: 'Choose one of the active venue time slots before continuing.',
       })
       return
     }
 
-    setBookingBusy(true)
+    const bookingDraft = {
+      venueId: Number(selectedVenue.id),
+      venueCategory: getVenueCategoryValue(selectedVenue),
+      date: bookingForm.date,
+      ...(selectedBookingSlot ? { timeSlotId: Number(selectedBookingSlot.id) } : {}),
+    }
+
+    clearBookingFeedback()
+    closeVenueDetails()
+    onStartBooking?.(bookingDraft)
+  }
+
+  const submitVenueBooking = async () => {
+    if (!selectedVenue?.id || !isBookingUser) {
+      return
+    }
+
+    const validationMessage = validateBookingDetailsStep()
+
+    if (validationMessage) {
+      setBookingFeedback({
+        tone: 'error',
+        message: validationMessage,
+      })
+      return
+    }
+
+    if (!bookingForm.brideIdDocumentDataUrl || !bookingForm.bridegroomIdDocumentDataUrl) {
+      setBookingFeedback({
+        tone: 'error',
+        message: 'Upload both the bride and bridegroom ID documents before submitting.',
+      })
+      return
+    }
+
+    setBookingSubmitting(true)
 
     try {
       await apiRequest('/api/bookings', {
@@ -1256,22 +1786,31 @@ function HomePage({ onNavigate, session }) {
         body: {
           venueId: Number(selectedVenue.id),
           date: `${bookingForm.date}T00:00:00Z`,
-          timeSlotId: Number(selectedBookingSlot.id),
+          guestsCount: Number(bookingForm.guestsCount),
+          ...(selectedBookingSlot
+            ? { timeSlotId: Number(selectedBookingSlot.id) }
+            : {
+                startTime: bookingForm.startTime,
+                endTime: bookingForm.endTime,
+              }),
+          venueServiceOptionIds: bookingForm.venueServiceOptionIds,
+          brideIdDocumentDataUrl: bookingForm.brideIdDocumentDataUrl,
+          bridegroomIdDocumentDataUrl: bookingForm.bridegroomIdDocumentDataUrl,
         },
       })
 
       setBookingFeedback({
         tone: 'idle',
-        message: 'Booking created successfully.',
+        message: 'Booking created successfully. You can now review it in My Bookings.',
       })
-      setBookingForm({ date: '', timeSlotId: '' })
+      setBookingStep(4)
     } catch (error) {
       setBookingFeedback({
         tone: 'error',
         message: error instanceof Error ? error.message : 'Unable to create the booking.',
       })
     } finally {
-      setBookingBusy(false)
+      setBookingSubmitting(false)
     }
   }
 
@@ -1372,17 +1911,17 @@ function HomePage({ onNavigate, session }) {
               <p>From meetings to celebrations — find and book with confidence.</p>
             </div>
 
-            <div className="hp-hero-float f1">
+            {false && <div className="hp-hero-float f1">
               <div className="hp-float-label">Available Now</div>
               <div className="hp-float-value">500+ Guests</div>
               <div className="hp-float-sub">Grand Celebration Hall</div>
-            </div>
+            </div>}
 
-            <div className="hp-hero-float f2">
+            {false && <div className="hp-hero-float f2">
               <div className="hp-float-label">Top Rated</div>
               <div className="hp-float-value">⭐ 4.9 / 5</div>
               <div className="hp-float-sub">By event planners</div>
-            </div>
+            </div>}
           </div>
         </section>
 
@@ -1463,15 +2002,15 @@ function HomePage({ onNavigate, session }) {
               />
               <div className="hp-about-img-overlay" />
 
-              <div className="hp-about-chip chip-1">
-                <div className="hp-float-label">Active Venues</div>
-                <div className="hp-float-value">{venues.length}+ Listings</div>
-              </div>
+              {false && <div className="hp-about-chip chip-1">
+              <div className="hp-float-label">Active Venues</div>
+              <div className="hp-float-value">{venues.length}+ Listings</div>
+              </div>}
 
-              <div className="hp-about-chip chip-2">
+              {false && <div className="hp-about-chip chip-2">
                 <div className="hp-float-label">✓ Verified</div>
                 <div className="hp-float-value">Business Network</div>
-              </div>
+              </div>}
             </div>
           </div>
         </section>
@@ -1555,7 +2094,7 @@ function HomePage({ onNavigate, session }) {
                 key={venue.id ?? venue.name}
                 type="button"
                 className={`hp-hall-card hp-animate hp-animate-d${Math.min(index + 1, 4)}`}
-                onClick={() => setSelectedVenue(venue)}
+                onClick={() => openVenueDetails(venue)}
               >
                 <div className="hp-hall-img-wrap">
                   <img
@@ -1586,7 +2125,7 @@ function HomePage({ onNavigate, session }) {
 
         {/* ── VENUE MODAL ── */}
         {selectedVenue ? (
-          <div className="hp-venue-overlay" onClick={() => setSelectedVenue(null)}>
+          <div className="hp-venue-overlay" onClick={closeVenueDetails}>
             <div className="hp-venue-panel" onClick={(e) => e.stopPropagation()}>
               <div className="hp-venue-panel-head">
                 <div>
@@ -1595,7 +2134,7 @@ function HomePage({ onNavigate, session }) {
                     {getVenueBusinessName(selectedVenue)} | {selectedVenue.city || 'Amman'}
                   </p>
                 </div>
-                <button type="button" className="hp-venue-close" onClick={() => setSelectedVenue(null)} aria-label="Close">
+                <button type="button" className="hp-venue-close" onClick={closeVenueDetails} aria-label="Close">
                   ✕
                 </button>
               </div>
@@ -1649,43 +2188,441 @@ function HomePage({ onNavigate, session }) {
                 <div className="hp-booking-panel">
                   <div className="hp-booking-head">
                     <div>
-                      <p className="hp-booking-title">Book This Venue</p>
+                      <p className="hp-booking-title">Start Booking</p>
                       <p className="hp-booking-copy">
-                        Direct booking is available here when the owner has configured active time slots.
+                        Complete the booking inside this dialog step by step, then open My Bookings once everything is submitted.
                       </p>
                     </div>
                   </div>
 
-                  {session?.role === 'User' ? (
+                  {isBookingUser ? (
                     <>
-                      <div className="hp-booking-grid">
-                        <div className="hp-booking-field">
-                          <label className="hp-booking-label">Date</label>
-                          <input
-                            className="hp-booking-input"
-                            type="date"
-                            value={bookingForm.date}
-                            onChange={(event) =>
-                              setBookingForm((currentForm) => ({
-                                ...currentForm,
-                                date: event.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-
-                        <div className="hp-booking-field">
-                          <label className="hp-booking-label">Selected Price</label>
-                          <input
-                            className="hp-booking-input"
-                            value={selectedBookingSlot ? getVenuePriceSummary({ pricePerHour: selectedBookingSlot.price, pricingType: 'FixedSlots' }) : 'Choose a slot'}
-                            readOnly
-                          />
-                        </div>
+                      <div className="hp-booking-stepper">
+                        {bookingSteps.map((step) => (
+                          <div
+                            key={step.number}
+                            className={`hp-booking-step${bookingStep === step.number ? ' active' : ''}${bookingStep > step.number ? ' done' : ''}`}
+                          >
+                            <span className="hp-booking-step-num">{step.number}</span>
+                            <div className="hp-booking-step-copy">
+                              <span className="hp-booking-step-label">{step.label}</span>
+                              <span className="hp-booking-step-desc">{step.desc}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
-                      {selectedVenueTimeSlots.length > 0 ? (
-                        <>
+                      {bookingStep === 1 ? (
+                        <div className="hp-booking-stage">
+                          <div className="hp-booking-stage-head">
+                            <p className="hp-booking-stage-title">Step 1: Event Details</p>
+                            <p className="hp-booking-stage-copy">
+                              Pick the booking date, add the guest count, then choose a slot or manual time range.
+                            </p>
+                          </div>
+
+                          <div className="hp-booking-grid wide">
+                            <div className="hp-booking-field">
+                              <label className="hp-booking-label">Date</label>
+                              <input
+                                className="hp-booking-input"
+                                type="date"
+                                name="date"
+                                value={bookingForm.date}
+                                onChange={handleBookingFieldChange}
+                              />
+                            </div>
+
+                            <div className="hp-booking-field">
+                              <label className="hp-booking-label">Guests Count</label>
+                              <input
+                                className="hp-booking-input"
+                                type="number"
+                                min="1"
+                                name="guestsCount"
+                                value={bookingForm.guestsCount}
+                                onChange={handleBookingFieldChange}
+                              />
+                            </div>
+
+                            <div className="hp-booking-field">
+                              <label className="hp-booking-label">Selected Price</label>
+                              <input
+                                className="hp-booking-input"
+                                value={
+                                  selectedBookingSlot
+                                    ? formatVenuePrice(selectedBookingSlot.price)
+                                    : estimatedBasePrice !== null
+                                      ? formatVenuePrice(estimatedBasePrice)
+                                      : selectedVenueTimeSlots.length > 0
+                                        ? 'Choose a slot'
+                                        : 'Enter time to estimate'
+                                }
+                                readOnly
+                              />
+                            </div>
+
+                            {selectedVenueTimeSlots.length === 0 ? (
+                              <>
+                                <div className="hp-booking-field">
+                                  <label className="hp-booking-label">Start Time</label>
+                                  <input
+                                    className="hp-booking-input"
+                                    type="time"
+                                    name="startTime"
+                                    value={bookingForm.startTime}
+                                    onChange={handleBookingFieldChange}
+                                  />
+                                </div>
+
+                                <div className="hp-booking-field">
+                                  <label className="hp-booking-label">End Time</label>
+                                  <input
+                                    className="hp-booking-input"
+                                    type="time"
+                                    name="endTime"
+                                    value={bookingForm.endTime}
+                                    onChange={handleBookingFieldChange}
+                                  />
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+
+                          {selectedVenueTimeSlots.length > 0 ? (
+                            <div className="hp-booking-slot-list">
+                              {selectedVenueTimeSlots.map((slot) => {
+                                const isSelected = String(bookingForm.timeSlotId) === String(slot.id)
+
+                                return (
+                                  <label
+                                    key={slot.id}
+                                    className={`hp-booking-slot-card${isSelected ? ' selected' : ''}`}
+                                  >
+                                    <div className="hp-booking-slot-main">
+                                      <input
+                                        type="radio"
+                                        name="home-time-slot"
+                                        checked={isSelected}
+                                        onChange={() =>
+                                          handleBookingFieldChange({
+                                            target: {
+                                              name: 'timeSlotId',
+                                              value: String(slot.id),
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <div>
+                                        <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
+                                        <p className="hp-booking-slot-copy">
+                                          Active owner-defined slot available for this booking.
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className="hp-booking-slot-price">{formatVenuePrice(slot.price)}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="hp-booking-note">
+                              This venue does not have owner-defined slots yet. Use manual start and end times to continue.
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {bookingStep === 2 ? (
+                        <div className="hp-booking-stage">
+                          <div className="hp-booking-stage-head">
+                            <p className="hp-booking-stage-title">Step 2: Optional Add-ons</p>
+                            <p className="hp-booking-stage-copy">
+                              Choose any extra services configured for this venue. These are added on top of the venue booking price.
+                            </p>
+                          </div>
+
+                          {bookingLoadingOptions ? (
+                            <div className="hp-booking-note">
+                              Loading available add-ons for this venue...
+                            </div>
+                          ) : bookingServiceOptions.length > 0 ? (
+                            <div className="hp-booking-option-list">
+                              {bookingServiceOptions.map((option) => {
+                                const isSelected = bookingForm.venueServiceOptionIds.some(
+                                  (selectedId) => String(selectedId) === String(option.id),
+                                )
+
+                                return (
+                                  <label
+                                    key={option.id}
+                                    className={`hp-booking-option-card${isSelected ? ' selected' : ''}`}
+                                  >
+                                    <div className="hp-booking-option-main">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleBookingOptionToggle(option.id)}
+                                      />
+                                      <div>
+                                        <p className="hp-booking-option-title">{option.serviceName}</p>
+                                        <p className="hp-booking-option-copy">
+                                          Optional venue add-on charged on top of the base booking price.
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className="hp-booking-option-price">
+                                      + {formatVenuePrice(option.price)}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="hp-booking-note">
+                              This venue does not have configured add-ons yet.
+                            </div>
+                          )}
+
+                          <div className="hp-booking-summary-grid">
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Base Estimate</span>
+                              <span className="hp-booking-summary-value">
+                                {estimatedBasePrice === null ? 'Depends on selected time' : formatVenuePrice(estimatedBasePrice)}
+                              </span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Add-ons</span>
+                              <span className="hp-booking-summary-value">{formatVenuePrice(servicesTotal)}</span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Estimated Total</span>
+                              <span className="hp-booking-summary-value">
+                                {estimatedTotal === null ? 'Calculated after submit' : formatVenuePrice(estimatedTotal)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {bookingStep === 3 ? (
+                        <div className="hp-booking-stage">
+                          <div className="hp-booking-stage-head">
+                            <p className="hp-booking-stage-title">Step 3: Documents & Review</p>
+                            <p className="hp-booking-stage-copy">
+                              Upload both ID documents, review your booking summary, then submit from this dialog.
+                            </p>
+                          </div>
+
+                          <div className="hp-booking-grid">
+                            <div className="hp-booking-field">
+                              <label className="hp-booking-label">Bride ID Document</label>
+                              <input
+                                className="hp-booking-input file"
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(event) => handleBookingDocumentChange('bride', event)}
+                              />
+                              {bookingDocumentNames.bride ? (
+                                <span className="hp-booking-file-meta">{bookingDocumentNames.bride}</span>
+                              ) : null}
+                            </div>
+
+                            <div className="hp-booking-field">
+                              <label className="hp-booking-label">Bridegroom ID Document</label>
+                              <input
+                                className="hp-booking-input file"
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(event) => handleBookingDocumentChange('bridegroom', event)}
+                              />
+                              {bookingDocumentNames.bridegroom ? (
+                                <span className="hp-booking-file-meta">{bookingDocumentNames.bridegroom}</span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="hp-booking-review-grid">
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Venue</span>
+                              <span className="hp-booking-summary-value">{selectedVenue.name || '--'}</span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Date</span>
+                              <span className="hp-booking-summary-value">{formatBookingDate(bookingForm.date)}</span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Guests</span>
+                              <span className="hp-booking-summary-value">{bookingForm.guestsCount || '--'} guests</span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Time</span>
+                              <span className="hp-booking-summary-value">{selectedBookingTimeLabel}</span>
+                            </div>
+                          </div>
+
+                          <div className="hp-booking-summary-grid">
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Base Estimate</span>
+                              <span className="hp-booking-summary-value">
+                                {estimatedBasePrice === null ? 'Depends on selected time' : formatVenuePrice(estimatedBasePrice)}
+                              </span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Selected Add-ons</span>
+                              <span className="hp-booking-summary-value">
+                                {selectedBookingServices.length > 0
+                                  ? selectedBookingServices.map((option) => option.serviceName).join(', ')
+                                  : 'No add-ons'}
+                              </span>
+                            </div>
+                            <div className="hp-booking-summary-card">
+                              <span className="hp-booking-summary-label">Estimated Total</span>
+                              <span className="hp-booking-summary-value">
+                                {estimatedTotal === null ? 'Calculated after submit' : formatVenuePrice(estimatedTotal)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {bookingStep === 4 ? (
+                        <div className="hp-booking-success">
+                          <p className="hp-booking-success-title">Booking Submitted</p>
+                          <p className="hp-booking-success-copy">
+                            Your booking for {selectedVenue.name || 'this venue'} on {formatBookingDate(bookingForm.date)} was created successfully. Open My Bookings to track the status.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {bookingFeedback.message ? (
+                        <div className={`hp-booking-status${bookingFeedback.tone === 'error' ? ' error' : ''}`}>
+                          {bookingFeedback.message}
+                        </div>
+                      ) : null}
+
+                      <div className="hp-booking-actions">
+                        {bookingStep === 1 ? (
+                          <>
+                            <button
+                              type="button"
+                              className="hp-booking-btn"
+                              onClick={startVenueBookingFlow}
+                            >
+                              Continue to Add-ons
+                            </button>
+                            <button
+                              type="button"
+                              className="hp-booking-btn secondary"
+                              onClick={closeVenueDetails}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : null}
+
+                        {bookingStep === 2 ? (
+                          <>
+                            <button
+                              type="button"
+                              className="hp-booking-btn"
+                              onClick={() => goToBookingStep(3)}
+                            >
+                              Continue to Review
+                            </button>
+                            <button
+                              type="button"
+                              className="hp-booking-btn secondary"
+                              onClick={() => setBookingStep(1)}
+                            >
+                              Back
+                            </button>
+                          </>
+                        ) : null}
+
+                        {bookingStep === 3 ? (
+                          <>
+                            <button
+                              type="button"
+                              className="hp-booking-btn"
+                              onClick={submitVenueBooking}
+                              disabled={bookingSubmitting}
+                            >
+                              {bookingSubmitting ? 'Submitting...' : 'Submit Booking'}
+                            </button>
+                            <button
+                              type="button"
+                              className="hp-booking-btn secondary"
+                              onClick={() => setBookingStep(2)}
+                              disabled={bookingSubmitting}
+                            >
+                              Back
+                            </button>
+                          </>
+                        ) : null}
+
+                        {bookingStep === 4 ? (
+                          <>
+                            <button
+                              type="button"
+                              className="hp-booking-btn"
+                              onClick={() => {
+                                closeVenueDetails()
+                                onNavigate('bookings')
+                              }}
+                            >
+                              Open My Bookings
+                            </button>
+                            <button
+                              type="button"
+                              className="hp-booking-btn secondary"
+                              onClick={closeVenueDetails}
+                            >
+                              Close
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="hp-booking-stage">
+                        <div className="hp-booking-stage-head">
+                          <p className="hp-booking-stage-title">Choose Date & Time</p>
+                          <p className="hp-booking-stage-copy">
+                            Pick the booking date and slot here. After login with a user account, the rest of the flow will continue.
+                          </p>
+                        </div>
+
+                        <div className="hp-booking-grid">
+                          <div className="hp-booking-field">
+                            <label className="hp-booking-label">Date</label>
+                            <input
+                              className="hp-booking-input"
+                              type="date"
+                              name="date"
+                              value={bookingForm.date}
+                              onChange={handleBookingFieldChange}
+                            />
+                          </div>
+
+                          <div className="hp-booking-field">
+                            <label className="hp-booking-label">Selected Price</label>
+                            <input
+                              className="hp-booking-input"
+                              value={
+                                selectedBookingSlot
+                                  ? formatVenuePrice(selectedBookingSlot.price)
+                                  : selectedVenueTimeSlots.length > 0
+                                    ? 'Choose a slot'
+                                    : 'Continue after login'
+                              }
+                              readOnly
+                            />
+                          </div>
+                        </div>
+
+                        {selectedVenueTimeSlots.length > 0 ? (
                           <div className="hp-booking-slot-list">
                             {selectedVenueTimeSlots.map((slot) => {
                               const isSelected = String(bookingForm.timeSlotId) === String(slot.id)
@@ -1701,16 +2638,18 @@ function HomePage({ onNavigate, session }) {
                                       name="home-time-slot"
                                       checked={isSelected}
                                       onChange={() =>
-                                        setBookingForm((currentForm) => ({
-                                          ...currentForm,
-                                          timeSlotId: String(slot.id),
-                                        }))
+                                        handleBookingFieldChange({
+                                          target: {
+                                            name: 'timeSlotId',
+                                            value: String(slot.id),
+                                          },
+                                        })
                                       }
                                     />
                                     <div>
                                       <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
                                       <p className="hp-booking-slot-copy">
-                                        Active owner-defined slot available for direct booking.
+                                        Active owner-defined slot prepared for direct booking.
                                       </p>
                                     </div>
                                   </div>
@@ -1719,61 +2658,32 @@ function HomePage({ onNavigate, session }) {
                               )
                             })}
                           </div>
+                        ) : (
+                          <div className="hp-booking-note">
+                            Manual time selection will continue after login from the booking page.
+                          </div>
+                        )}
+                      </div>
 
-                          {bookingFeedback.message ? (
-                            <div className={`hp-booking-status${bookingFeedback.tone === 'error' ? ' error' : ''}`}>
-                              {bookingFeedback.message}
-                            </div>
-                          ) : null}
-
-                          <div className="hp-booking-actions">
-                            <button
-                              type="button"
-                              className="hp-booking-btn"
-                              onClick={submitVenueBooking}
-                              disabled={bookingBusy}
-                            >
-                              {bookingBusy ? 'Submitting...' : 'Book Now'}
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="hp-booking-status">
-                            This venue is not using owner-defined slots yet. Use the dashboard booking page only if you need the manual start/end fallback.
-                          </div>
-                          <div className="hp-booking-actions">
-                            <button
-                              type="button"
-                              className="hp-booking-btn secondary"
-                              onClick={() => {
-                                setSelectedVenue(null)
-                                onNavigate('bookings')
-                              }}
-                            >
-                              Open Booking Page
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
                       <div className={`hp-booking-status${session ? '' : ' error'}`}>
                         {session
-                          ? 'Bookings are available from user accounts only.'
-                          : 'Log in with a user account to book this venue.'}
+                          ? 'Bookings can only be completed from user accounts. Switch account to continue.'
+                          : 'Log in with a user account to continue the booking flow.'}
                       </div>
+
+                      {bookingFeedback.message ? (
+                        <div className={`hp-booking-status${bookingFeedback.tone === 'error' ? ' error' : ''}`}>
+                          {bookingFeedback.message}
+                        </div>
+                      ) : null}
+
                       <div className="hp-booking-actions">
                         <button
                           type="button"
-                          className="hp-booking-btn secondary"
-                          onClick={() => {
-                            setSelectedVenue(null)
-                            onNavigate(session ? 'bookings' : 'auth')
-                          }}
+                          className="hp-booking-btn"
+                          onClick={startVenueBookingFlow}
                         >
-                          {session ? 'Go to Dashboard' : 'Log In to Book'}
+                          {session ? 'Switch Account to Book' : 'Log In to Continue'}
                         </button>
                       </div>
                     </>
@@ -1955,15 +2865,15 @@ function HomePage({ onNavigate, session }) {
               />
               <div className="hp-about-img-overlay" />
 
-              <div className="hp-about-chip chip-1">
-                <div className="hp-float-label">Active Venues</div>
-                <div className="hp-float-value">{venues.length}+ Listings</div>
-              </div>
+              {false && <div className="hp-about-chip chip-1">
+              <div className="hp-float-label">Active Venues</div>
+              <div className="hp-float-value">{venues.length}+ Listings</div>
+              </div>}
 
-              <div className="hp-about-chip chip-2">
+              {false && <div className="hp-about-chip chip-2">
                 <div className="hp-float-label">Verified</div>
                 <div className="hp-float-value">Business Network</div>
-              </div>
+              </div>}
             </div>
           </div>
         </section>

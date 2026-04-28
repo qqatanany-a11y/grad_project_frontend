@@ -61,10 +61,18 @@ function App() {
   const [currentPage, setCurrentPage] = useState(
     getDefaultPageForRole(initialSession?.role),
   )
+  const [bookingDraft, setBookingDraft] = useState(null)
 
   const handleSignIn = (authUser) => {
     persistAuthSession(authUser)
     setSession(authUser)
+
+    if (bookingDraft && authUser?.role === 'User') {
+      setCurrentPage('bookings')
+      setView('dashboard')
+      return
+    }
+
     setCurrentPage(getDefaultPageForRole(authUser?.role))
     setView('dashboard')
   }
@@ -105,8 +113,33 @@ function App() {
     setCurrentPage(resolvePageForRole(session?.role, to))
   }
 
+  const startVenueBooking = (draft) => {
+    if (!draft?.venueId) {
+      return
+    }
+
+    setBookingDraft({
+      ...draft,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    })
+
+    if (session?.role === 'User') {
+      setView('dashboard')
+      setCurrentPage('bookings')
+      return
+    }
+
+    setView('auth')
+  }
+
   if (view === 'home') {
-    return <HomePage onNavigate={navigate} session={session} />
+    return (
+      <HomePage
+        onNavigate={navigate}
+        onStartBooking={startVenueBooking}
+        session={session}
+      />
+    )
   }
 
   if (view === 'owner-request') {
@@ -133,7 +166,13 @@ function App() {
       case 'companies':
         return <Companies session={session} />
       case 'bookings':
-        return <Bookings session={session} />
+        return (
+          <Bookings
+            session={session}
+            initialBookingDraft={bookingDraft}
+            onBookingDraftApplied={() => setBookingDraft(null)}
+          />
+        )
       case 'venue-requests':
         return <VenueRequests session={session} />
       case 'users':
