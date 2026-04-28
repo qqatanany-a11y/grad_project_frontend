@@ -7,6 +7,7 @@ import {
   validateName,
   validatePhone,
 } from '../../lib/validation'
+import LanguageToggle from '../../i18n/LanguageToggle'
 
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 
@@ -182,6 +183,14 @@ const styles = `
     transition: color 0.15s;
   }
   .ma-toggle-btn:hover { color: #3730a3; }
+
+  .ma-lang {
+    position: fixed;
+    top: 1rem;
+    right: auto;
+    inset-inline-end: 1rem;
+    z-index: 5;
+  }
 `
 
 function Field({ id, label, type = 'text', name, required, value, error, onChange, onBlur, autoComplete, inputMode, maxLength }) {
@@ -330,6 +339,7 @@ function AuthPage({ onSignIn, onBack }) {
     <>
       <style>{styles}</style>
       <div className="ma-page">
+        <LanguageToggle className="ma-lang" />
 
         {/* Left: image panel */}
         <div className="ma-image-panel">

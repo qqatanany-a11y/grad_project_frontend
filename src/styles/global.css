@@ -22,6 +22,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[dir='rtl'] {
+  font-family: 'Inter', 'Tahoma', 'Arial', sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -36,7 +40,92 @@ body {
   margin: 0;
 }
 
+body[dir='rtl'] {
+  text-align: right;
+}
+
 button,
 input {
   font: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  direction: inherit;
+}
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  padding: 0 0.85rem;
+  border: 1.5px solid rgba(79, 70, 229, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #4f46e5;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.language-toggle:hover {
+  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(79, 70, 229, 0.32);
+  transform: translateY(-1px);
+}
+
+.language-toggle small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+:root[dir='rtl'] .db-sidebar {
+  border-right: 0;
+  border-left: 1px solid #e2e8f0;
+  inset: 0 0 0 auto;
+  box-shadow: -4px 0 24px rgba(79,70,229,0.06);
+}
+
+:root[dir='rtl'] .db-main {
+  margin-left: 0;
+  margin-right: 256px;
+}
+
+:root[dir='rtl'] .db-nav-item,
+:root[dir='rtl'] .db-footer-btn,
+:root[dir='rtl'] .hp-hall-card {
+  text-align: right;
+}
+
+:root[dir='rtl'] .db-nav-item:hover {
+  transform: translateX(-3px);
+}
+
+:root[dir='rtl'] .hp-hero-caption {
+  left: 2.5rem;
+  right: 2.5rem;
+}
+
+:root[dir='rtl'] .hp-feature-item:hover {
+  transform: translateX(-8px) translateY(-2px);
+}
+
+:root[dir='rtl'] .ma-back-btn svg,
+:root[dir='rtl'] .ahr-back-btn svg,
+:root[dir='rtl'] .db-back-btn svg {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 1024px) {
+  :root[dir='rtl'] .db-main {
+    margin-right: 0;
+  }
 }

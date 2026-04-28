@@ -7,6 +7,7 @@ import {
   validateName,
   validatePhone,
 } from '../../lib/validation'
+import LanguageToggle from '../../i18n/LanguageToggle'
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -360,6 +361,7 @@ function CompanyRegistration({ onNavigate }) {
             </svg>
             Back to Home
           </button>
+          <LanguageToggle />
         </header>
 
         <div className="ahr-body">
