@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
 import {
   formatVenueTimeSlot,
@@ -231,7 +231,7 @@ function readFileAsDataUrl(file) {
   })
 }
 
-function Bookings({ session }) {
+function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }) {
   const [bookings, setBookings] = useState([])
   const [venues, setVenues] = useState([])
   const [formValues, setFormValues] = useState(emptyForm)
@@ -246,6 +246,7 @@ function Bookings({ session }) {
   const [busyId, setBusyId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
+  const appliedDraftIdRef = useRef(null)
 
   const isOwner = session?.role === 'Owner'
   const isUser = session?.role === 'User'
@@ -281,6 +282,32 @@ function Bookings({ session }) {
       loadBookings()
     }
   }, [session?.role, session?.token])
+
+  useEffect(() => {
+    if (!isUser || !initialBookingDraft?.id) {
+      return
+    }
+
+    if (appliedDraftIdRef.current === initialBookingDraft.id) {
+      return
+    }
+
+    appliedDraftIdRef.current = initialBookingDraft.id
+    setShowForm(true)
+    setVenueTypeFilter(initialBookingDraft.venueCategory ?? 'All')
+    setServiceOptions([])
+    setDocumentNames({ bride: '', bridegroom: '' })
+    setFeedback({ tone: 'idle', message: '' })
+    setFormValues({
+      ...emptyForm,
+      venueId: String(initialBookingDraft.venueId ?? ''),
+      date: initialBookingDraft.date ?? '',
+      timeSlotId: initialBookingDraft.timeSlotId
+        ? String(initialBookingDraft.timeSlotId)
+        : '',
+    })
+    onBookingDraftApplied?.()
+  }, [initialBookingDraft, isUser, onBookingDraftApplied])
 
   const filteredBookings = useMemo(() => {
     const query = search.trim().toLowerCase()

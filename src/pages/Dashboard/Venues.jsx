@@ -483,7 +483,6 @@ function Venues({ session }) {
 
   const isOwner = session?.role === 'Owner'
   const isAdmin = session?.role === 'Admin'
-  const isUser = session?.role === 'User'
 
   const loadVenues = async () => {
     setLoading(true)
