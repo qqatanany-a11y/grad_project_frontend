@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { getVenuePhotoSet } from '../../lib/venueMedia'
+import { formatVenueTimeSlot, getVenueTimeSlots } from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles = makeDashStyles('vr') + `
@@ -60,6 +62,64 @@ const styles = makeDashStyles('vr') + `
     letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;
   }
   .vr-detail-item span { font-size: 0.875rem; color: #1e1b4b; font-weight: 500; }
+  .vr-media {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .vr-media-cover {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    display: block;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #eef2ff;
+  }
+  .vr-media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .vr-media-item {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #eef2ff;
+  }
+  .vr-slot-list {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1rem;
+  }
+  .vr-slot-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.85rem 0.95rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+  }
+  .vr-slot-time {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e1b4b;
+  }
+  .vr-slot-copy {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+  .vr-slot-price {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #4f46e5;
+  }
   @media (max-width: 1100px) {
     .vr-row { grid-template-columns: 1fr; }
     .vr-row.header { display: none; }
@@ -78,9 +138,44 @@ function formatDate(value) {
   })
 }
 
+function formatCurrency(value) {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? `${amount.toFixed(2)} JOD` : '--'
+}
+
+function getVenueCategoryValue(source) {
+  const rawValue = source?.category ?? source?.Category ?? 'WeddingHall'
+
+  if (rawValue === 2 || rawValue === 'Farm') {
+    return 'Farm'
+  }
+
+  return 'WeddingHall'
+}
+
+function getVenueCategoryLabel(value) {
+  return value === 'Farm' || value === 2 ? 'Farm' : 'Wedding Hall'
+}
+
+function getPricingTypeValue(source) {
+  const rawValue = source?.pricingType ?? source?.PricingType ?? 'Hourly'
+
+  if (rawValue === 2 || rawValue === 'FixedSlots') {
+    return 'FixedSlots'
+  }
+
+  return 'Hourly'
+}
+
+function getPricingTypeLabel(value) {
+  return value === 'FixedSlots' || value === 2 ? 'Fixed Slots' : 'Hourly'
+}
+
 function parseRequestedData(requestedDataJson) {
   try {
     const data = JSON.parse(requestedDataJson ?? '{}')
+    const pricePerHour = Number(data?.pricePerHour ?? data?.PricePerHour)
+    const { coverPhotoUrl, galleryPhotoUrls, photoUrls } = getVenuePhotoSet(data)
 
     return {
       name: data?.name ?? data?.Name ?? '',
@@ -88,8 +183,14 @@ function parseRequestedData(requestedDataJson) {
       city: data?.city ?? data?.City ?? '',
       address: data?.address ?? data?.Address ?? '',
       capacity: data?.capacity ?? data?.Capacity ?? null,
-      minimalPrice: data?.minimalPrice ?? data?.MinimalPrice ?? null,
+      category: getVenueCategoryValue(data),
+      pricingType: getPricingTypeValue(data),
+      pricePerHour: Number.isFinite(pricePerHour) ? pricePerHour : null,
       companyName: data?.companyName ?? data?.CompanyName ?? '',
+      timeSlots: getVenueTimeSlots(data),
+      coverPhotoUrl,
+      galleryPhotoUrls,
+      photoUrls,
     }
   } catch {
     return {
@@ -98,8 +199,13 @@ function parseRequestedData(requestedDataJson) {
       city: '',
       address: '',
       capacity: null,
-      minimalPrice: null,
+      category: 'WeddingHall',
+      pricingType: 'Hourly',
+      pricePerHour: null,
       companyName: '',
+      coverPhotoUrl: '',
+      galleryPhotoUrls: [],
+      photoUrls: [],
     }
   }
 }
@@ -230,7 +336,7 @@ function VenueRequests({ session }) {
           className="vr-input vr-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by venue, company, owner, or city..."
+          placeholder="Search by venue, business, owner, or city..."
         />
         <select
           className="vr-select"
@@ -256,7 +362,7 @@ function VenueRequests({ session }) {
       <div className="vr-table">
         <div className="vr-row header">
           <p className="vr-label">Venue</p>
-          <p className="vr-label">Company</p>
+          <p className="vr-label">Business</p>
           <p className="vr-label">Owner</p>
           <p className="vr-label">City</p>
           <p className="vr-label">Status</p>
@@ -333,8 +439,16 @@ function VenueRequests({ session }) {
                         <span>{request.details.capacity ?? '--'}</span>
                       </div>
                       <div className="vr-detail-item">
-                        <label>Minimal Price</label>
-                        <span>{request.details.minimalPrice ?? '--'}</span>
+                        <label>Venue Type</label>
+                        <span>{getVenueCategoryLabel(request.details.category)}</span>
+                      </div>
+                      <div className="vr-detail-item">
+                        <label>Pricing Model</label>
+                        <span>{getPricingTypeLabel(request.details.pricingType)}</span>
+                      </div>
+                      <div className="vr-detail-item">
+                        <label>Price</label>
+                        <span>{formatCurrency(request.details.pricePerHour)}</span>
                       </div>
                       <div className="vr-detail-item">
                         <label>Description</label>
@@ -347,6 +461,45 @@ function VenueRequests({ session }) {
                         </div>
                       ) : null}
                     </div>
+
+                    {request.details.timeSlots?.length > 0 ? (
+                      <div className="vr-slot-list">
+                        {request.details.timeSlots.map((slot, index) => (
+                          <div key={`${request.id}-slot-${slot.id ?? index}`} className="vr-slot-item">
+                            <div>
+                              <div className="vr-slot-time">{formatVenueTimeSlot(slot)}</div>
+                              <div className="vr-slot-copy">{slot.isActive ? 'Active slot' : 'Inactive slot'}</div>
+                            </div>
+                            <span className="vr-slot-price">{formatCurrency(slot.price)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {request.details.photoUrls?.length > 0 ? (
+                      <div className="vr-media">
+                        {request.details.coverPhotoUrl ? (
+                          <img
+                            src={request.details.coverPhotoUrl}
+                            alt={`${request.details.name || 'Venue'} cover`}
+                            className="vr-media-cover"
+                          />
+                        ) : null}
+
+                        {request.details.galleryPhotoUrls?.length > 0 ? (
+                          <div className="vr-media-grid">
+                            {request.details.galleryPhotoUrls.map((photoUrl, index) => (
+                              <img
+                                key={`${request.id}-photo-${index}`}
+                                src={photoUrl}
+                                alt={`${request.details.name || 'Venue'} photo ${index + 2}`}
+                                className="vr-media-item"
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

@@ -289,10 +289,10 @@ const layoutStyles = `
 `
 
 const pageTitles = {
-  'owner-requests': 'Company Requests',
+  'owner-requests': 'Business Requests',
   'venue-requests': 'Venue Requests',
   venues: 'Venues',
-  companies: 'Companies',
+  companies: 'Businesses',
   bookings: 'Bookings',
   users: 'Users',
   'edit-requests': 'Edit Requests',
@@ -304,10 +304,10 @@ function getNavigation(role) {
       {
         section: 'Admin',
         items: [
-          { id: 'owner-requests', label: 'Company Requests', icon: 'list' },
+          { id: 'owner-requests', label: 'Business Requests', icon: 'list' },
           { id: 'venue-requests', label: 'Venue Requests', icon: 'list' },
           { id: 'venues', label: 'Venues', icon: 'venue' },
-          { id: 'companies', label: 'Companies', icon: 'company' },
+          { id: 'companies', label: 'Businesses', icon: 'company' },
           { id: 'users', label: 'Users', icon: 'users' },
           { id: 'edit-requests', label: 'Edit Requests', icon: 'edit' },
         ],

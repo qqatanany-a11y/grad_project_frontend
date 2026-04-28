@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { getVenuePhotoSet } from '../../lib/venueMedia'
+import {
+  formatVenueTimeSlot,
+  getVenueTimeSlots,
+} from '../../lib/venueTimeSlots'
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -483,6 +488,41 @@ const styles = `
   .hp-hiw-desc  { font-size: 0.875rem; color: var(--muted); line-height: 1.7; margin: 0; }
 
   /* ── VENUE CARDS ── */
+  .hp-venue-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .hp-venue-filter-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+  .hp-venue-filter {
+    border: 1.5px solid rgba(79,70,229,0.15);
+    background: #fff;
+    color: var(--muted);
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+  }
+  .hp-venue-filter:hover {
+    color: var(--primary);
+    border-color: rgba(79,70,229,0.28);
+    transform: translateY(-1px);
+  }
+  .hp-venue-filter.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
   .hp-halls-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
 
   .hp-hall-card {
@@ -515,6 +555,12 @@ const styles = `
   .hp-hall-name { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 0.35rem; letter-spacing: -0.01em; }
   .hp-hall-cap  { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.65rem; font-weight: 500; }
   .hp-hall-features { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
+  .hp-hall-price {
+    margin: 0.8rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
 
   .hp-hall-tag {
     display: inline-flex; align-items: center; margin-top: 1rem;
@@ -622,6 +668,15 @@ const styles = `
   .hp-venue-close:hover { background: var(--accent); color: #fff; border-color: var(--accent); transform: rotate(90deg); }
 
   .hp-venue-body { padding: 1.75rem; }
+  .hp-venue-cover {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    display: block;
+    border-radius: 18px;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, #e0e7ff, #fce7f3);
+  }
 
   .hp-venue-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
   .hp-venue-chip {
@@ -632,12 +687,181 @@ const styles = `
   }
 
   .hp-venue-description { font-size: 0.95rem; line-height: 1.8; color: var(--muted); margin-bottom: 1.5rem; }
+  .hp-venue-gallery-title {
+    margin: 1.5rem 0 0.85rem;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .hp-venue-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .hp-venue-gallery-item {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+    border-radius: 14px;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+  }
 
   .hp-venue-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
 
   .hp-venue-detail { padding: 1rem; background: var(--bg-alt); border-radius: 12px; border: 1px solid var(--border); }
   .hp-venue-detail-label { display: block; margin-bottom: 0.3rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
   .hp-venue-detail-value { font-size: 0.95rem; color: var(--text); font-weight: 700; line-height: 1.5; }
+  .hp-booking-panel {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border-radius: 18px;
+    border: 1px solid rgba(79,70,229,0.14);
+    background: linear-gradient(135deg, rgba(79,70,229,0.04), rgba(244,63,94,0.03));
+  }
+  .hp-booking-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .hp-booking-title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .hp-booking-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.6;
+  }
+  .hp-booking-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+  .hp-booking-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .hp-booking-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hp-booking-input {
+    height: 2.85rem;
+    border: 2px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 0 0.9rem;
+    font: inherit;
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .hp-booking-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79,70,229,0.1);
+  }
+  .hp-booking-slot-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .hp-booking-slot-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.95rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .hp-booking-slot-card.selected {
+    border-color: rgba(79,70,229,0.28);
+    background: rgba(79,70,229,0.05);
+  }
+  .hp-booking-slot-main {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .hp-booking-slot-main input {
+    margin-top: 0.2rem;
+  }
+  .hp-booking-slot-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .hp-booking-slot-copy {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .hp-booking-slot-price {
+    white-space: nowrap;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--primary);
+  }
+  .hp-booking-status {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    border: 1.5px solid rgba(79,70,229,0.18);
+    background: rgba(79,70,229,0.06);
+    color: var(--primary);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .hp-booking-status.error {
+    border-color: rgba(244,63,94,0.22);
+    background: rgba(244,63,94,0.07);
+    color: #be123c;
+  }
+  .hp-booking-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .hp-booking-btn {
+    height: 2.85rem;
+    padding: 0 1.25rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #4f46e5, #3730a3);
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(79,70,229,0.22);
+  }
+  .hp-booking-btn.secondary {
+    background: rgba(79,70,229,0.08);
+    color: var(--primary);
+    border: 1.5px solid rgba(79,70,229,0.2);
+    box-shadow: none;
+  }
+  .hp-booking-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
 
   /* ── CONTACT ── */
   .hp-contact-grid { max-width: 680px; }
@@ -713,6 +937,7 @@ const styles = `
     .hp-cta-banner { padding: 4rem 1.5rem; }
     .hp-cta-banner h2 { font-size: 2rem; }
     .hp-venue-detail-grid { grid-template-columns: 1fr; }
+    .hp-booking-grid { grid-template-columns: 1fr; }
     .hp-venue-panel-head { padding: 1.25rem; }
     .hp-venue-body { padding: 1.25rem; }
   }
@@ -743,7 +968,7 @@ const howItWorks = [
     num: '02',
     icon: '📋',
     title: 'Register & Connect',
-    desc: 'Venue owners submit their company details through a smooth, professional guided registration process.',
+    desc: 'Venue owners submit their business details through a smooth and guided registration process.',
   },
   {
     num: '03',
@@ -759,32 +984,44 @@ const fallbackVenues = [
     name: 'Grand Celebration Hall',
     capacity: 500,
     city: 'Amman',
+    address: 'Airport Road',
     description: 'Ideal for weddings, large celebrations, and premium evening events.',
     companyName: 'Eventes',
+    category: 'WeddingHall',
+    pricingType: 'Hourly',
+    pricePerHour: 180,
   },
   {
     id: 2,
-    name: 'Executive Conference Space',
-    capacity: 80,
+    name: 'Garden Wedding Farm',
+    capacity: 350,
     city: 'Amman',
-    description: 'Perfect for meetings, presentations, workshops, and business discussions.',
+    address: 'Jerash Road',
+    description: 'Open-air farm venue prepared for outdoor weddings, receptions, and private parties.',
     companyName: 'Eventes',
+    category: 'Farm',
+    pricingType: 'FixedSlots',
+    pricePerHour: 900,
   },
   {
     id: 3,
-    name: 'Seminar And Training Studio',
-    capacity: 200,
+    name: 'Skyline Wedding Hall',
+    capacity: 240,
     city: 'Amman',
-    description: 'Designed for seminars, training programs, lectures, and community events.',
+    address: 'Mecca Street',
+    description: 'Modern indoor hall with flexible seating for engagement parties and wedding ceremonies.',
     companyName: 'Eventes',
+    category: 'WeddingHall',
+    pricingType: 'Hourly',
+    pricePerHour: 120,
   },
 ]
 
 const navLinks = [
   { id: 'hero',   label: 'Home' },
-  { id: 'about',  label: 'About' },
   { id: 'halls',  label: 'Venues' },
   { id: 'contact',label: 'Contact' },
+  { id: 'about',  label: 'About' },
 ]
 
 function scrollTo(id) {
@@ -797,19 +1034,91 @@ function formatVenuePrice(value) {
   return `${amount} JOD`
 }
 
-function getVenueCompanyName(venue) { return venue.companyName || 'Eventes' }
+function getVenueCategoryValue(venue) {
+  const rawValue = venue?.category ?? venue?.Category ?? 'WeddingHall'
+
+  if (rawValue === 2 || rawValue === 'Farm') {
+    return 'Farm'
+  }
+
+  return 'WeddingHall'
+}
+
+function getVenueCategoryLabel(value) {
+  return value === 'Farm' || value === 2 ? 'Farm' : 'Wedding Hall'
+}
+
+function getPricingTypeValue(venue) {
+  const rawValue = venue?.pricingType ?? venue?.PricingType ?? 'Hourly'
+
+  if (rawValue === 2 || rawValue === 'FixedSlots') {
+    return 'FixedSlots'
+  }
+
+  return 'Hourly'
+}
+
+function getPricingTypeLabel(value) {
+  return value === 'FixedSlots' || value === 2 ? 'Fixed Slots' : 'Hourly'
+}
+
+function getVenuePriceValue(venue) {
+  const amount = Number(venue?.pricePerHour ?? venue?.PricePerHour)
+  return Number.isFinite(amount) ? amount : null
+}
+
+function getVenuePriceSummary(venue) {
+  const pricingType = getPricingTypeValue(venue)
+  const priceValue = getVenuePriceValue(venue)
+
+  if (pricingType === 'Hourly' && priceValue !== null) {
+    return `${formatVenuePrice(priceValue)} / hour`
+  }
+
+  if (pricingType === 'FixedSlots' && priceValue !== null) {
+    return `${formatVenuePrice(priceValue)} / slot`
+  }
+
+  return pricingType === 'FixedSlots' ? 'Fixed slot pricing' : 'Price available on request'
+}
+
+function getVenueBusinessName(venue) {
+  return venue?.companyName ?? venue?.CompanyName ?? 'Eventes'
+}
 
 function getVenueSummary(venue) {
   return (
     venue.description ||
-    'A flexible venue prepared for business events, celebrations, and memorable guest experiences.'
+    'A flexible venue prepared for weddings, celebrations, and memorable guest experiences.'
   )
 }
 
-function useScrollAnimation() {
+function getVenueCoverPhoto(venue, fallbackIndex = 0) {
+  const { coverPhotoUrl } = getVenuePhotoSet(venue)
+  return coverPhotoUrl || VENUE_IMAGES[fallbackIndex % VENUE_IMAGES.length]
+}
+
+function useScrollAnimation(watchValue) {
   useEffect(() => {
     const selectors = '.hp-animate, .hp-animate-left, .hp-animate-right, .hp-animate-scale'
-    const elements = document.querySelectorAll(selectors)
+    const elements = Array.from(document.querySelectorAll(selectors))
+
+    if (elements.length === 0) {
+      return undefined
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      elements.forEach((element) => element.classList.add('visible'))
+      return undefined
+    }
+
+    const revealIfVisible = (element) => {
+      const rect = element.getBoundingClientRect()
+      if (rect.top <= window.innerHeight * 0.9 && rect.bottom >= 0) {
+        element.classList.add('visible')
+      }
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -820,18 +1129,25 @@ function useScrollAnimation() {
       },
       { threshold: 0.1 },
     )
-    elements.forEach((el) => observer.observe(el))
+
+    elements.forEach((element) => {
+      observer.observe(element)
+      revealIfVisible(element)
+    })
+
     return () => observer.disconnect()
-  }, [])
+  }, [watchValue])
 }
 
 function HomePage({ onNavigate, session }) {
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [venues, setVenues] = useState(fallbackVenues)
+  const [venueTypeFilter, setVenueTypeFilter] = useState('All')
   const [selectedVenue, setSelectedVenue] = useState(null)
-
-  useScrollAnimation()
+  const [bookingForm, setBookingForm] = useState({ date: '', timeSlotId: '' })
+  const [bookingBusy, setBookingBusy] = useState(false)
+  const [bookingFeedback, setBookingFeedback] = useState({ tone: 'idle', message: '' })
 
   useEffect(() => {
     const onScroll = () => {
@@ -868,6 +1184,97 @@ function HomePage({ onNavigate, session }) {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [selectedVenue])
 
+  const displayedVenues = useMemo(() => {
+    if (venueTypeFilter === 'All') {
+      return venues
+    }
+
+    return venues.filter((venue) => getVenueCategoryValue(venue) === venueTypeFilter)
+  }, [venueTypeFilter, venues])
+
+  useScrollAnimation(displayedVenues)
+
+  const selectedVenueTimeSlots = useMemo(() => {
+    return selectedVenue ? getVenueTimeSlots(selectedVenue, { activeOnly: true }) : []
+  }, [selectedVenue])
+
+  const selectedBookingSlot = useMemo(() => {
+    return (
+      selectedVenueTimeSlots.find((slot) => String(slot.id) === String(bookingForm.timeSlotId)) ?? null
+    )
+  }, [bookingForm.timeSlotId, selectedVenueTimeSlots])
+
+  const selectedVenuePhotoSet = useMemo(
+    () =>
+      selectedVenue
+        ? getVenuePhotoSet(selectedVenue)
+        : { coverPhotoUrl: '', galleryPhotoUrls: [], photoUrls: [] },
+    [selectedVenue],
+  )
+
+  useEffect(() => {
+    setBookingForm({ date: '', timeSlotId: '' })
+    setBookingBusy(false)
+    setBookingFeedback({ tone: 'idle', message: '' })
+  }, [selectedVenue?.id])
+
+  const submitVenueBooking = async () => {
+    if (!selectedVenue?.id) {
+      return
+    }
+
+    if (session?.role !== 'User') {
+      setBookingFeedback({
+        tone: 'error',
+        message: 'Bookings are available for signed-in user accounts only.',
+      })
+      return
+    }
+
+    if (!bookingForm.date) {
+      setBookingFeedback({
+        tone: 'error',
+        message: 'Choose a booking date before submitting.',
+      })
+      return
+    }
+
+    if (!selectedBookingSlot) {
+      setBookingFeedback({
+        tone: 'error',
+        message: 'Choose one of the active venue time slots before submitting.',
+      })
+      return
+    }
+
+    setBookingBusy(true)
+
+    try {
+      await apiRequest('/api/bookings', {
+        method: 'POST',
+        token: session?.token,
+        body: {
+          venueId: Number(selectedVenue.id),
+          date: `${bookingForm.date}T00:00:00Z`,
+          timeSlotId: Number(selectedBookingSlot.id),
+        },
+      })
+
+      setBookingFeedback({
+        tone: 'idle',
+        message: 'Booking created successfully.',
+      })
+      setBookingForm({ date: '', timeSlotId: '' })
+    } catch (error) {
+      setBookingFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to create the booking.',
+      })
+    } finally {
+      setBookingBusy(false)
+    }
+  }
+
   return (
     <>
       <style>{styles}</style>
@@ -887,7 +1294,7 @@ function HomePage({ onNavigate, session }) {
                 {link.label}
               </button>
             ))}
-            <button className="hp-nav-link" onClick={() => onNavigate('add-hall')}>Register Company</button>
+            <button className="hp-nav-link" onClick={() => onNavigate('add-hall')}>Register Business</button>
           </div>
 
           <button className="hp-login-btn" onClick={() => onNavigate(session ? 'venues' : 'auth')}>
@@ -915,13 +1322,13 @@ function HomePage({ onNavigate, session }) {
             </h1>
 
             <p className="hp-hero-desc">
-              Eventes connects users with the best venues, helps companies register professionally,
+              Eventes connects users with the best venues, helps businesses register professionally,
               and gives admins full control — all in one powerful platform.
             </p>
 
             <div className="hp-hero-cta">
               <button className="hp-cta-primary" onClick={() => onNavigate('add-hall')}>
-                🏢 Register Company
+                Register Business
               </button>
               <button className="hp-cta-secondary" onClick={() => scrollTo('halls')}>
                 Explore Venues →
@@ -982,12 +1389,12 @@ function HomePage({ onNavigate, session }) {
         {/* ── WAVE 1 ── */}
         <div className="hp-wave" style={{ background: '#ffffff' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-            <path d="M0,36 C240,72 480,0 720,36 C960,72 1200,0 1440,36 L1440,72 L0,72 Z" fill="#f8f7ff" />
+            <path d="M0,36 C240,72 480,0 720,36 C960,72 1200,0 1440,36 L1440,72 L0,72 Z" fill="#ffffff" />
           </svg>
         </div>
 
         {/* ── ABOUT ── */}
-        <section id="about" className="hp-section hp-section-alt">
+        <section id="about-hidden" className="hp-section hp-section-alt" style={{ display: 'none' }}>
           <div className="hp-about-grid">
             <div>
               <span className="hp-section-tag hp-animate">About Eventes</span>
@@ -1013,7 +1420,7 @@ function HomePage({ onNavigate, session }) {
                     delay: 'd2',
                   },
                   {
-                    title: 'Simple Company Registration',
+                    title: 'Simple Business Registration',
                     desc: 'Venue owners submit details professionally through a guided process.',
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#f43f5e" strokeWidth="1.6">
@@ -1025,7 +1432,7 @@ function HomePage({ onNavigate, session }) {
                   },
                   {
                     title: 'Organized Admin Control',
-                    desc: 'Admins manage requests, approve companies, and keep data structured.',
+                    desc: 'Admins manage requests, approve businesses, and keep data structured.',
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#f59e0b" strokeWidth="1.6">
                         <circle cx="10" cy="10" r="8" />
@@ -1063,7 +1470,7 @@ function HomePage({ onNavigate, session }) {
 
               <div className="hp-about-chip chip-2">
                 <div className="hp-float-label">✓ Verified</div>
-                <div className="hp-float-value">Company Network</div>
+                <div className="hp-float-value">Business Network</div>
               </div>
             </div>
           </div>
@@ -1118,12 +1525,32 @@ function HomePage({ onNavigate, session }) {
             Spaces Designed For <br /><strong>Real Events</strong>
           </h2>
           <p className="hp-section-lead hp-animate hp-animate-d2">
-            Explore venues for conferences, seminars, celebrations, and private gatherings.
+            Explore wedding halls and farms for celebrations, outdoor events, and private gatherings.
             Compare options quickly with clear, structured information.
           </p>
 
+          <div className="hp-venue-toolbar">
+            <div className="hp-venue-filter-group">
+              {[
+                { value: 'All', label: 'All Venues' },
+                { value: 'WeddingHall', label: 'Wedding Halls' },
+                { value: 'Farm', label: 'Farms' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`hp-venue-filter${venueTypeFilter === option.value ? ' active' : ''}`}
+                  onClick={() => setVenueTypeFilter(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <span className="hp-hall-cap">{displayedVenues.length} venues shown</span>
+          </div>
+
           <div className="hp-halls-grid">
-            {venues.map((venue, index) => (
+            {displayedVenues.map((venue, index) => (
               <button
                 key={venue.id ?? venue.name}
                 type="button"
@@ -1132,7 +1559,7 @@ function HomePage({ onNavigate, session }) {
               >
                 <div className="hp-hall-img-wrap">
                   <img
-                    src={VENUE_IMAGES[index % VENUE_IMAGES.length]}
+                    src={getVenueCoverPhoto(venue, index)}
                     alt={venue.name}
                     className="hp-hall-img"
                     onError={(e) => { e.target.style.display = 'none' }}
@@ -1144,8 +1571,12 @@ function HomePage({ onNavigate, session }) {
                 <div className="hp-hall-body">
                   <p className="hp-hall-name">{venue.name}</p>
                   <p className="hp-hall-cap">📍 {venue.city || 'Amman'}</p>
+                  <p className="hp-hall-cap">
+                    {getVenueCategoryLabel(getVenueCategoryValue(venue))} | {getPricingTypeLabel(getPricingTypeValue(venue))}
+                  </p>
                   <p className="hp-hall-features">{getVenueSummary(venue)}</p>
-                  <span className="hp-hall-tag">{getVenueCompanyName(venue)}</span>
+                  <p className="hp-hall-price">{getVenuePriceSummary(venue)}</p>
+                  <span className="hp-hall-tag">{getVenueBusinessName(venue)}</span>
                   <span className="hp-hall-hint">View details →</span>
                 </div>
               </button>
@@ -1161,7 +1592,7 @@ function HomePage({ onNavigate, session }) {
                 <div>
                   <h3 className="hp-venue-panel-title">{selectedVenue.name || 'Venue Details'}</h3>
                   <p className="hp-venue-panel-subtitle">
-                    {getVenueCompanyName(selectedVenue)} · {selectedVenue.city || 'Amman'}
+                    {getVenueBusinessName(selectedVenue)} | {selectedVenue.city || 'Amman'}
                   </p>
                 </div>
                 <button type="button" className="hp-venue-close" onClick={() => setSelectedVenue(null)} aria-label="Close">
@@ -1170,9 +1601,17 @@ function HomePage({ onNavigate, session }) {
               </div>
 
               <div className="hp-venue-body">
+                <img
+                  src={selectedVenuePhotoSet.coverPhotoUrl || getVenueCoverPhoto(selectedVenue)}
+                  alt={selectedVenue.name || 'Venue cover'}
+                  className="hp-venue-cover"
+                />
+
                 <div className="hp-venue-meta">
                   <span className="hp-venue-chip">👥 Up to {selectedVenue.capacity ?? 0} guests</span>
-                  <span className="hp-venue-chip">💰 From {formatVenuePrice(selectedVenue.minimalPrice)}</span>
+                  <span className="hp-venue-chip">{getVenueCategoryLabel(getVenueCategoryValue(selectedVenue))}</span>
+                  <span className="hp-venue-chip">{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</span>
+                  <span className="hp-venue-chip">{getVenuePriceSummary(selectedVenue)}</span>
                   <span className="hp-venue-chip">📍 {selectedVenue.city || 'Amman'}</span>
                 </div>
 
@@ -1180,8 +1619,8 @@ function HomePage({ onNavigate, session }) {
 
                 <div className="hp-venue-detail-grid">
                   <div className="hp-venue-detail">
-                    <span className="hp-venue-detail-label">Hosted By</span>
-                    <span className="hp-venue-detail-value">{getVenueCompanyName(selectedVenue)}</span>
+                    <span className="hp-venue-detail-label">Business</span>
+                    <span className="hp-venue-detail-value">{getVenueBusinessName(selectedVenue)}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Guest Capacity</span>
@@ -1199,13 +1638,163 @@ function HomePage({ onNavigate, session }) {
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Starting Price</span>
-                    <span className="hp-venue-detail-value">{formatVenuePrice(selectedVenue.minimalPrice)}</span>
+                    <span className="hp-venue-detail-value">{getVenuePriceSummary(selectedVenue)}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Venue Name</span>
                     <span className="hp-venue-detail-value">{selectedVenue.name || '--'}</span>
                   </div>
                 </div>
+
+                <div className="hp-booking-panel">
+                  <div className="hp-booking-head">
+                    <div>
+                      <p className="hp-booking-title">Book This Venue</p>
+                      <p className="hp-booking-copy">
+                        Direct booking is available here when the owner has configured active time slots.
+                      </p>
+                    </div>
+                  </div>
+
+                  {session?.role === 'User' ? (
+                    <>
+                      <div className="hp-booking-grid">
+                        <div className="hp-booking-field">
+                          <label className="hp-booking-label">Date</label>
+                          <input
+                            className="hp-booking-input"
+                            type="date"
+                            value={bookingForm.date}
+                            onChange={(event) =>
+                              setBookingForm((currentForm) => ({
+                                ...currentForm,
+                                date: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="hp-booking-field">
+                          <label className="hp-booking-label">Selected Price</label>
+                          <input
+                            className="hp-booking-input"
+                            value={selectedBookingSlot ? getVenuePriceSummary({ pricePerHour: selectedBookingSlot.price, pricingType: 'FixedSlots' }) : 'Choose a slot'}
+                            readOnly
+                          />
+                        </div>
+                      </div>
+
+                      {selectedVenueTimeSlots.length > 0 ? (
+                        <>
+                          <div className="hp-booking-slot-list">
+                            {selectedVenueTimeSlots.map((slot) => {
+                              const isSelected = String(bookingForm.timeSlotId) === String(slot.id)
+
+                              return (
+                                <label
+                                  key={slot.id}
+                                  className={`hp-booking-slot-card${isSelected ? ' selected' : ''}`}
+                                >
+                                  <div className="hp-booking-slot-main">
+                                    <input
+                                      type="radio"
+                                      name="home-time-slot"
+                                      checked={isSelected}
+                                      onChange={() =>
+                                        setBookingForm((currentForm) => ({
+                                          ...currentForm,
+                                          timeSlotId: String(slot.id),
+                                        }))
+                                      }
+                                    />
+                                    <div>
+                                      <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
+                                      <p className="hp-booking-slot-copy">
+                                        Active owner-defined slot available for direct booking.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="hp-booking-slot-price">{formatVenuePrice(slot.price)}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+
+                          {bookingFeedback.message ? (
+                            <div className={`hp-booking-status${bookingFeedback.tone === 'error' ? ' error' : ''}`}>
+                              {bookingFeedback.message}
+                            </div>
+                          ) : null}
+
+                          <div className="hp-booking-actions">
+                            <button
+                              type="button"
+                              className="hp-booking-btn"
+                              onClick={submitVenueBooking}
+                              disabled={bookingBusy}
+                            >
+                              {bookingBusy ? 'Submitting...' : 'Book Now'}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="hp-booking-status">
+                            This venue is not using owner-defined slots yet. Use the dashboard booking page only if you need the manual start/end fallback.
+                          </div>
+                          <div className="hp-booking-actions">
+                            <button
+                              type="button"
+                              className="hp-booking-btn secondary"
+                              onClick={() => {
+                                setSelectedVenue(null)
+                                onNavigate('bookings')
+                              }}
+                            >
+                              Open Booking Page
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className={`hp-booking-status${session ? '' : ' error'}`}>
+                        {session
+                          ? 'Bookings are available from user accounts only.'
+                          : 'Log in with a user account to book this venue.'}
+                      </div>
+                      <div className="hp-booking-actions">
+                        <button
+                          type="button"
+                          className="hp-booking-btn secondary"
+                          onClick={() => {
+                            setSelectedVenue(null)
+                            onNavigate(session ? 'bookings' : 'auth')
+                          }}
+                        >
+                          {session ? 'Go to Dashboard' : 'Log In to Book'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {selectedVenuePhotoSet.galleryPhotoUrls.length > 0 ? (
+                  <>
+                    <p className="hp-venue-gallery-title">Additional Photos</p>
+                    <div className="hp-venue-gallery">
+                      {selectedVenuePhotoSet.galleryPhotoUrls.map((photoUrl, index) => (
+                        <img
+                          key={`${selectedVenue.id ?? selectedVenue.name ?? 'venue'}-${index}`}
+                          src={photoUrl}
+                          alt={`${selectedVenue.name || 'Venue'} photo ${index + 2}`}
+                          className="hp-venue-gallery-item"
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1221,7 +1810,7 @@ function HomePage({ onNavigate, session }) {
             </p>
             <div className="hp-cta-banner-btns hp-animate hp-animate-d2">
               <button className="hp-cta-white" onClick={() => onNavigate('add-hall')}>
-                Register Your Company
+                Register Your Business
               </button>
               <button className="hp-cta-ghost" onClick={() => scrollTo('halls')}>
                 Explore All Venues
@@ -1293,6 +1882,92 @@ function HomePage({ onNavigate, session }) {
         </section>
 
         {/* ── FOOTER ── */}
+        <div className="hp-wave" style={{ background: '#f8f7ff' }}>
+          <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+            <path d="M0,36 C360,0 1080,72 1440,36 L1440,72 L0,72 Z" fill="#ffffff" />
+          </svg>
+        </div>
+
+        <section id="about" className="hp-section">
+          <div className="hp-about-grid">
+            <div>
+              <span className="hp-section-tag hp-animate">About Eventes</span>
+              <h2 className="hp-section-title hp-animate-left hp-animate-d1">
+                A Smarter Way To <br /><strong>Manage Events</strong>
+              </h2>
+              <p className="hp-section-lead hp-animate hp-animate-d2">
+                Eventes simplifies every step of the event journey from discovering the
+                right venue to reviewing registrations in one connected platform.
+              </p>
+
+              <div className="hp-about-features">
+                {[
+                  {
+                    title: 'Easy Venue Discovery',
+                    desc: 'Browse venues by city, guest capacity, and type in one clean interface.',
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#4f46e5" strokeWidth="1.6">
+                        <path d="M10 2L18 6.5v7L10 18l-8-4.5v-7L10 2z" strokeLinejoin="round" />
+                      </svg>
+                    ),
+                    delay: 'd2',
+                  },
+                  {
+                    title: 'Optional Venue Add-ons',
+                    desc: 'Businesses can configure optional services that users select during booking.',
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#f43f5e" strokeWidth="1.6">
+                        <path d="M5 10h10M10 5v10" strokeLinecap="round" />
+                        <rect x="2.5" y="2.5" width="15" height="15" rx="3" />
+                      </svg>
+                    ),
+                    delay: 'd3',
+                  },
+                  {
+                    title: 'Organized Admin Control',
+                    desc: 'Admins review requests, approve businesses, and keep data structured.',
+                    icon: (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#f59e0b" strokeWidth="1.6">
+                        <circle cx="10" cy="10" r="8" />
+                        <path d="M10 6v4.5l3 1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ),
+                    delay: 'd4',
+                  },
+                ].map((feature) => (
+                  <div key={feature.title} className={`hp-feature-item hp-animate hp-animate-${feature.delay}`}>
+                    <div className="hp-feature-icon">{feature.icon}</div>
+                    <div className="hp-feature-text">
+                      <h4>{feature.title}</h4>
+                      <p>{feature.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="hp-about-img-wrap hp-animate-right hp-animate-d2">
+              <img
+                src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=800&q=80"
+                alt="Event planning"
+                className="hp-about-img"
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
+              <div className="hp-about-img-overlay" />
+
+              <div className="hp-about-chip chip-1">
+                <div className="hp-float-label">Active Venues</div>
+                <div className="hp-float-value">{venues.length}+ Listings</div>
+              </div>
+
+              <div className="hp-about-chip chip-2">
+                <div className="hp-float-label">Verified</div>
+                <div className="hp-float-value">Business Network</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <footer className="hp-footer">
           <span className="hp-footer-brand">Eventes</span>
           <div className="hp-footer-links">
@@ -1301,7 +1976,7 @@ function HomePage({ onNavigate, session }) {
                 {link.label}
               </button>
             ))}
-            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Register Company</button>
+            <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Register Business</button>
           </div>
           <span className="hp-footer-copy">© 2026 Eventes. All rights reserved.</span>
         </footer>

@@ -282,7 +282,7 @@ function CompanyRegistration({ onNavigate }) {
     if (name === 'email') return validateEmail(value)
     if (name === 'phoneNumber') return validatePhone(value, 'Phone number')
     if (name === 'businessPhone') return validatePhone(value, 'Business phone')
-    if (name === 'companyName') return value.trim() ? '' : 'Company name is required.'
+    if (name === 'companyName') return value.trim() ? '' : 'Business name is required.'
     if (name === 'businessAddress') return value.trim() ? '' : 'Business address is required.'
     return ''
   }
@@ -366,9 +366,9 @@ function CompanyRegistration({ onNavigate }) {
           <div className="ahr-card">
             {submitted ? (
               <div className="ahr-success">
-                <p className="ahr-success-title">Company registration submitted</p>
+                <p className="ahr-success-title">Business registration submitted</p>
                 <p className="ahr-success-sub">
-                  Your company registration request was sent successfully. The admin can now review it from the dashboard.
+                  Your business registration request was sent successfully. The admin can now review it from the dashboard.
                 </p>
                 <button
                   className="ahr-new-btn"
@@ -382,9 +382,9 @@ function CompanyRegistration({ onNavigate }) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} noValidate>
-                <h1 className="ahr-card-title">Register Your Company</h1>
+                <h1 className="ahr-card-title">Register Your Business</h1>
                 <p className="ahr-card-sub">
-                  Fill in your company details and the registration request will be sent to the admin dashboard for review.
+                  Fill in your business details and the registration request will be sent to the admin dashboard for review.
                 </p>
 
                 <p className="ahr-section-label">Representative Information</p>
@@ -446,7 +446,7 @@ function CompanyRegistration({ onNavigate }) {
                 <p className="ahr-section-label">Business Information</p>
                 <div className="ahr-grid-2">
                   <div className="ahr-field">
-                    <label className="ahr-label">Company Name</label>
+                    <label className="ahr-label">Business Name</label>
                     <input
                       className="ahr-input"
                       name="companyName"
@@ -497,7 +497,7 @@ function CompanyRegistration({ onNavigate }) {
                 {submitError ? <p className="ahr-error">{submitError}</p> : null}
 
                 <button className="ahr-submit" type="submit" disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit Company Registration'}
+                  {submitting ? 'Submitting...' : 'Submit Business Registration'}
                 </button>
               </form>
             )}
