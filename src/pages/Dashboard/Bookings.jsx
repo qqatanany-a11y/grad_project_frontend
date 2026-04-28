@@ -782,8 +782,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 Pricing model: <strong>{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</strong>
                 {selectedTimeSlot ? (
                   <>
-                    {' Â· '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
-                    {' Â· '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
+                    {' · '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
+                    {' · '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
                   </>
                 ) : getVenuePricePerHour(selectedVenue) ? (
                   <>
@@ -1002,3 +1002,4 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 }
 
 export default Bookings
+

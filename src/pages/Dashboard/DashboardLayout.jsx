@@ -1,3 +1,5 @@
+import LanguageToggle from '../../i18n/LanguageToggle'
+
 const layoutStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -461,6 +463,7 @@ function DashboardLayout({
             </div>
 
             <div className="db-topbar-meta">
+              <LanguageToggle />
               <span className="db-pill">{user?.role || 'Guest'}</span>
             </div>
           </header>

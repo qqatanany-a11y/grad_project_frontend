@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
@@ -6,6 +6,8 @@ import {
   getVenueTimeSlots,
   parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
+import LanguageToggle from '../../i18n/LanguageToggle'
+import { useI18n } from '../../i18n/I18nProvider'
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -26,7 +28,7 @@ const styles = `
     --radius: 20px;
   }
 
-  /* ── KEYFRAMES ── */
+  /* â”€â”€ KEYFRAMES â”€â”€ */
   @keyframes gradientShift {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
@@ -134,7 +136,7 @@ const styles = `
     scroll-behavior: smooth; overflow-x: hidden;
   }
 
-  /* ── NAV ── */
+  /* â”€â”€ NAV â”€â”€ */
   .hp-nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     background: rgba(255,255,255,0.82);
@@ -188,7 +190,7 @@ const styles = `
   }
   .hp-login-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 22px rgba(79,70,229,0.48); }
 
-  /* ── HERO ── */
+  /* â”€â”€ HERO â”€â”€ */
   .hp-hero {
     min-height: 100vh;
     display: grid; grid-template-columns: 1fr 1fr;
@@ -303,7 +305,7 @@ const styles = `
   .hp-stat:nth-child(4) .hp-stat-num { animation-delay: 1.25s; }
   .hp-stat-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; }
 
-  /* ── HERO RIGHT ── */
+  /* â”€â”€ HERO RIGHT â”€â”€ */
   .hp-hero-right { position: relative; overflow: hidden; animation: fadeInRight 0.9s 0.2s ease both; }
 
   .hp-hero-img {
@@ -341,12 +343,12 @@ const styles = `
   .hp-float-value { font-size: 1.05rem; font-weight: 900; color: var(--primary); }
   .hp-float-sub   { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
 
-  /* ── WAVE DIVIDER ── */
+  /* â”€â”€ WAVE DIVIDER â”€â”€ */
   .hp-wave { position: relative; line-height: 0; overflow: hidden; }
   .hp-wave svg { display: block; width: 100%; height: 72px; }
   .hp-wave-flip { transform: scaleX(-1); }
 
-  /* ── SECTIONS ── */
+  /* â”€â”€ SECTIONS â”€â”€ */
   .hp-section { padding: 6rem 5rem; }
   .hp-section-alt { background: var(--bg-alt); }
 
@@ -374,7 +376,7 @@ const styles = `
     line-height: 1.8; max-width: 640px; margin-bottom: 3rem;
   }
 
-  /* ── ABOUT ── */
+  /* â”€â”€ ABOUT â”€â”€ */
   .hp-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
   .hp-about-features { display: flex; flex-direction: column; gap: 1.1rem; }
 
@@ -422,7 +424,7 @@ const styles = `
   .hp-about-chip.chip-1 { top: 1.5rem; right: 1.5rem; animation: float 4.5s ease-in-out infinite; }
   .hp-about-chip.chip-2 { bottom: 1.5rem; left: 1.5rem; animation: float 4.5s 2s ease-in-out infinite; }
 
-  /* ── HOW IT WORKS ── */
+  /* â”€â”€ HOW IT WORKS â”€â”€ */
   .hp-hiw-section {
     padding: 6rem 5rem;
     background: #fff;
@@ -488,7 +490,7 @@ const styles = `
   .hp-hiw-title { font-size: 1.1rem; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.75rem; }
   .hp-hiw-desc  { font-size: 0.875rem; color: var(--muted); line-height: 1.7; margin: 0; }
 
-  /* ── VENUE CARDS ── */
+  /* â”€â”€ VENUE CARDS â”€â”€ */
   .hp-venue-toolbar {
     display: flex;
     justify-content: space-between;
@@ -564,15 +566,19 @@ const styles = `
   }
 
   .hp-hall-tag {
-    display: inline-flex; align-items: center; margin-top: 1rem;
+    display: inline-flex; align-items: center;
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.08em; padding: 0.3rem 0.75rem;
     border-radius: 999px; background: rgba(79,70,229,0.08);
     color: var(--primary); border: 1px solid rgba(79,70,229,0.14);
   }
-  .hp-hall-hint { display: block; margin-top: 0.75rem; font-size: 0.75rem; color: var(--primary); font-weight: 600; }
+  .hp-hall-meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    margin-top: 1rem; flex-wrap: wrap;
+  }
+  .hp-hall-hint { display: inline-flex; font-size: 0.75rem; color: var(--primary); font-weight: 700; }
 
-  /* ── CTA BANNER ── */
+  /* â”€â”€ CTA BANNER â”€â”€ */
   .hp-cta-banner {
     background: linear-gradient(140deg, #4f46e5 0%, #7c3aed 45%, #f43f5e 100%);
     padding: 6rem 5rem; text-align: center;
@@ -631,7 +637,7 @@ const styles = `
   }
   .hp-cta-ghost:hover { background: rgba(255,255,255,0.25); border-color: #fff; transform: translateY(-3px); }
 
-  /* ── MODAL ── */
+  /* â”€â”€ MODAL â”€â”€ */
   .hp-venue-overlay {
     position: fixed; inset: 0; z-index: 300;
     background: rgba(30,27,75,0.55); backdrop-filter: blur(6px);
@@ -1068,7 +1074,7 @@ const styles = `
     cursor: wait;
   }
 
-  /* ── CONTACT ── */
+  /* â”€â”€ CONTACT â”€â”€ */
   .hp-contact-grid { max-width: 680px; }
 
   .hp-contact-item {
@@ -1089,7 +1095,7 @@ const styles = `
   .hp-contact-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary); margin-bottom: 3px; }
   .hp-contact-value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
 
-  /* ── FOOTER ── */
+  /* â”€â”€ FOOTER â”€â”€ */
   .hp-footer {
     background: linear-gradient(140deg, #1e1b4b 0%, #312e81 60%, #4c1d95 100%);
     padding: 3.5rem 5rem;
@@ -1121,7 +1127,7 @@ const styles = `
 
   .hp-footer-copy { font-size: 0.8rem; color: rgba(255,255,255,0.3); position: relative; z-index: 1; }
 
-  /* ── RESPONSIVE ── */
+  /* â”€â”€ RESPONSIVE â”€â”€ */
   @media (max-width: 900px) {
     .hp-nav { padding: 0 1.5rem; }
     .hp-hero { grid-template-columns: 1fr; min-height: auto; }
@@ -1166,19 +1172,19 @@ const VENUE_IMAGES = [
 const howItWorks = [
   {
     num: '01',
-    icon: '🔍',
+    icon: '\u{1F50D}',
     title: 'Browse & Discover',
-    desc: 'Explore a curated list of venues across categories — from conference rooms to grand celebration halls.',
+    desc: 'Explore a curated list of venues across categories — from wedding halls to grand celebration venues.',
   },
   {
     num: '02',
-    icon: '📋',
+    icon: '\u{1F4CB}',
     title: 'Register & Connect',
     desc: 'Venue owners submit their business details through a smooth and guided registration process.',
   },
   {
     num: '03',
-    icon: '🎉',
+    icon: '\u{1F389}',
     title: 'Approve & Celebrate',
     desc: 'Admins review and approve applications quickly, making every event a seamless success.',
   },
@@ -1303,19 +1309,19 @@ function getVenuePriceValue(venue) {
   return Number.isFinite(amount) ? amount : null
 }
 
-function getVenuePriceSummary(venue) {
+function getVenuePriceSummary(venue, f = (text) => text) {
   const pricingType = getPricingTypeValue(venue)
   const priceValue = getVenuePriceValue(venue)
 
   if (pricingType === 'Hourly' && priceValue !== null) {
-    return `${formatVenuePrice(priceValue)} / hour`
+    return `${priceValue} ${f('JOD')} / ${f('per hour')}`
   }
 
   if (pricingType === 'FixedSlots' && priceValue !== null) {
-    return `${formatVenuePrice(priceValue)} / slot`
+    return `${priceValue} ${f('JOD')} / ${f('per slot')}`
   }
 
-  return pricingType === 'FixedSlots' ? 'Fixed slot pricing' : 'Price available on request'
+  return pricingType === 'FixedSlots' ? f('Fixed slot pricing') : f('Price available on request')
 }
 
 function getVenueBusinessName(venue) {
@@ -1376,6 +1382,7 @@ function useScrollAnimation(watchValue) {
 }
 
 function HomePage({ onNavigate, onStartBooking, session }) {
+  const { f } = useI18n()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [venues, setVenues] = useState(fallbackVenues)
@@ -1819,7 +1826,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       <style>{styles}</style>
       <div className="hp-root">
 
-        {/* ── NAV ── */}
+        {/* â”€â”€ NAV â”€â”€ */}
         <nav className={`hp-nav${scrolled ? ' scrolled' : ''}`}>
           <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>Eventes</button>
 
@@ -1834,6 +1841,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
               </button>
             ))}
             <button className="hp-nav-link" onClick={() => onNavigate('add-hall')}>Register Business</button>
+            <LanguageToggle className="hp-language-toggle" />
           </div>
 
           <button className="hp-login-btn" onClick={() => onNavigate(session ? 'venues' : 'auth')}>
@@ -1841,7 +1849,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           </button>
         </nav>
 
-        {/* ── HERO ── */}
+        {/* â”€â”€ HERO â”€â”€ */}
         <section id="hero" className="hp-hero">
           {/* Animated blobs */}
           <div className="hp-blob hp-blob-1" />
@@ -1862,7 +1870,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
             <p className="hp-hero-desc">
               Eventes connects users with the best venues, helps businesses register professionally,
-              and gives admins full control — all in one powerful platform.
+              and gives admins full control â€” all in one powerful platform.
             </p>
 
             <div className="hp-hero-cta">
@@ -1908,7 +1916,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
             <div className="hp-hero-overlay" />
             <div className="hp-hero-caption">
               <h3>Professional spaces, smoother planning</h3>
-              <p>From meetings to celebrations — find and book with confidence.</p>
+              <p>From meetings to celebrations â€” find and book with confidence.</p>
             </div>
 
             {false && <div className="hp-hero-float f1">
@@ -1919,20 +1927,20 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
             {false && <div className="hp-hero-float f2">
               <div className="hp-float-label">Top Rated</div>
-              <div className="hp-float-value">⭐ 4.9 / 5</div>
+              <div className="hp-float-value">â­ 4.9 / 5</div>
               <div className="hp-float-sub">By event planners</div>
             </div>}
           </div>
         </section>
 
-        {/* ── WAVE 1 ── */}
+        {/* â”€â”€ WAVE 1 â”€â”€ */}
         <div className="hp-wave" style={{ background: '#ffffff' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <path d="M0,36 C240,72 480,0 720,36 C960,72 1200,0 1440,36 L1440,72 L0,72 Z" fill="#ffffff" />
           </svg>
         </div>
 
-        {/* ── ABOUT ── */}
+        {/* â”€â”€ ABOUT â”€â”€ */}
         <section id="about-hidden" className="hp-section hp-section-alt" style={{ display: 'none' }}>
           <div className="hp-about-grid">
             <div>
@@ -1941,7 +1949,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                 A Smarter Way To <br /><strong>Manage Events</strong>
               </h2>
               <p className="hp-section-lead hp-animate hp-animate-d2">
-                Eventes simplifies every step of the event journey — from discovering
+                Eventes simplifies every step of the event journey â€” from discovering
                 the perfect venue to finalizing registrations, all managed through one
                 beautiful, connected platform.
               </p>
@@ -1950,7 +1958,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                 {[
                   {
                     title: 'Easy Venue Discovery',
-                    desc: 'Browse venues by capacity, city, and type — all in one clean interface.',
+                    desc: 'Browse venues by capacity, city, and type â€” all in one clean interface.',
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#4f46e5" strokeWidth="1.6">
                         <path d="M10 2L18 6.5v7L10 18l-8-4.5v-7L10 2z" strokeLinejoin="round" />
@@ -2015,14 +2023,14 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           </div>
         </section>
 
-        {/* ── WAVE 2 ── */}
+        {/* â”€â”€ WAVE 2 â”€â”€ */}
         <div className="hp-wave" style={{ background: '#f8f7ff' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <path d="M0,36 C360,0 1080,72 1440,36 L1440,72 L0,72 Z" fill="#ffffff" />
           </svg>
         </div>
 
-        {/* ── HOW IT WORKS ── */}
+        {/* â”€â”€ HOW IT WORKS â”€â”€ */}
         <section className="hp-hiw-section">
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <span className="hp-section-tag hp-animate">How It Works</span>
@@ -2043,21 +2051,21 @@ function HomePage({ onNavigate, onStartBooking, session }) {
               >
                 <div className="hp-hiw-num">{step.num}</div>
                 <div className="hp-hiw-icon">{step.icon}</div>
-                <h3 className="hp-hiw-title">{step.title}</h3>
-                <p className="hp-hiw-desc">{step.desc}</p>
+                <h3 className="hp-hiw-title">{f(step.title)}</h3>
+                <p className="hp-hiw-desc">{f(step.desc)}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── WAVE 3 ── */}
+        {/* â”€â”€ WAVE 3 â”€â”€ */}
         <div className="hp-wave" style={{ background: '#ffffff' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <path d="M0,36 C480,72 960,0 1440,36 L1440,72 L0,72 Z" fill="#f8f7ff" />
           </svg>
         </div>
 
-        {/* ── VENUES ── */}
+        {/* â”€â”€ VENUES â”€â”€ */}
         <section id="halls" className="hp-section hp-section-alt">
           <span className="hp-section-tag hp-animate">Featured Venues</span>
           <h2 className="hp-section-title hp-animate hp-animate-d1">
@@ -2099,89 +2107,91 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                 <div className="hp-hall-img-wrap">
                   <img
                     src={getVenueCoverPhoto(venue, index)}
-                    alt={venue.name}
+                    alt={f(venue.name)}
                     className="hp-hall-img"
                     onError={(e) => { e.target.style.display = 'none' }}
                   />
                   <span className="hp-hall-img-badge">
-                    Up to {venue.capacity ?? 0} guests
+                    {f('Up to')} {venue.capacity ?? 0} {f('Guests')}
                   </span>
                 </div>
                 <div className="hp-hall-body">
-                  <p className="hp-hall-name">{venue.name}</p>
-                  <p className="hp-hall-cap">📍 {venue.city || 'Amman'}</p>
+                  <p className="hp-hall-name">{f(venue.name)}</p>
+                  <p className="hp-hall-cap">{f(venue.city || 'Amman')}</p>
                   <p className="hp-hall-cap">
-                    {getVenueCategoryLabel(getVenueCategoryValue(venue))} | {getPricingTypeLabel(getPricingTypeValue(venue))}
+                    {f(getVenueCategoryLabel(getVenueCategoryValue(venue)))} | {f(getPricingTypeLabel(getPricingTypeValue(venue)))}
                   </p>
-                  <p className="hp-hall-features">{getVenueSummary(venue)}</p>
-                  <p className="hp-hall-price">{getVenuePriceSummary(venue)}</p>
-                  <span className="hp-hall-tag">{getVenueBusinessName(venue)}</span>
-                  <span className="hp-hall-hint">View details →</span>
+                  <p className="hp-hall-features">{f(getVenueSummary(venue))}</p>
+                  <p className="hp-hall-price">{getVenuePriceSummary(venue, f)}</p>
+                  <div className="hp-hall-meta">
+                    <span className="hp-hall-tag">{f('Verified venue')}</span>
+                    <span className="hp-hall-hint">{f('View details')}</span>
+                  </div>
                 </div>
               </button>
             ))}
           </div>
         </section>
 
-        {/* ── VENUE MODAL ── */}
+        {/* â”€â”€ VENUE MODAL â”€â”€ */}
         {selectedVenue ? (
           <div className="hp-venue-overlay" onClick={closeVenueDetails}>
             <div className="hp-venue-panel" onClick={(e) => e.stopPropagation()}>
               <div className="hp-venue-panel-head">
                 <div>
-                  <h3 className="hp-venue-panel-title">{selectedVenue.name || 'Venue Details'}</h3>
+                  <h3 className="hp-venue-panel-title">{f(selectedVenue.name || 'Venue Details')}</h3>
                   <p className="hp-venue-panel-subtitle">
-                    {getVenueBusinessName(selectedVenue)} | {selectedVenue.city || 'Amman'}
+                    {f('Verified venue')} | {f(selectedVenue.city || 'Amman')}
                   </p>
                 </div>
                 <button type="button" className="hp-venue-close" onClick={closeVenueDetails} aria-label="Close">
-                  ✕
+                  ×
                 </button>
               </div>
 
               <div className="hp-venue-body">
                 <img
                   src={selectedVenuePhotoSet.coverPhotoUrl || getVenueCoverPhoto(selectedVenue)}
-                  alt={selectedVenue.name || 'Venue cover'}
+                  alt={f(selectedVenue.name || 'Venue cover')}
                   className="hp-venue-cover"
                 />
 
                 <div className="hp-venue-meta">
-                  <span className="hp-venue-chip">👥 Up to {selectedVenue.capacity ?? 0} guests</span>
-                  <span className="hp-venue-chip">{getVenueCategoryLabel(getVenueCategoryValue(selectedVenue))}</span>
-                  <span className="hp-venue-chip">{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</span>
-                  <span className="hp-venue-chip">{getVenuePriceSummary(selectedVenue)}</span>
-                  <span className="hp-venue-chip">📍 {selectedVenue.city || 'Amman'}</span>
+                  <span className="hp-venue-chip">{f('Up to')} {selectedVenue.capacity ?? 0} {f('Guests')}</span>
+                  <span className="hp-venue-chip">{f(getVenueCategoryLabel(getVenueCategoryValue(selectedVenue)))}</span>
+                  <span className="hp-venue-chip">{f(getPricingTypeLabel(getPricingTypeValue(selectedVenue)))}</span>
+                  <span className="hp-venue-chip">{getVenuePriceSummary(selectedVenue, f)}</span>
+                  <span className="hp-venue-chip">{f(selectedVenue.city || 'Amman')}</span>
                 </div>
 
-                <p className="hp-venue-description">{getVenueSummary(selectedVenue)}</p>
+                <p className="hp-venue-description">{f(getVenueSummary(selectedVenue))}</p>
 
                 <div className="hp-venue-detail-grid">
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Business</span>
-                    <span className="hp-venue-detail-value">{getVenueBusinessName(selectedVenue)}</span>
+                    <span className="hp-venue-detail-value">{f('Verified venue')}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Guest Capacity</span>
-                    <span className="hp-venue-detail-value">{selectedVenue.capacity ?? 0} guests</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.capacity ?? 0} {f('Guests')}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">City</span>
-                    <span className="hp-venue-detail-value">{selectedVenue.city || 'Amman'}</span>
+                    <span className="hp-venue-detail-value">{f(selectedVenue.city || 'Amman')}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Address</span>
                     <span className="hp-venue-detail-value">
-                      {selectedVenue.address || 'Available from venue provider'}
+                      {f(selectedVenue.address || 'Available from venue provider')}
                     </span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Starting Price</span>
-                    <span className="hp-venue-detail-value">{getVenuePriceSummary(selectedVenue)}</span>
+                    <span className="hp-venue-detail-value">{getVenuePriceSummary(selectedVenue, f)}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Venue Name</span>
-                    <span className="hp-venue-detail-value">{selectedVenue.name || '--'}</span>
+                    <span className="hp-venue-detail-value">{selectedVenue.name ? f(selectedVenue.name) : '--'}</span>
                   </div>
                 </div>
 
@@ -2710,13 +2720,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           </div>
         ) : null}
 
-        {/* ── CTA BANNER ── */}
+        {/* â”€â”€ CTA BANNER â”€â”€ */}
         <section className="hp-cta-banner">
           <div className="hp-cta-banner-inner">
             <h2 className="hp-animate">Ready To Find Your Perfect Venue?</h2>
             <p className="hp-animate hp-animate-d1">
-              Join Eventes and discover the ideal space for your next event — conferences,
-              weddings, seminars, and everything in between.
+              {f('Join Eventes and discover the ideal space for your next event — celebrations, weddings, and unforgettable moments.')}
             </p>
             <div className="hp-cta-banner-btns hp-animate hp-animate-d2">
               <button className="hp-cta-white" onClick={() => onNavigate('add-hall')}>
@@ -2729,14 +2738,14 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           </div>
         </section>
 
-        {/* ── WAVE 4 ── */}
+        {/* â”€â”€ WAVE 4 â”€â”€ */}
         <div className="hp-wave" style={{ background: 'linear-gradient(140deg, #4f46e5, #7c3aed 45%, #f43f5e)' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <path d="M0,36 C360,72 1080,0 1440,36 L1440,72 L0,72 Z" fill="#f8f7ff" />
           </svg>
         </div>
 
-        {/* ── CONTACT ── */}
+        {/* â”€â”€ CONTACT â”€â”€ */}
         <section id="contact" className="hp-section hp-section-alt">
           <span className="hp-section-tag hp-animate">Contact</span>
           <h2 className="hp-section-title hp-animate hp-animate-d1">
@@ -2791,7 +2800,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           </div>
         </section>
 
-        {/* ── FOOTER ── */}
+        {/* â”€â”€ FOOTER â”€â”€ */}
         <div className="hp-wave" style={{ background: '#f8f7ff' }}>
           <svg viewBox="0 0 1440 72" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
             <path d="M0,36 C360,0 1080,72 1440,36 L1440,72 L0,72 Z" fill="#ffffff" />
@@ -2897,3 +2906,4 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 }
 
 export default HomePage
+
