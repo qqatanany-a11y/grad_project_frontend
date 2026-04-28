@@ -116,7 +116,7 @@ function CompanyRequests({ session }) {
     } catch (error) {
       setFeedback({
         tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to load company requests.',
+        message: error instanceof Error ? error.message : 'Unable to load business requests.',
       })
       setRequests([])
     } finally {
@@ -190,7 +190,7 @@ function CompanyRequests({ session }) {
           className="or-input or-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by company, venue, representative, or email..."
+          placeholder="Search by business, venue, representative, or email..."
         />
         <select
           className="or-select"
@@ -215,7 +215,7 @@ function CompanyRequests({ session }) {
 
       <div className="or-table">
         <div className="or-row header">
-          <p className="or-label">Company</p>
+          <p className="or-label">Business</p>
           <p className="or-label">Representative</p>
           <p className="or-label">Venue</p>
           <p className="or-label">Business Phone</p>
@@ -225,7 +225,7 @@ function CompanyRequests({ session }) {
 
         {filteredRequests.length === 0 ? (
           <div className="or-empty">
-            {loading ? 'Loading company requests...' : 'No company requests found.'}
+            {loading ? 'Loading business requests...' : 'No business requests found.'}
           </div>
         ) : (
           filteredRequests.map((request) => {

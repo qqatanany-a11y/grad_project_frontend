@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
+import { getVenuePhotoSet } from '../../lib/venueMedia'
+import {
+  areVenueTimeSlotsEqual,
+  formatVenueTimeSlot,
+  getVenueTimeSlots,
+} from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles = makeDashStyles('er') + `
@@ -88,6 +94,76 @@ const styles = makeDashStyles('er') + `
     background: rgba(79,70,229,0.04); color: #64748b;
     font-size: 0.875rem; line-height: 1.6; border-radius: 10px;
   }
+  .er-media {
+    display: grid;
+    gap: 0.9rem;
+  }
+  .er-media-cover {
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    display: block;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #eef2ff;
+  }
+  .er-media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+  .er-media-item {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #eef2ff;
+  }
+  .er-slot-stack {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .er-slot-card {
+    padding: 1rem;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    border-radius: 12px;
+  }
+  .er-slot-card.changed {
+    border-color: rgba(79,70,229,0.3);
+    background: rgba(79,70,229,0.04);
+  }
+  .er-slot-list {
+    display: grid;
+    gap: 0.6rem;
+  }
+  .er-slot-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.85rem 0.95rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fafbff;
+  }
+  .er-slot-time {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e1b4b;
+  }
+  .er-slot-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+  .er-slot-price {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #4f46e5;
+  }
   .er-json {
     margin: 0; white-space: pre-wrap; word-break: break-word;
     font-size: 0.8rem; line-height: 1.7; color: #64748b;
@@ -127,7 +203,9 @@ const VENUE_FIELDS = [
   { key: 'city', label: 'City' },
   { key: 'address', label: 'Address' },
   { key: 'capacity', label: 'Capacity' },
-  { key: 'minimalPrice', label: 'Minimal Price' },
+  { key: 'category', label: 'Venue Type' },
+  { key: 'pricingType', label: 'Pricing Model' },
+  { key: 'pricePerHour', label: 'Price' },
   { key: 'isActive', label: 'Status' },
 ]
 
@@ -157,10 +235,41 @@ function readValue(source, ...keys) {
   return undefined
 }
 
+function getVenueCategoryValue(source) {
+  const rawValue = readValue(source, 'category', 'Category')
+
+  if (rawValue === 2 || rawValue === 'Farm') {
+    return 'Farm'
+  }
+
+  return 'WeddingHall'
+}
+
+function getVenueCategoryLabel(value) {
+  return value === 'Farm' || value === 2 ? 'Farm' : 'Wedding Hall'
+}
+
+function getPricingTypeValue(source) {
+  const rawValue = readValue(source, 'pricingType', 'PricingType')
+
+  if (rawValue === 2 || rawValue === 'FixedSlots') {
+    return 'FixedSlots'
+  }
+
+  return 'Hourly'
+}
+
+function getPricingTypeLabel(value) {
+  return value === 'FixedSlots' || value === 2 ? 'Fixed Slots' : 'Hourly'
+}
+
 function normalizeVenueData(source) {
   if (!source || typeof source !== 'object') {
     return null
   }
+
+  const pricePerHour = Number(readValue(source, 'pricePerHour', 'PricePerHour'))
+  const { coverPhotoUrl, galleryPhotoUrls, photoUrls } = getVenuePhotoSet(source)
 
   return {
     name: readValue(source, 'name', 'Name') ?? '',
@@ -168,10 +277,16 @@ function normalizeVenueData(source) {
     city: readValue(source, 'city', 'City') ?? '',
     address: readValue(source, 'address', 'Address') ?? '',
     capacity: readValue(source, 'capacity', 'Capacity') ?? null,
-    minimalPrice: readValue(source, 'minimalPrice', 'MinimalPrice') ?? null,
+    category: getVenueCategoryValue(source),
+    pricingType: getPricingTypeValue(source),
+    pricePerHour: Number.isFinite(pricePerHour) ? pricePerHour : null,
     isActive: readValue(source, 'isActive', 'IsActive') ?? null,
     companyName: readValue(source, 'companyName', 'CompanyName') ?? '',
     venueId: readValue(source, 'venueId', 'VenueId') ?? null,
+    timeSlots: getVenueTimeSlots(source),
+    coverPhotoUrl,
+    galleryPhotoUrls,
+    photoUrls,
   }
 }
 
@@ -244,9 +359,17 @@ function formatFieldValue(key, value) {
     return Number.isFinite(amount) ? `${amount}` : '--'
   }
 
-  if (key === 'minimalPrice') {
+  if (key === 'category') {
+    return getVenueCategoryLabel(value)
+  }
+
+  if (key === 'pricingType') {
+    return getPricingTypeLabel(value)
+  }
+
+  if (key === 'pricePerHour') {
     const amount = Number(value)
-    return Number.isFinite(amount) ? `${amount} JOD` : '--'
+    return Number.isFinite(amount) ? `${amount.toFixed(2)} JOD` : '--'
   }
 
   return String(value)
@@ -257,7 +380,7 @@ function areFieldValuesEqual(key, currentValue, requestedValue) {
     return Boolean(currentValue) === Boolean(requestedValue)
   }
 
-  if (key === 'capacity' || key === 'minimalPrice') {
+  if (key === 'capacity' || key === 'pricePerHour') {
     const currentNumber = Number(currentValue)
     const requestedNumber = Number(requestedValue)
 
@@ -267,6 +390,70 @@ function areFieldValuesEqual(key, currentValue, requestedValue) {
   }
 
   return String(currentValue ?? '').trim() === String(requestedValue ?? '').trim()
+}
+
+function renderVenueMedia(title, venueData, keyPrefix) {
+  if (!venueData?.photoUrls?.length) {
+    return null
+  }
+
+  return (
+    <div className="er-detail-stack">
+      <p className="er-section-title">{title}</p>
+      <div className="er-media">
+        {venueData.coverPhotoUrl ? (
+          <img
+            src={venueData.coverPhotoUrl}
+            alt={`${venueData.name || 'Venue'} cover`}
+            className="er-media-cover"
+          />
+        ) : null}
+
+        {venueData.galleryPhotoUrls?.length > 0 ? (
+          <div className="er-media-grid">
+            {venueData.galleryPhotoUrls.map((photoUrl, index) => (
+              <img
+                key={`${keyPrefix}-photo-${index}`}
+                src={photoUrl}
+                alt={`${venueData.name || 'Venue'} photo ${index + 2}`}
+                className="er-media-item"
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function renderVenueTimeSlots(title, slots, { comparison = false, changed = false } = {}) {
+  if (!Array.isArray(slots) || slots.length === 0) {
+    return (
+      <div className={`er-slot-card${comparison && changed ? ' changed' : ''}`}>
+        <span className="er-change-label">{title}</span>
+        <div className="er-note" style={{ marginTop: '0.75rem' }}>
+          No time slots defined.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`er-slot-card${comparison && changed ? ' changed' : ''}`}>
+      <span className="er-change-label">{title}</span>
+      <div className="er-slot-list" style={{ marginTop: '0.75rem' }}>
+        {slots.map((slot, index) => (
+          <div key={`${title}-${slot.id ?? index}`} className="er-slot-item">
+            <div>
+              <div className="er-slot-time">{formatVenueTimeSlot(slot)}</div>
+              <div className="er-slot-meta">{slot.isActive ? 'Active slot' : 'Inactive slot'}</div>
+            </div>
+            <div className="er-slot-price">{formatFieldValue('pricePerHour', slot.price)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function EditRequests({ session }) {
@@ -294,11 +481,7 @@ function EditRequests({ session }) {
         },
       )
 
-      setRequests(
-        Array.isArray(data)
-          ? data.filter(isVenueEditRequest)
-          : [],
-      )
+      setRequests(Array.isArray(data) ? data.filter(isVenueEditRequest) : [])
       setFeedback({ tone: 'idle', message: '' })
     } catch (error) {
       setFeedback({
@@ -462,6 +645,9 @@ function EditRequests({ session }) {
       const currentVenue = parsedRequest.current ?? venueSnapshots[request.id] ?? null
       const snapshotError = snapshotErrors[request.id]
       const snapshotLoading = Boolean(loadingSnapshotIds[request.id])
+      const slotsChanged = currentVenue
+        ? !areVenueTimeSlotsEqual(currentVenue.timeSlots, parsedRequest.requested?.timeSlots)
+        : false
       const changeCount = currentVenue
         ? VENUE_FIELDS.filter((field) =>
             !areFieldValuesEqual(
@@ -469,7 +655,7 @@ function EditRequests({ session }) {
               currentVenue[field.key],
               parsedRequest.requested?.[field.key],
             ),
-          ).length
+          ).length + (slotsChanged ? 1 : 0)
         : null
 
       return (
@@ -477,7 +663,7 @@ function EditRequests({ session }) {
           <div className="er-summary-row">
             <span className="er-pill">Venue ID: {parsedRequest.venueId ?? request.targetId ?? '--'}</span>
             {parsedRequest.companyName ? (
-              <span className="er-pill">{parsedRequest.companyName}</span>
+              <span className="er-pill">Business: {parsedRequest.companyName}</span>
             ) : null}
             {changeCount !== null ? (
               <span className="er-pill strong">{changeCount} edited fields</span>
@@ -529,6 +715,19 @@ function EditRequests({ session }) {
             })}
           </div>
 
+          <div className="er-slot-stack">
+            {currentVenue ? renderVenueTimeSlots('Current Time Slots', currentVenue.timeSlots) : null}
+            {renderVenueTimeSlots('Requested Time Slots', parsedRequest.requested?.timeSlots, {
+              comparison: Boolean(currentVenue),
+              changed: slotsChanged,
+            })}
+            {currentVenue ? (
+              <span className={`er-change-status ${slotsChanged ? 'changed' : 'same'}`}>
+                {slotsChanged ? 'Time Slots Edited' : 'Time Slots Unchanged'}
+              </span>
+            ) : null}
+          </div>
+
           {snapshotLoading ? (
             <div className="er-note">
               Loading the current venue data so the edited fields can be highlighted.
@@ -542,6 +741,8 @@ function EditRequests({ session }) {
           ) : null}
 
           {snapshotError ? <div className="er-note">{snapshotError}</div> : null}
+
+          {renderVenueMedia('Requested Photos', parsedRequest.requested, `requested-${request.id}`)}
         </div>
       )
     }
@@ -555,7 +756,7 @@ function EditRequests({ session }) {
         <div className="er-detail-stack">
           <div className="er-summary-row">
             {parsedRequest.companyName ? (
-              <span className="er-pill">{parsedRequest.companyName}</span>
+              <span className="er-pill">Business: {parsedRequest.companyName}</span>
             ) : null}
           </div>
           {renderSimpleDetails(
@@ -563,6 +764,8 @@ function EditRequests({ session }) {
             VENUE_FIELDS.filter((field) => field.key !== 'isActive'),
             parsedRequest.requested,
           )}
+          {renderVenueTimeSlots('Requested Time Slots', parsedRequest.requested?.timeSlots)}
+          {renderVenueMedia('Requested Photos', parsedRequest.requested, `create-${request.id}`)}
         </div>
       )
     }

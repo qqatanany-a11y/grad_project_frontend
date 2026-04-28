@@ -86,7 +86,7 @@ function Companies({ session }) {
     } catch (error) {
       setFeedback({
         tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to load companies.',
+        message: error instanceof Error ? error.message : 'Unable to load businesses.',
       })
       setCompanies([])
     } finally {
@@ -127,7 +127,7 @@ function Companies({ session }) {
           className="cp-input cp-search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search companies by name, email, or location..."
+          placeholder="Search businesses by name, email, or location..."
         />
         <button className="cp-button secondary" onClick={loadCompanies} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh'}
@@ -142,7 +142,7 @@ function Companies({ session }) {
 
       {filteredCompanies.length === 0 ? (
         <div className="cp-empty">
-          {loading ? 'Loading companies...' : 'No companies found.'}
+          {loading ? 'Loading businesses...' : 'No businesses found.'}
         </div>
       ) : (
         <div className="cp-list">
@@ -183,7 +183,7 @@ function Companies({ session }) {
                         <span>{company.email || '--'}</span>
                       </div>
                       <div className="cp-detail">
-                        <label>Company ID</label>
+                        <label>Business ID</label>
                         <span>{company.id}</span>
                       </div>
                     </div>
