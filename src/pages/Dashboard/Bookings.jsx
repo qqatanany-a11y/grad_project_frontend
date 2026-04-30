@@ -5,6 +5,7 @@ import {
   getVenueTimeSlots,
   parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
+import { useI18n } from '../../i18n/I18nProvider'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles =
@@ -147,6 +148,51 @@ const styles =
       font-size: 0.76rem;
       color: #64748b;
     }
+    .bk-file-control {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      min-height: 3rem;
+      padding: 0.55rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .bk-file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .bk-file-button {
+      min-height: 2.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 1rem;
+      border: 1.5px solid rgba(79,70,229,0.22);
+      border-radius: 10px;
+      background: #f8f7ff;
+      color: #4f46e5;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .bk-file-name {
+      min-width: 0;
+      flex: 1;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     @media (max-width: 760px) {
       .bk-grid-wide, .bk-summary-grid {
         grid-template-columns: 1fr;
@@ -232,6 +278,7 @@ function readFileAsDataUrl(file) {
 }
 
 function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }) {
+  const { f } = useI18n()
   const [bookings, setBookings] = useState([])
   const [venues, setVenues] = useState([])
   const [formValues, setFormValues] = useState(emptyForm)
@@ -749,28 +796,34 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
             <div className="bk-field">
               <label className="bk-label">Bride ID Document</label>
-              <input
-                className="bk-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(event) => handleDocumentChange('bride', event)}
-                required
-              />
-              {documentNames.bride ? <span className="bk-file-meta">{documentNames.bride}</span> : null}
+              <label className="bk-file-control">
+                <input
+                  className="bk-file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => handleDocumentChange('bride', event)}
+                />
+                <span className="bk-file-button">{f('Choose bride ID document')}</span>
+                <span className="bk-file-name">
+                  {documentNames.bride || f('No document selected')}
+                </span>
+              </label>
             </div>
 
             <div className="bk-field">
               <label className="bk-label">Bridegroom ID Document</label>
-              <input
-                className="bk-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(event) => handleDocumentChange('bridegroom', event)}
-                required
-              />
-              {documentNames.bridegroom ? (
-                <span className="bk-file-meta">{documentNames.bridegroom}</span>
-              ) : null}
+              <label className="bk-file-control">
+                <input
+                  className="bk-file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => handleDocumentChange('bridegroom', event)}
+                />
+                <span className="bk-file-button">{f('Choose bridegroom ID document')}</span>
+                <span className="bk-file-name">
+                  {documentNames.bridegroom || f('No document selected')}
+                </span>
+              </label>
             </div>
           </div>
 

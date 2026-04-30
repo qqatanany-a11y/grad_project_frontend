@@ -7,6 +7,7 @@ import {
   normalizeTimeValue,
   validateVenueTimeSlots,
 } from '../../lib/venueTimeSlots'
+import { useI18n } from '../../i18n/I18nProvider'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles =
@@ -174,9 +175,41 @@ const styles =
       color: #64748b;
       font-weight: 600;
     }
-    .vp-photo-input {
-      padding: 0.75rem 0.85rem;
-      height: auto;
+    .vp-photo-file-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+    .vp-photo-file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .vp-photo-file-button {
+      min-height: 2.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 1.2rem;
+      border: 1.5px solid rgba(79,70,229,0.22);
+      border-radius: 12px;
+      background: #fff;
+      color: #4f46e5;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(79,70,229,0.08);
+    }
+    .vp-photo-file-note {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 700;
     }
     .vp-photo-grid {
       display: grid;
@@ -464,6 +497,7 @@ function normalizeVenueServiceOption(option) {
 }
 
 function Venues({ session }) {
+  const { f } = useI18n()
   const [venues, setVenues] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -1198,18 +1232,27 @@ function Venues({ session }) {
               <div>
                 <label className="vp-label">Venue Photos</label>
                 <div className="vp-photo-count">
-                  {formValues.photoItems.length} photo{formValues.photoItems.length === 1 ? '' : 's'} selected
-                  {editId ? '' : ' - minimum 10 required'}
+                  {editId
+                    ? f('Selected photos: {count}', { count: formValues.photoItems.length })
+                    : f('Selected photos: {count}. Minimum required: 10.', { count: formValues.photoItems.length })}
                 </div>
               </div>
-              <input
-                className="vp-input vp-photo-input"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoSelection}
-                disabled={processingPhotos}
-              />
+              <label className="vp-photo-file-control">
+                <input
+                  className="vp-photo-file-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoSelection}
+                  disabled={processingPhotos}
+                />
+                <span className="vp-photo-file-button">{f('Choose venue photos')}</span>
+                <span className="vp-photo-file-note">
+                  {formValues.photoItems.length > 0
+                    ? f('{count} photos selected', { count: formValues.photoItems.length })
+                    : f('No photos selected')}
+                </span>
+              </label>
             </div>
 
             <div className="vp-note" style={{ marginTop: 0 }}>

@@ -1,4 +1,5 @@
 import LanguageToggle from '../../i18n/LanguageToggle'
+import { useI18n } from '../../i18n/I18nProvider'
 
 const layoutStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -398,8 +399,10 @@ function DashboardLayout({
   onGoHome,
   user,
 }) {
+  const { f } = useI18n()
   const navigation = getNavigation(user?.role)
   const displayName = user?.fullName || user?.email || 'Dashboard User'
+  const dashboardLabel = f(`${user?.role || 'Guest'} dashboard`)
 
   return (
     <>
@@ -407,8 +410,8 @@ function DashboardLayout({
       <div className="db-root">
         <aside className="db-sidebar">
           <div className="db-brand">
-            <p className="db-brand-name">EventPlan</p>
-            <p className="db-brand-sub">{user?.role || 'Guest'} dashboard</p>
+            <p className="db-brand-name">Ceremoniq</p>
+            <p className="db-brand-sub">{dashboardLabel}</p>
           </div>
 
           <nav className="db-nav">

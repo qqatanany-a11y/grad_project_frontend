@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
@@ -1180,7 +1180,7 @@ const howItWorks = [
     num: '02',
     icon: '\u{1F4CB}',
     title: 'Register & Connect',
-    desc: 'Venue owners submit their business details through a smooth and guided registration process.',
+    desc: 'Venue management teams submit their business details through a smooth and guided registration process.',
   },
   {
     num: '03',
@@ -1198,7 +1198,7 @@ const fallbackVenues = [
     city: 'Amman',
     address: 'Airport Road',
     description: 'Ideal for weddings, large celebrations, and premium evening events.',
-    companyName: 'Eventes',
+    companyName: 'Ceremoniq',
     category: 'WeddingHall',
     pricingType: 'Hourly',
     pricePerHour: 180,
@@ -1210,7 +1210,7 @@ const fallbackVenues = [
     city: 'Amman',
     address: 'Jerash Road',
     description: 'Open-air farm venue prepared for outdoor weddings, receptions, and private parties.',
-    companyName: 'Eventes',
+    companyName: 'Ceremoniq',
     category: 'Farm',
     pricingType: 'FixedSlots',
     pricePerHour: 900,
@@ -1222,7 +1222,7 @@ const fallbackVenues = [
     city: 'Amman',
     address: 'Mecca Street',
     description: 'Modern indoor hall with flexible seating for engagement parties and wedding ceremonies.',
-    companyName: 'Eventes',
+    companyName: 'Ceremoniq',
     category: 'WeddingHall',
     pricingType: 'Hourly',
     pricePerHour: 120,
@@ -1325,7 +1325,7 @@ function getVenuePriceSummary(venue, f = (text) => text) {
 }
 
 function getVenueBusinessName(venue) {
-  return venue?.companyName ?? venue?.CompanyName ?? 'Eventes'
+  return venue?.companyName ?? venue?.CompanyName ?? 'Ceremoniq'
 }
 
 function getVenueSummary(venue) {
@@ -1828,7 +1828,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
         {/* â”€â”€ NAV â”€â”€ */}
         <nav className={`hp-nav${scrolled ? ' scrolled' : ''}`}>
-          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>Eventes</button>
+          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>Ceremoniq</button>
 
           <div className="hp-nav-links">
             {navLinks.map((link) => (
@@ -1869,8 +1869,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
             </h1>
 
             <p className="hp-hero-desc">
-              Eventes connects users with the best venues, helps businesses register professionally,
-              and gives admins full control â€” all in one powerful platform.
+              {f('Ceremoniq brings venue discovery, booking, and platform management together in one refined experience for guests, venue teams, and admins.')}
             </p>
 
             <div className="hp-hero-cta">
@@ -1944,12 +1943,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         <section id="about-hidden" className="hp-section hp-section-alt" style={{ display: 'none' }}>
           <div className="hp-about-grid">
             <div>
-              <span className="hp-section-tag hp-animate">About Eventes</span>
+              <span className="hp-section-tag hp-animate">About Ceremoniq</span>
               <h2 className="hp-section-title hp-animate-left hp-animate-d1">
                 A Smarter Way To <br /><strong>Manage Events</strong>
               </h2>
               <p className="hp-section-lead hp-animate hp-animate-d2">
-                Eventes simplifies every step of the event journey â€” from discovering
+                Ceremoniq simplifies every step of the event journey â€” from discovering
                 the perfect venue to finalizing registrations, all managed through one
                 beautiful, connected platform.
               </p>
@@ -1968,7 +1967,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                   },
                   {
                     title: 'Simple Business Registration',
-                    desc: 'Venue owners submit details professionally through a guided process.',
+                    desc: 'Venue management teams submit details professionally through a guided process.',
                     icon: (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#f43f5e" strokeWidth="1.6">
                         <rect x="2" y="3.5" width="16" height="11" rx="1.5" />
@@ -2038,7 +2037,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
               Three Steps To <strong>Your Perfect Event</strong>
             </h2>
             <p className="hp-section-lead hp-animate hp-animate-d2" style={{ margin: '0 auto', textAlign: 'center' }}>
-              Getting started on Eventes is quick, straightforward, and designed
+              Getting started on Ceremoniq is quick, straightforward, and designed
               to get you from discovery to celebration as fast as possible.
             </p>
           </div>
@@ -2326,7 +2325,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                       <div>
                                         <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
                                         <p className="hp-booking-slot-copy">
-                                          Active owner-defined slot available for this booking.
+                                          Active venue management slot available for this booking.
                                         </p>
                                       </div>
                                     </div>
@@ -2337,7 +2336,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             </div>
                           ) : (
                             <div className="hp-booking-note">
-                              This venue does not have owner-defined slots yet. Use manual start and end times to continue.
+                              This venue does not have venue management slots yet. Use manual start and end times to continue.
                             </div>
                           )}
                         </div>
@@ -2659,7 +2658,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                     <div>
                                       <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
                                       <p className="hp-booking-slot-copy">
-                                        Active owner-defined slot prepared for direct booking.
+                                        Active venue management slot prepared for direct booking.
                                       </p>
                                     </div>
                                   </div>
@@ -2725,7 +2724,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           <div className="hp-cta-banner-inner">
             <h2 className="hp-animate">Ready To Find Your Perfect Venue?</h2>
             <p className="hp-animate hp-animate-d1">
-              {f('Join Eventes and discover the ideal space for your next event — celebrations, weddings, and unforgettable moments.')}
+              {f('Join Ceremoniq and discover the ideal space for your next event — celebrations, weddings, and unforgettable moments.')}
             </p>
             <div className="hp-cta-banner-btns hp-animate hp-animate-d2">
               <button className="hp-cta-white" onClick={() => onNavigate('add-hall')}>
@@ -2749,7 +2748,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         <section id="contact" className="hp-section hp-section-alt">
           <span className="hp-section-tag hp-animate">Contact</span>
           <h2 className="hp-section-title hp-animate hp-animate-d1">
-            Get In Touch With <strong>Eventes</strong>
+            Get In Touch With <strong>Ceremoniq</strong>
           </h2>
 
           <div className="hp-contact-grid">
@@ -2761,7 +2760,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
             {[
               {
                 label: 'Email',
-                value: 'eventes@gmail.com',
+                value: 'ceremoniq@gmail.com',
                 icon: (
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#4f46e5" strokeWidth="1.5">
                     <rect x="1.5" y="3.5" width="15" height="11" rx="1.5" />
@@ -2810,12 +2809,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         <section id="about" className="hp-section">
           <div className="hp-about-grid">
             <div>
-              <span className="hp-section-tag hp-animate">About Eventes</span>
+              <span className="hp-section-tag hp-animate">About Ceremoniq</span>
               <h2 className="hp-section-title hp-animate-left hp-animate-d1">
                 A Smarter Way To <br /><strong>Manage Events</strong>
               </h2>
               <p className="hp-section-lead hp-animate hp-animate-d2">
-                Eventes simplifies every step of the event journey from discovering the
+                Ceremoniq simplifies every step of the event journey from discovering the
                 right venue to reviewing registrations in one connected platform.
               </p>
 
@@ -2888,7 +2887,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         </section>
 
         <footer className="hp-footer">
-          <span className="hp-footer-brand">Eventes</span>
+          <span className="hp-footer-brand">Ceremoniq</span>
           <div className="hp-footer-links">
             {navLinks.map((link) => (
               <button key={link.id} className="hp-footer-link" onClick={() => scrollTo(link.id)}>
@@ -2897,7 +2896,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
             ))}
             <button className="hp-footer-link" onClick={() => onNavigate('add-hall')}>Register Business</button>
           </div>
-          <span className="hp-footer-copy">© 2026 Eventes. All rights reserved.</span>
+          <span className="hp-footer-copy">© 2026 Ceremoniq. All rights reserved.</span>
         </footer>
 
       </div>
