@@ -151,6 +151,11 @@ export function makeDashStyles(p) {
       background: rgba(22,163,74,0.1); color: #15803d; border-color: rgba(22,163,74,0.22);
     }
     .${p}-badge.rejected { background: rgba(244,63,94,0.08); color: #be123c; border-color: rgba(244,63,94,0.2); }
+    .${p}-badge.cancelled { background: rgba(148,163,184,0.12); color: #475569; border-color: rgba(148,163,184,0.3); }
+    .${p}-badge.paid { background: rgba(16,185,129,0.1); color: #065f46; border-color: rgba(16,185,129,0.25); }
+    .${p}-badge.pending\\ payment, .${p}-badge.pending-payment {
+      background: rgba(251,146,60,0.12); color: #c2410c; border-color: rgba(251,146,60,0.28);
+    }
 
     .${p}-inline-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 

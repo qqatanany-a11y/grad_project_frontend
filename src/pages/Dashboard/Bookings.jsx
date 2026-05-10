@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { apiRequest } from '../../lib/apiClient'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
+import { apiRequest, getVenueAvailableSlots } from '../../lib/apiClient'
+import { useI18n } from '../../i18n/I18nProvider'
 import {
   formatVenueTimeSlot,
+  getVenueAvailabilitySlots,
   getVenueTimeSlots,
   parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
@@ -147,10 +150,251 @@ const styles =
       font-size: 0.76rem;
       color: #64748b;
     }
+    .bk-status-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .bk-inline-button {
+      height: 2.2rem;
+      padding: 0 0.95rem;
+      font-size: 0.8rem;
+    }
+    .bk-status-stack {
+      display: grid;
+      gap: 0.65rem;
+    }
+    .bk-payment-panel {
+      margin-top: 0.15rem;
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      background: #fafbff;
+    }
+    .bk-payment-panel.accent {
+      border-color: rgba(79,70,229,0.18);
+      background: rgba(79,70,229,0.04);
+    }
+    .bk-payment-meta {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .bk-payment-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+    .bk-payment-line strong {
+      color: #1e1b4b;
+      font-size: 0.82rem;
+    }
+    .bk-payment-choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.85rem;
+    }
+    .bk-payment-choice {
+      padding: 0.85rem 0.95rem;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.18s;
+    }
+    .bk-payment-choice:hover {
+      transform: translateY(-1px);
+      border-color: rgba(79,70,229,0.2);
+    }
+    .bk-payment-choice.selected {
+      border-color: rgba(79,70,229,0.28);
+      background: rgba(79,70,229,0.06);
+    }
+    .bk-payment-choice-title {
+      margin: 0 0 0.2rem;
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: #1e1b4b;
+    }
+    .bk-payment-choice-copy {
+      margin: 0;
+      font-size: 0.76rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .bk-payment-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.85rem;
+    }
+    .bk-proof-preview {
+      display: block;
+      max-width: 100%;
+      max-height: 180px;
+      margin-top: 0.55rem;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      object-fit: cover;
+    }
     @media (max-width: 760px) {
-      .bk-grid-wide, .bk-summary-grid {
+      .bk-grid-wide, .bk-summary-grid, .bk-payment-choices {
         grid-template-columns: 1fr;
       }
+    }
+
+    /* â”€â”€ Payment Modal â”€â”€ */
+    @keyframes bkModalFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes bkModalSlideUp {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+    .bk-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(8px);
+      animation: bkModalFadeIn 0.18s ease both;
+    }
+    .bk-modal {
+      width: min(100%, 480px);
+      border-radius: 24px;
+      background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+      border: 1px solid rgba(99,102,241,0.16);
+      box-shadow: 0 32px 80px rgba(15,23,42,0.28);
+      animation: bkModalSlideUp 0.24s cubic-bezier(0.22,1,0.36,1) both;
+      overflow: hidden;
+    }
+    .bk-modal-head {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1.1rem 1.25rem;
+      background: linear-gradient(135deg, rgba(79,70,229,0.07), rgba(129,140,248,0.04));
+      border-bottom: 1px solid rgba(226,232,240,0.9);
+    }
+    .bk-modal-icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #4338ca;
+      background: linear-gradient(135deg, rgba(79,70,229,0.15), rgba(129,140,248,0.1));
+      border: 1px solid rgba(79,70,229,0.12);
+    }
+    .bk-modal-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #1e1b4b;
+      flex: 1;
+    }
+    .bk-modal-close {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 1rem;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .bk-modal-close:hover { background: #f1f5f9; color: #1e1b4b; }
+    .bk-modal-body {
+      padding: 1.15rem 1.25rem 1.35rem;
+    }
+    .bk-modal-info {
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      border: 1.5px solid rgba(79,70,229,0.14);
+      background: rgba(79,70,229,0.04);
+      margin-bottom: 1rem;
+    }
+    .bk-modal-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #64748b;
+      gap: 1rem;
+    }
+    .bk-modal-info-row strong { color: #1e1b4b; font-size: 0.84rem; }
+    .bk-modal-choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+      margin-bottom: 1rem;
+    }
+    .bk-modal-choice {
+      padding: 0.85rem 0.95rem;
+      border-radius: 14px;
+      border: 2px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.16s;
+      text-align: start;
+    }
+    .bk-modal-choice:hover { transform: translateY(-1px); border-color: rgba(79,70,229,0.22); }
+    .bk-modal-choice.selected {
+      border-color: rgba(79,70,229,0.55);
+      background: rgba(79,70,229,0.06);
+    }
+    .bk-modal-choice-title {
+      margin: 0 0 0.18rem;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #1e1b4b;
+    }
+    .bk-modal-choice-copy {
+      margin: 0;
+      font-size: 0.74rem;
+      color: #64748b;
+      line-height: 1.45;
+    }
+    .bk-modal-upload { margin-bottom: 0.9rem; }
+    .bk-modal-proof {
+      display: block;
+      max-width: 100%;
+      max-height: 160px;
+      margin-top: 0.5rem;
+      border-radius: 10px;
+      border: 1.5px solid #e2e8f0;
+      object-fit: cover;
+    }
+    .bk-modal-footer {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .bk-modal-footer .bk-button { flex: 1; justify-content: center; }
+    @media (max-width: 640px) {
+      .bk-modal-backdrop { padding: 1rem; }
+      .bk-modal-choices { grid-template-columns: 1fr; }
+      .bk-modal-footer { flex-direction: column; }
     }
   `
 
@@ -158,6 +402,7 @@ const emptyForm = {
   venueId: '',
   date: '',
   timeSlotId: '',
+  venueAvailabilityId: '',
   startTime: '',
   endTime: '',
   guestsCount: '',
@@ -165,6 +410,9 @@ const emptyForm = {
   brideIdDocumentDataUrl: '',
   bridegroomIdDocumentDataUrl: '',
 }
+
+const PAYMENT_METHOD_CASH = 1
+const PAYMENT_METHOD_CLIQ = 2
 
 function formatDate(value) {
   if (!value) return '--'
@@ -180,6 +428,60 @@ function formatCurrency(value) {
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '--'
   return `${amount.toFixed(2)} JOD`
+}
+
+function formatPercentage(value) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return '--'
+
+  return Number.isInteger(amount) ? `${amount}%` : `${amount.toFixed(2)}%`
+}
+
+function formatDateTime(value) {
+  if (!value) return '--'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '--'
+
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function getBookingStatusValue(booking) {
+  const rawStatus = booking?.status
+  return typeof rawStatus === 'string' ? rawStatus.toLowerCase() : 'pending'
+}
+
+function getPaymentMethodLabel(value) {
+  return typeof value === 'string' && value.toLowerCase() === 'cliq' ? 'CliQ' : 'Cash'
+}
+
+function isBookingAtLeastTwoWeeksAway(value) {
+  if (!value) return false
+
+  const bookingDate = new Date(value)
+  if (Number.isNaN(bookingDate.getTime())) return false
+
+  const now = new Date()
+  const bookingDateUtc = Date.UTC(
+    bookingDate.getUTCFullYear(),
+    bookingDate.getUTCMonth(),
+    bookingDate.getUTCDate(),
+  )
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const daysLeft = (bookingDateUtc - todayUtc) / (1000 * 60 * 60 * 24)
+
+  return daysLeft >= 14
+}
+
+function canCancelBooking(booking) {
+  const status = getBookingStatusValue(booking)
+  return (status === 'pending' || status === 'confirmed') && isBookingAtLeastTwoWeeksAway(booking?.date)
 }
 
 function getVenueCategoryValue(venue) {
@@ -232,6 +534,7 @@ function readFileAsDataUrl(file) {
 }
 
 function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }) {
+  const { f, direction } = useI18n()
   const [bookings, setBookings] = useState([])
   const [venues, setVenues] = useState([])
   const [formValues, setFormValues] = useState(emptyForm)
@@ -243,10 +546,23 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const [documentNames, setDocumentNames] = useState({ bride: '', bridegroom: '' })
   const [loading, setLoading] = useState(true)
   const [loadingOptions, setLoadingOptions] = useState(false)
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [venueAvailabilitySlots, setVenueAvailabilitySlots] = useState([])
+  const [availabilityError, setAvailabilityError] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [paymentDraft, setPaymentDraft] = useState({
+    bookingId: null,
+    paymentMethod: PAYMENT_METHOD_CASH,
+    cliqTransferImageDataUrl: '',
+    cliqTransferImageName: '',
+  })
+  const [paymentSubmittingId, setPaymentSubmittingId] = useState(null)
+  const [paymentModalBooking, setPaymentModalBooking] = useState(null)
+  const [modalError, setModalError] = useState('')
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
   const appliedDraftIdRef = useRef(null)
+  const { confirm } = useAppDialog()
 
   const isOwner = session?.role === 'Owner'
   const isUser = session?.role === 'User'
@@ -302,6 +618,9 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       ...emptyForm,
       venueId: String(initialBookingDraft.venueId ?? ''),
       date: initialBookingDraft.date ?? '',
+      venueAvailabilityId: initialBookingDraft.venueAvailabilityId
+        ? String(initialBookingDraft.venueAvailabilityId)
+        : '',
       timeSlotId: initialBookingDraft.timeSlotId
         ? String(initialBookingDraft.timeSlotId)
         : '',
@@ -350,15 +669,46 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
   }, [formValues.venueId, venues])
 
-  const availableTimeSlots = useMemo(() => {
+  const usesVenueAvailability = useMemo(() => {
+    return selectedVenue ? getPricingTypeValue(selectedVenue) === 'FixedSlots' : false
+  }, [selectedVenue])
+
+  const ownerDefinedTimeSlots = useMemo(() => {
     return selectedVenue ? getVenueTimeSlots(selectedVenue, { activeOnly: true }) : []
   }, [selectedVenue])
 
+  const availableTimeSlots = useMemo(() => {
+    if (!selectedVenue) {
+      return []
+    }
+
+    if (usesVenueAvailability) {
+      return formValues.date ? venueAvailabilitySlots : []
+    }
+
+    return ownerDefinedTimeSlots
+  }, [
+    formValues.date,
+    ownerDefinedTimeSlots,
+    selectedVenue,
+    usesVenueAvailability,
+    venueAvailabilitySlots,
+  ])
+
   const selectedTimeSlot = useMemo(() => {
+    const selectedSlotId = usesVenueAvailability
+      ? formValues.venueAvailabilityId
+      : formValues.timeSlotId
+
     return (
-      availableTimeSlots.find((slot) => String(slot.id) === String(formValues.timeSlotId)) ?? null
+      availableTimeSlots.find((slot) => String(slot.id) === String(selectedSlotId)) ?? null
     )
-  }, [availableTimeSlots, formValues.timeSlotId])
+  }, [
+    availableTimeSlots,
+    formValues.timeSlotId,
+    formValues.venueAvailabilityId,
+    usesVenueAvailability,
+  ])
 
   useEffect(() => {
     if (!formValues.venueId) {
@@ -375,6 +725,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         ...currentValues,
         venueId: '',
         timeSlotId: '',
+        venueAvailabilityId: '',
         venueServiceOptionIds: [],
       }))
       setServiceOptions([])
@@ -382,21 +733,80 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }, [filteredVenues, formValues.venueId])
 
   useEffect(() => {
+    if (!selectedVenue?.id || !usesVenueAvailability || !formValues.date) {
+      setVenueAvailabilitySlots([])
+      setAvailabilityError('')
+      setLoadingAvailability(false)
+      return undefined
+    }
+
+    let isCancelled = false
+
+    const loadVenueAvailability = async () => {
+      setLoadingAvailability(true)
+      setAvailabilityError('')
+
+      try {
+        const data = await getVenueAvailableSlots(selectedVenue.id, formValues.date)
+
+        if (isCancelled) {
+          return
+        }
+
+        setVenueAvailabilitySlots(getVenueAvailabilitySlots(data))
+      } catch (error) {
+        if (!isCancelled) {
+          setVenueAvailabilitySlots([])
+          setAvailabilityError(
+            error instanceof Error ? error.message : 'Unable to load venue availability.',
+          )
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingAvailability(false)
+        }
+      }
+    }
+
+    loadVenueAvailability()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [formValues.date, selectedVenue?.id, usesVenueAvailability])
+
+  useEffect(() => {
+    const selectedSlotId = usesVenueAvailability
+      ? formValues.venueAvailabilityId
+      : formValues.timeSlotId
+
     if (!availableTimeSlots.length) {
+      if (selectedSlotId) {
+        setFormValues((currentValues) => ({
+          ...currentValues,
+          ...(usesVenueAvailability ? { venueAvailabilityId: '' } : { timeSlotId: '' }),
+        }))
+      }
+
       return
     }
 
     const selectedStillAvailable = availableTimeSlots.some(
-      (slot) => String(slot.id) === String(formValues.timeSlotId),
+      (slot) => String(slot.id) === String(selectedSlotId),
     )
 
     if (!selectedStillAvailable) {
       setFormValues((currentValues) => ({
         ...currentValues,
-        timeSlotId: '',
+        ...(usesVenueAvailability ? { venueAvailabilityId: '' } : { timeSlotId: '' }),
       }))
     }
-  }, [availableTimeSlots, formValues.timeSlotId])
+  }, [
+    availableTimeSlots,
+    formValues.timeSlotId,
+    formValues.venueAvailabilityId,
+    usesVenueAvailability,
+  ])
 
   useEffect(() => {
     if (!isUser || !formValues.venueId) {
@@ -442,6 +852,19 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
   }, [formValues.venueId, isUser, session?.token])
 
+  const updateBookingStatus = (bookingId, nextStatus) => {
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) =>
+        booking.id === bookingId
+          ? {
+              ...booking,
+              status: nextStatus,
+            }
+          : booking,
+      ),
+    )
+  }
+
   const servicesTotal = useMemo(() => {
     return serviceOptions
       .filter((option) => formValues.venueServiceOptionIds.includes(option.id))
@@ -476,8 +899,101 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const estimatedTotal =
     estimatedBasePrice === null ? null : estimatedBasePrice + servicesTotal
 
+  const availabilitySummary = useMemo(() => {
+    if (!selectedVenue || !usesVenueAvailability) {
+      return null
+    }
+
+    if (!formValues.date) {
+      return 'Choose a booking date to check whether this venue is available.'
+    }
+
+    if (loadingAvailability) {
+      return 'Checking venue availability for the selected date...'
+    }
+
+    if (availabilityError) {
+      return availabilityError
+    }
+
+    if (availableTimeSlots.length === 0) {
+      return 'This venue is not available for booking on the selected date.'
+    }
+
+    return `This venue has ${availableTimeSlots.length} available slot${availableTimeSlots.length === 1 ? '' : 's'} on the selected date.`
+  }, [
+    availabilityError,
+    availableTimeSlots.length,
+    formValues.date,
+    loadingAvailability,
+    selectedVenue,
+    usesVenueAvailability,
+  ])
+
+  const selectVenueSlot = (slotId) => {
+    setFormValues((currentValues) => ({
+      ...currentValues,
+      timeSlotId: usesVenueAvailability ? '' : String(slotId),
+      venueAvailabilityId: usesVenueAvailability ? String(slotId) : '',
+    }))
+  }
+
+  const getBookingTimingValidationMessage = () => {
+    if (usesVenueAvailability) {
+      if (!formValues.date) {
+        return 'Choose a booking date before submitting.'
+      }
+
+      if (loadingAvailability) {
+        return 'Checking venue availability for the selected date...'
+      }
+
+      if (availabilityError) {
+        return availabilityError
+      }
+
+      if (availableTimeSlots.length === 0) {
+        return 'This venue is not available for booking on the selected date.'
+      }
+
+      if (!selectedTimeSlot) {
+        return 'Choose one of the available venue time slots before submitting.'
+      }
+
+      return null
+    }
+
+    if (availableTimeSlots.length > 0 && !selectedTimeSlot) {
+      return 'Choose one of the available venue time slots before submitting.'
+    }
+
+    if (availableTimeSlots.length === 0) {
+      const startMinutes = parseTimeToMinutes(formValues.startTime)
+      const endMinutes = parseTimeToMinutes(formValues.endTime)
+
+      if (startMinutes === null || endMinutes === null) {
+        return 'Enter both start and end times before submitting.'
+      }
+
+      if (endMinutes <= startMinutes) {
+        return 'End time must be later than start time.'
+      }
+    }
+
+    return null
+  }
+
   const handleChange = ({ target: { name, value } }) => {
-    setFormValues((currentValues) => ({ ...currentValues, [name]: value }))
+    setFormValues((currentValues) => ({
+      ...currentValues,
+      [name]: value,
+      ...(name === 'venueId' || name === 'date'
+        ? {
+            timeSlotId: '',
+            venueAvailabilityId: '',
+          }
+        : {}),
+    }))
   }
 
   const handleOptionToggle = (optionId) => {
@@ -536,15 +1052,29 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setVenueTypeFilter('All')
     setServiceOptions([])
     setDocumentNames({ bride: '', bridegroom: '' })
+    setVenueAvailabilitySlots([])
+    setAvailabilityError('')
+    setLoadingAvailability(false)
+  }
+
+  const resetPaymentDraft = () => {
+    setPaymentDraft({
+      bookingId: null,
+      paymentMethod: PAYMENT_METHOD_CASH,
+      cliqTransferImageDataUrl: '',
+      cliqTransferImageName: '',
+    })
   }
 
   const createBooking = async (event) => {
     event.preventDefault()
 
-    if (availableTimeSlots.length > 0 && !selectedTimeSlot) {
+    const timingValidationMessage = getBookingTimingValidationMessage()
+
+    if (timingValidationMessage) {
       setFeedback({
         tone: 'error',
-        message: 'Choose one of the available venue time slots before submitting.',
+        message: timingValidationMessage,
       })
       return
     }
@@ -568,7 +1098,9 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           date: `${formValues.date}T00:00:00Z`,
           guestsCount: Number(formValues.guestsCount),
           ...(selectedTimeSlot
-            ? { timeSlotId: Number(formValues.timeSlotId) }
+            ? usesVenueAvailability
+              ? { venueAvailabilityId: Number(selectedTimeSlot.id) }
+              : { timeSlotId: Number(selectedTimeSlot.id) }
             : {
                 startTime: formValues.startTime,
                 endTime: formValues.endTime,
@@ -602,11 +1134,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         token: session?.token,
       })
 
+      updateBookingStatus(bookingId, decision === 'approve' ? 'Confirmed' : 'Rejected')
       setFeedback({
         tone: 'idle',
         message: `Booking #${bookingId} ${decision === 'approve' ? 'approved' : 'rejected'}.`,
       })
-      await loadBookings()
     } catch (error) {
       setFeedback({
         tone: 'error',
@@ -615,6 +1147,155 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     } finally {
       setBusyId(null)
     }
+  }
+
+  const cancelBooking = async (bookingId) => {
+    const isConfirmed = await confirm({
+      tone: 'danger',
+      title: 'Confirm booking cancellation',
+      message: 'Cancel this booking?',
+      description: 'Your booking will be marked as cancelled immediately after confirmation.',
+      confirmLabel: 'Yes, cancel booking',
+      cancelLabel: 'Keep booking',
+    })
+
+    if (!isConfirmed) {
+      return
+    }
+
+    setBusyId(bookingId)
+
+    try {
+      const result = await apiRequest(`/api/bookings/${bookingId}/cancel`, {
+        method: 'PUT',
+        token: session?.token,
+      })
+
+      updateBookingStatus(bookingId, 'Cancelled')
+      setFeedback({
+        tone: 'idle',
+        message:
+          typeof result === 'string' && result
+            ? result
+            : `Booking #${bookingId} cancelled successfully.`,
+      })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to update booking.',
+      })
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handlePaymentProofChange = async (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      setPaymentDraft((currentDraft) => ({
+        ...currentDraft,
+        cliqTransferImageDataUrl: '',
+        cliqTransferImageName: '',
+      }))
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFeedback({
+        tone: 'error',
+        message: 'CliQ transfer image must be 5 MB or smaller.',
+      })
+      event.target.value = ''
+      return
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+
+      setPaymentDraft((currentDraft) => ({
+        ...currentDraft,
+        cliqTransferImageDataUrl: dataUrl,
+        cliqTransferImageName: file.name,
+      }))
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to read the selected file.',
+      })
+    }
+  }
+
+  const submitPayment = async (booking) => {
+    if (!booking?.id) return
+
+    setModalError('')
+
+    if (
+      paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ &&
+      !paymentDraft.cliqTransferImageDataUrl
+    ) {
+      setModalError('Upload a CliQ transfer image before submitting the payment.')
+      return
+    }
+
+    setPaymentSubmittingId(booking.id)
+
+    try {
+      const response = await apiRequest('/api/payments/pay', {
+        method: 'POST',
+        token: session?.token,
+        body: {
+          bookingId: booking.id,
+          paymentMethod: paymentDraft.paymentMethod,
+          ...(paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ
+            ? { cliqTransferImageDataUrl: paymentDraft.cliqTransferImageDataUrl }
+            : {}),
+        },
+      })
+
+      // CliQ => Paid, Cash => Pending Payment
+      const nextStatus =
+        paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ ? 'Paid' : 'Pending Payment'
+
+      setFeedback({
+        tone: 'idle',
+        message:
+          typeof response === 'string' && response
+            ? response
+            : paymentDraft.paymentMethod === PAYMENT_METHOD_CASH
+              ? `Cash payment selected for booking #${booking.id}. Please complete the payment within 24 hours.`
+              : `CliQ payment submitted for booking #${booking.id}.`,
+      })
+      updateBookingStatus(booking.id, nextStatus)
+      setPaymentModalBooking(null)
+      setModalError('')
+      resetPaymentDraft()
+      await loadBookings()
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unable to submit the payment.'
+      console.error('[Payment]', msg, error)
+      setModalError(msg)
+    } finally {
+      setPaymentSubmittingId(null)
+    }
+  }
+
+  const openPaymentModal = (booking) => {
+    setModalError('')
+    setPaymentModalBooking(booking)
+    setPaymentDraft({
+      bookingId: booking.id,
+      paymentMethod: PAYMENT_METHOD_CASH,
+      cliqTransferImageDataUrl: '',
+      cliqTransferImageName: '',
+    })
+  }
+
+  const closePaymentModal = () => {
+    setModalError('')
+    setPaymentModalBooking(null)
+    resetPaymentDraft()
   }
 
   if (!isOwner && !isUser) {
@@ -719,7 +1400,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
               />
             </div>
 
-            {availableTimeSlots.length === 0 ? (
+            {!usesVenueAvailability && availableTimeSlots.length === 0 ? (
               <>
                 <div className="bk-field">
                   <label className="bk-label">Start Time</label>
@@ -778,45 +1459,48 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
             <>
               <div className="bk-note">
                 Selected venue type: <strong>{getVenueCategoryLabel(getVenueCategoryValue(selectedVenue))}</strong>
-                {' · '}
+                {' Â· '}
                 Pricing model: <strong>{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</strong>
                 {selectedTimeSlot ? (
                   <>
-                    {' · '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
-                    {' · '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
+                    {' Â· '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
+                    {' Â· '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
                   </>
                 ) : getVenuePricePerHour(selectedVenue) ? (
                   <>
-                    {' · '}Base rate: <strong>{formatCurrency(selectedVenue.pricePerHour)} / hour</strong>
+                    {' Â· '}Base rate: <strong>{formatCurrency(selectedVenue.pricePerHour)} / hour</strong>
                   </>
                 ) : null}
               </div>
 
+              {availabilitySummary ? <div className="bk-note">{availabilitySummary}</div> : null}
+
               {availableTimeSlots.length > 0 ? (
                 <div style={{ marginTop: '1rem' }}>
-                  <label className="bk-label">Available Time Slots</label>
+                  <label className="bk-label">
+                    {usesVenueAvailability ? 'Available Slots For Selected Date' : 'Available Time Slots'}
+                  </label>
                   <div className="bk-slot-list">
                     {availableTimeSlots.map((slot) => {
-                      const selected = String(formValues.timeSlotId) === String(slot.id)
+                      const selected = usesVenueAvailability
+                        ? String(formValues.venueAvailabilityId) === String(slot.id)
+                        : String(formValues.timeSlotId) === String(slot.id)
 
                       return (
                         <label key={slot.id} className={`bk-slot-card${selected ? ' selected' : ''}`}>
                           <div className="bk-option-main">
                             <input
                               type="radio"
-                              name="timeSlotId"
+                              name={usesVenueAvailability ? 'venueAvailabilityId' : 'timeSlotId'}
                               checked={selected}
-                              onChange={() =>
-                                setFormValues((currentValues) => ({
-                                  ...currentValues,
-                                  timeSlotId: String(slot.id),
-                                }))
-                              }
+                              onChange={() => selectVenueSlot(slot.id)}
                             />
                             <div>
                               <p className="bk-option-title">{formatVenueTimeSlot(slot)}</p>
                               <p className="bk-option-copy">
-                                Only active owner-defined time slots can be booked.
+                                {usesVenueAvailability
+                                  ? 'Available venue slot for the selected booking date.'
+                                  : 'Only active owner-defined time slots can be booked.'}
                               </p>
                             </div>
                           </div>
@@ -912,7 +1596,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           <p className="bk-label-row">Date</p>
           <p className="bk-label-row">Time</p>
           <p className="bk-label-row">Total Price</p>
-          <p className="bk-label-row">Status</p>
+          <p className="bk-label-row">Status / Actions</p>
         </div>
 
         {filteredBookings.length === 0 ? (
@@ -923,7 +1607,14 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           )
         ) : (
           filteredBookings.map((booking) => {
-            const status = booking.status?.toLowerCase() || 'pending'
+            const status = getBookingStatusValue(booking)
+            const showCancelAction = isUser && canCancelBooking(booking)
+            const payment = booking.payment
+            const paymentFormOpen = paymentDraft.bookingId === booking.id
+            const depositAmount = Number(booking.depositAmount)
+            const hasDeposit = Number.isFinite(depositAmount) && depositAmount > 0
+            // Show Pay Now for confirmed bookings that haven't been paid yet
+            const showPayButton = isUser && (booking.canPay || (status === 'confirmed' && !payment))
 
             return (
               <div key={booking.id} className="bk-row">
@@ -969,6 +1660,12 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                       Extras {formatCurrency(booking.servicesPrice)}
                     </p>
                   ) : null}
+                  {hasDeposit ? (
+                    <p className="bk-copy" style={{ marginTop: '0.3rem' }}>
+                      Deposit {formatPercentage(booking.depositPercentage)} -{' '}
+                      {formatCurrency(booking.depositAmount)}
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   {isOwner && status === 'pending' ? (
@@ -989,7 +1686,68 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                       </button>
                     </div>
                   ) : (
-                    <span className={`bk-badge ${status}`}>{booking.status}</span>
+                    <div className="bk-status-stack">
+                      <div className="bk-status-actions">
+                        <span className={`bk-badge ${status.replace(/\s+/g, '-')}`}>{booking.status}</span>
+                        {showPayButton ? (
+                          <button
+                            className="bk-button secondary bk-inline-button"
+                            onClick={() => openPaymentModal(booking)}
+                            disabled={paymentSubmittingId === booking.id}
+                          >
+                            Pay now
+                          </button>
+                        ) : null}
+                        {showCancelAction ? (
+                          <button
+                            className="bk-button danger bk-inline-button"
+                            onClick={() => cancelBooking(booking.id)}
+                            disabled={busyId === booking.id || paymentSubmittingId === booking.id}
+                          >
+                            {busyId === booking.id ? 'Cancelling...' : 'Cancel booking'}
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {payment ? (
+                        <div className="bk-payment-panel">
+                          <div className="bk-payment-meta">
+                            <div className="bk-payment-line">
+                              <span>Payment method</span>
+                              <strong>{getPaymentMethodLabel(payment.paymentMethod)}</strong>
+                            </div>
+                            <div className="bk-payment-line">
+                              <span>Payment status</span>
+                              <strong>{payment.status || '--'}</strong>
+                            </div>
+                            <div className="bk-payment-line">
+                              <span>Deposit amount</span>
+                              <strong>{formatCurrency(payment.amount)}</strong>
+                            </div>
+                            {payment.paidAt ? (
+                              <div className="bk-payment-line">
+                                <span>Submitted at</span>
+                                <strong>{formatDateTime(payment.paidAt)}</strong>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {payment.cliqTransferImageDataUrl ? (
+                            <div className="bk-doc-links">
+                              <a
+                                className="bk-link"
+                                href={payment.cliqTransferImageDataUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View CliQ proof
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                    </div>
                   )}
                 </div>
               </div>
@@ -997,9 +1755,127 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           })
         )}
       </div>
+
+      {paymentModalBooking ? (
+        <div
+          className="bk-modal-backdrop"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closePaymentModal() }}
+        >
+          <div className="bk-modal" dir={direction}>
+            <div className="bk-modal-head">
+              <div className="bk-modal-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <p className="bk-modal-title">Confirm Payment</p>
+              <button type="button" className="bk-modal-close" onClick={closePaymentModal} aria-label="Close">âœ•</button>
+            </div>
+            <div className="bk-modal-body">
+              {/* Compute deposit: use backend value if present, otherwise 10% of total */}
+              {(() => {
+                const total = Number(paymentModalBooking.totalPrice) || 0
+                const backendDeposit = Number(paymentModalBooking.depositAmount)
+                const backendPct = Number(paymentModalBooking.depositPercentage)
+                const depositAmt = backendDeposit > 0 ? backendDeposit : total * 0.10
+                const depositPct = backendPct > 0 ? backendPct : (total > 0 ? 10 : 0)
+
+                return (
+                  <div className="bk-modal-info">
+                    <div className="bk-modal-info-row">
+                      <span>Total booking price</span>
+                      <strong>{formatCurrency(total)}</strong>
+                    </div>
+                    <div className="bk-modal-info-row">
+                      <span>Required deposit (10%)</span>
+                      <strong style={{ color: '#4f46e5' }}>
+                        {formatCurrency(depositAmt)}
+                        {depositPct > 0 ? ` — ${formatPercentage(depositPct)}` : ''}
+                      </strong>
+                    </div>
+                    <div className="bk-modal-info-row">
+                      <span>Allowed methods</span>
+                      <strong>Cash or CliQ only</strong>
+                    </div>
+                  </div>
+                )
+              })()}
+              <div className="bk-modal-choices">
+                <button
+                  type="button"
+                  className={`bk-modal-choice${paymentDraft.paymentMethod === PAYMENT_METHOD_CASH ? ' selected' : ''}`}
+                  onClick={() => setPaymentDraft((d) => ({ ...d, paymentMethod: PAYMENT_METHOD_CASH, cliqTransferImageDataUrl: '', cliqTransferImageName: '' }))}
+                >
+                  <p className="bk-modal-choice-title">Cash</p>
+                  <p className="bk-modal-choice-copy">Pay in person at the venue. Status will be set to pending payment.</p>
+                </button>
+                <button
+                  type="button"
+                  className={`bk-modal-choice${paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ ? ' selected' : ''}`}
+                  onClick={() => setPaymentDraft((d) => ({ ...d, paymentMethod: PAYMENT_METHOD_CLIQ }))}
+                >
+                  <p className="bk-modal-choice-title">CliQ</p>
+                  <p className="bk-modal-choice-copy">Upload the transfer image before submitting.</p>
+                </button>
+              </div>
+              {paymentDraft.paymentMethod === PAYMENT_METHOD_CASH ? (
+                <div className="bk-note" style={{ marginBottom: '0.85rem', fontSize: '0.78rem' }}>
+                  ⚠ If the cash payment is not completed within 24 hours, your booking will be automatically cancelled.
+                </div>
+              ) : null}
+              {paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ ? (
+                <div className="bk-modal-upload">
+                  <label className="bk-label">CliQ Transfer Image</label>
+                  <input className="bk-input" type="file" accept="image/*" onChange={handlePaymentProofChange} required />
+                  {paymentDraft.cliqTransferImageName ? (
+                    <span className="bk-file-meta">{paymentDraft.cliqTransferImageName}</span>
+                  ) : null}
+                  {paymentDraft.cliqTransferImageDataUrl ? (
+                    <img className="bk-modal-proof" src={paymentDraft.cliqTransferImageDataUrl} alt="CliQ proof preview" />
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="bk-modal-footer" style={{ flexDirection: 'column', gap: '0.6rem' }}>
+                {modalError ? (
+                  <div style={{
+                    padding: '0.65rem 0.9rem',
+                    borderRadius: '10px',
+                    background: 'rgba(244,63,94,0.08)',
+                    border: '1.5px solid rgba(244,63,94,0.22)',
+                    color: '#be123c',
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}>
+                    ⚠ {modalError}
+                  </div>
+                ) : null}
+                <div style={{ display: 'flex', gap: '0.6rem', width: '100%' }}>
+                  <button
+                    className="bk-button"
+                    type="button"
+                    style={{ flex: 1 }}
+                    onClick={() => submitPayment(paymentModalBooking)}
+                    disabled={paymentSubmittingId === paymentModalBooking.id}
+                  >
+                    {paymentSubmittingId === paymentModalBooking.id ? 'Submitting...' : 'Submit payment'}
+                  </button>
+                  <button
+                    className="bk-button secondary"
+                    type="button"
+                    style={{ flex: 1 }}
+                    onClick={closePaymentModal}
+                    disabled={paymentSubmittingId === paymentModalBooking.id}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }
 
 export default Bookings
-
