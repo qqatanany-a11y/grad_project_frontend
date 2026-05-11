@@ -189,12 +189,13 @@ function formatDate(value) {
 }
 
 function isVenueEditRequest(request) {
-  return request?.type === 'Venue'
+  return request?.type === 'Venue' || request?.type === 'VenueUpdate'
 }
 
 const REQUEST_TYPE_LABELS = {
   Profile: 'Profile Edit',
   Venue: 'Venue Edit',
+  VenueUpdate: 'Venue Edit',
   VenueCreate: 'New Venue Request',
 }
 
@@ -311,7 +312,7 @@ function parseRequestData(request) {
     return { kind: 'raw', raw: null }
   }
 
-  if (request?.type === 'Venue') {
+  if (isVenueEditRequest(request)) {
     return {
       kind: 'venue',
       current: normalizeVenueData(readValue(parsed, 'current', 'Current')),
@@ -570,7 +571,7 @@ function EditRequests({ session }) {
 
   const loadVenueSnapshot = async (request) => {
     if (
-      request?.type !== 'Venue' ||
+      !isVenueEditRequest(request) ||
       !request?.targetId ||
       venueSnapshots[request.id] ||
       loadingSnapshotIds[request.id]
@@ -627,7 +628,7 @@ function EditRequests({ session }) {
     }
 
     const parsedRequest = parseRequestData(request)
-    if (request?.type === 'Venue' && !parsedRequest.current) {
+    if (isVenueEditRequest(request) && !parsedRequest.current) {
       void loadVenueSnapshot(request)
     }
   }
