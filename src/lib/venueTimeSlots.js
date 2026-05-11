@@ -75,6 +75,23 @@ export function normalizeVenueTimeSlot(slot) {
   }
 }
 
+export function normalizeVenueAvailabilitySlot(slot) {
+  const slotId = Number(readValue(slot, 'id', 'Id'))
+  const venueId = Number(readValue(slot, 'venueId', 'VenueId'))
+  const price = Number(readValue(slot, 'price', 'Price'))
+  const rawDate = String(readValue(slot, 'date', 'Date') ?? '').trim()
+
+  return {
+    id: Number.isInteger(slotId) && slotId > 0 ? slotId : null,
+    venueId: Number.isInteger(venueId) && venueId > 0 ? venueId : null,
+    date: rawDate ? rawDate.slice(0, 10) : '',
+    startTime: normalizeTimeValue(String(readValue(slot, 'startTime', 'StartTime') ?? '')),
+    endTime: normalizeTimeValue(String(readValue(slot, 'endTime', 'EndTime') ?? '')),
+    price: Number.isFinite(price) ? price : 0,
+    isBooked: readValue(slot, 'isBooked', 'IsBooked') === true,
+  }
+}
+
 function sortVenueTimeSlots(leftSlot, rightSlot) {
   const leftStart = parseTimeToMinutes(leftSlot.startTime) ?? 0
   const rightStart = parseTimeToMinutes(rightSlot.startTime) ?? 0
@@ -106,6 +123,17 @@ export function getVenueTimeSlots(source, { activeOnly = false } = {}) {
   }
 
   return normalizedSlots.filter((slot) => slot.isActive)
+}
+
+export function getVenueAvailabilitySlots(source) {
+  if (!Array.isArray(source)) {
+    return []
+  }
+
+  return source
+    .map((slot) => normalizeVenueAvailabilitySlot(slot))
+    .filter((slot) => slot.id && slot.startTime && slot.endTime && !slot.isBooked)
+    .sort(sortVenueTimeSlots)
 }
 
 function hasSlotContent(slot) {

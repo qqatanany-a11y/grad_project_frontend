@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import { formatVenueTimeSlot, getVenueTimeSlots } from '../../lib/venueTimeSlots'
@@ -225,6 +226,7 @@ function normalizeVenueRequest(request) {
 }
 
 function VenueRequests({ session }) {
+  const { prompt } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
@@ -286,6 +288,27 @@ function VenueRequests({ session }) {
   }, [requests, search, statusFilter])
 
   const handleDecision = async (requestId, decision) => {
+    let body
+
+    if (decision === 'reject') {
+      const reason = await prompt({
+        tone: 'danger',
+        title: 'Reject request',
+        message: 'Enter rejection reason (optional):',
+        description: 'Add a rejection reason if you want the requester to see more context.',
+        inputLabel: 'Rejection reason (optional)',
+        placeholder: 'Type your note here...',
+        confirmLabel: 'Submit rejection',
+        cancelLabel: 'Maybe later',
+      })
+
+      if (reason === null) {
+        return
+      }
+
+      body = { reason }
+    }
+
     setBusyId(requestId)
 
     try {
@@ -293,13 +316,6 @@ function VenueRequests({ session }) {
         decision === 'approve'
           ? `/api/admin/edit-requests/${requestId}/approve`
           : `/api/admin/edit-requests/${requestId}/reject`
-
-      const body =
-        decision === 'reject'
-          ? {
-              reason: window.prompt('Enter rejection reason (optional):') || '',
-            }
-          : undefined
 
       await apiRequest(path, {
         method: 'POST',
