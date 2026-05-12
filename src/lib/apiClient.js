@@ -1,5 +1,11 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9000'
+const DEFAULT_API_URL = 'http://localhost:5000'
+
+// Deployment-aware API base URL for Vite and Vercel environments.
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_BASE_URL ??
+  DEFAULT_API_URL
+).replace(/\/+$/, '')
 
 export async function parseResponseBody(response) {
   const text = await response.text()
