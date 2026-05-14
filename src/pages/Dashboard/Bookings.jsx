@@ -8,7 +8,6 @@ import {
   getVenueTimeSlots,
   parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
-import { useI18n } from '../../i18n/I18nProvider'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles =
