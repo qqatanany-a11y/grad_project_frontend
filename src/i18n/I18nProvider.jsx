@@ -3,7 +3,7 @@ import en from './en.json'
 import ar from './ar.json'
 
 const dictionaries = { en, ar }
-const LANGUAGE_STORAGE_KEY = 'eventplan-language'
+const LANGUAGE_STORAGE_KEY = 'ceremoniq-language'
 
 const I18nContext = createContext({
   language: 'en',

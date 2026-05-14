@@ -8,6 +8,7 @@ import {
   getVenueTimeSlots,
   parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
+import { useI18n } from '../../i18n/I18nProvider'
 import { makeDashStyles } from './dashboardPageStyles'
 
 const styles =
@@ -1430,28 +1431,34 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
             <div className="bk-field">
               <label className="bk-label">Bride ID Document</label>
-              <input
-                className="bk-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(event) => handleDocumentChange('bride', event)}
-                required
-              />
-              {documentNames.bride ? <span className="bk-file-meta">{documentNames.bride}</span> : null}
+              <label className="bk-file-control">
+                <input
+                  className="bk-file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => handleDocumentChange('bride', event)}
+                />
+                <span className="bk-file-button">{f('Choose bride ID document')}</span>
+                <span className="bk-file-name">
+                  {documentNames.bride || f('No document selected')}
+                </span>
+              </label>
             </div>
 
             <div className="bk-field">
               <label className="bk-label">Bridegroom ID Document</label>
-              <input
-                className="bk-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(event) => handleDocumentChange('bridegroom', event)}
-                required
-              />
-              {documentNames.bridegroom ? (
-                <span className="bk-file-meta">{documentNames.bridegroom}</span>
-              ) : null}
+              <label className="bk-file-control">
+                <input
+                  className="bk-file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => handleDocumentChange('bridegroom', event)}
+                />
+                <span className="bk-file-button">{f('Choose bridegroom ID document')}</span>
+                <span className="bk-file-name">
+                  {documentNames.bridegroom || f('No document selected')}
+                </span>
+              </label>
             </div>
           </div>
 

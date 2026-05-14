@@ -1,4 +1,4 @@
-# Eventes — Event & Venue Management Platform
+# Ceremoniq — Event & Venue Management Platform
 
 A modern React + Vite event/venue management app with a fully redesigned UI featuring indigo/rose/gold palette, real venue images, and animations throughout.
 

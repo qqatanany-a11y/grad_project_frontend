@@ -89,7 +89,7 @@ function AdminOverviewPage({ session }) {
           <div className="admin-stat-label">Companies</div>
           <div className="admin-stat-value">{totalCompanies}</div>
           <p className="admin-stat-detail">
-            Registered owner companies visible to admins
+            Registered venue management companies visible to admins
           </p>
         </article>
 
