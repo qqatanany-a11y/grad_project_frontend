@@ -1,7 +1,7 @@
 import { useI18n } from './I18nProvider'
 
 function LanguageToggle({ className = '' }) {
-  const { f, language, toggleLanguage } = useI18n()
+  const { f, toggleLanguage } = useI18n()
 
   return (
     <button
@@ -11,8 +11,7 @@ function LanguageToggle({ className = '' }) {
       aria-label={f('language.toggleLabel')}
       title={f('language.toggleLabel')}
     >
-      <span>{language === 'ar' ? 'EN' : 'AR'}</span>
-      <small>{f('language.switch')}</small>
+      <span>{f('language.switch')}</span>
     </button>
   )
 }
