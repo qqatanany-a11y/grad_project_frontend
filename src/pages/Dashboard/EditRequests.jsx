@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
@@ -188,12 +189,13 @@ function formatDate(value) {
 }
 
 function isVenueEditRequest(request) {
-  return request?.type === 'Venue'
+  return request?.type === 'Venue' || request?.type === 'VenueUpdate'
 }
 
 const REQUEST_TYPE_LABELS = {
   Profile: 'Profile Edit',
   Venue: 'Venue Edit',
+  VenueUpdate: 'Venue Edit',
   VenueCreate: 'New Venue Request',
 }
 
@@ -310,7 +312,7 @@ function parseRequestData(request) {
     return { kind: 'raw', raw: null }
   }
 
-  if (request?.type === 'Venue') {
+  if (isVenueEditRequest(request)) {
     return {
       kind: 'venue',
       current: normalizeVenueData(readValue(parsed, 'current', 'Current')),
@@ -457,6 +459,7 @@ function renderVenueTimeSlots(title, slots, { comparison = false, changed = fals
 }
 
 function EditRequests({ session }) {
+  const { prompt } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState(null)
@@ -516,6 +519,27 @@ function EditRequests({ session }) {
   }, [requests, search])
 
   const handleDecision = async (requestId, decision) => {
+    let body
+
+    if (decision === 'reject') {
+      const reason = await prompt({
+        tone: 'danger',
+        title: 'Reject request',
+        message: 'Enter rejection reason (optional):',
+        description: 'Add a rejection reason if you want the requester to see more context.',
+        inputLabel: 'Rejection reason (optional)',
+        placeholder: 'Type your note here...',
+        confirmLabel: 'Submit rejection',
+        cancelLabel: 'Maybe later',
+      })
+
+      if (reason === null) {
+        return
+      }
+
+      body = { reason }
+    }
+
     setBusyId(requestId)
 
     try {
@@ -523,13 +547,6 @@ function EditRequests({ session }) {
         decision === 'approve'
           ? `/api/admin/edit-requests/${requestId}/approve`
           : `/api/admin/edit-requests/${requestId}/reject`
-
-      const body =
-        decision === 'reject'
-          ? {
-              reason: window.prompt('Enter rejection reason (optional):') || '',
-            }
-          : undefined
 
       await apiRequest(path, {
         method: 'POST',
@@ -554,7 +571,7 @@ function EditRequests({ session }) {
 
   const loadVenueSnapshot = async (request) => {
     if (
-      request?.type !== 'Venue' ||
+      !isVenueEditRequest(request) ||
       !request?.targetId ||
       venueSnapshots[request.id] ||
       loadingSnapshotIds[request.id]
@@ -611,7 +628,7 @@ function EditRequests({ session }) {
     }
 
     const parsedRequest = parseRequestData(request)
-    if (request?.type === 'Venue' && !parsedRequest.current) {
+    if (isVenueEditRequest(request) && !parsedRequest.current) {
       void loadVenueSnapshot(request)
     }
   }

@@ -299,6 +299,7 @@ const pageTitles = {
   bookings: 'Bookings',
   users: 'Users',
   'edit-requests': 'Edit Requests',
+  'change-password': 'Change Password',
 }
 
 function getNavigation(role) {
@@ -315,6 +316,12 @@ function getNavigation(role) {
           { id: 'edit-requests', label: 'Edit Requests', icon: 'edit' },
         ],
       },
+      {
+        section: 'Account',
+        items: [
+          { id: 'change-password', label: 'Change Password', icon: 'lock' },
+        ],
+      },
     ]
   }
 
@@ -328,6 +335,12 @@ function getNavigation(role) {
           { id: 'edit-requests', label: 'My Edit Requests', icon: 'edit' },
         ],
       },
+      {
+        section: 'Account',
+        items: [
+          { id: 'change-password', label: 'Change Password', icon: 'lock' },
+        ],
+      },
     ]
   }
 
@@ -336,6 +349,12 @@ function getNavigation(role) {
       section: 'User',
       items: [
         { id: 'bookings', label: 'My Bookings', icon: 'booking' },
+      ],
+    },
+    {
+      section: 'Account',
+      items: [
+        { id: 'change-password', label: 'Change Password', icon: 'lock' },
       ],
     },
   ]
@@ -376,6 +395,13 @@ function renderIcon(icon) {
         <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
           <path d="M2 14V6l6-4 6 4v8H2z" strokeLinejoin="round" />
           <path d="M6 14v-3.5h4V14" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'lock':
+      return (
+        <svg className="db-nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <rect x="3" y="7" width="10" height="7" rx="1.5" />
+          <path d="M5.5 7V5.2a2.5 2.5 0 115 0V7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )
     case 'list':

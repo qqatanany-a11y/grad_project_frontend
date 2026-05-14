@@ -1,5 +1,11 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:7000'
+const DEFAULT_API_URL = 'http://localhost:5000'
+
+// Deployment-aware API base URL for Vite and Vercel environments.
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_BASE_URL ??
+  DEFAULT_API_URL
+).replace(/\/+$/, '')
 
 export async function parseResponseBody(response) {
   const text = await response.text()
@@ -52,4 +58,18 @@ export async function apiRequest(
   }
 
   return payload
+}
+
+export async function getVenueAvailableSlots(venueId, date, options = {}) {
+  if (!venueId || !date) {
+    return []
+  }
+
+  const query = new URLSearchParams({ date }).toString()
+  const payload = await apiRequest(
+    `/api/venue-availabilities/${venueId}/available?${query}`,
+    options,
+  )
+
+  return Array.isArray(payload) ? payload : []
 }

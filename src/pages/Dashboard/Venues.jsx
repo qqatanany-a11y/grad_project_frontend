@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
@@ -497,7 +498,7 @@ function normalizeVenueServiceOption(option) {
 }
 
 function Venues({ session }) {
-  const { f } = useI18n()
+  const { confirm } = useAppDialog()
   const [venues, setVenues] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -872,7 +873,17 @@ function Venues({ session }) {
   }
 
   const deleteVenue = async (venueId) => {
-    if (!window.confirm(`Delete venue #${venueId}?`)) {
+    const isConfirmed = await confirm({
+      tone: 'danger',
+      title: 'Delete venue',
+      message: 'Delete venue #{venueId}?',
+      messageValues: { venueId },
+      description: 'This venue will be removed from the dashboard immediately.',
+      confirmLabel: 'Delete venue',
+      cancelLabel: 'Keep venue',
+    })
+
+    if (!isConfirmed) {
       return
     }
 

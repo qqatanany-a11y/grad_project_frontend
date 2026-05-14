@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import {
   sanitizeNameInput,
@@ -32,6 +33,7 @@ const getUserValidationMessage = (values) =>
   validatePhone(values.phoneNumber, 'Phone number', { required: false })
 
 function AdminUsersPage({ session }) {
+  const { confirm } = useAppDialog()
   const [users, setUsers] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [formValues, setFormValues] = useState(EMPTY_FORM)
@@ -203,11 +205,20 @@ function AdminUsersPage({ session }) {
       return
     }
 
-    if (
-      action === 'delete' &&
-      !window.confirm(`Delete user #${selectedUser.id}? This cannot be undone.`)
-    ) {
-      return
+    if (action === 'delete') {
+      const isConfirmed = await confirm({
+        tone: 'danger',
+        title: 'Delete user',
+        message: 'Delete user #{userId}? This cannot be undone.',
+        messageValues: { userId: selectedUser.id },
+        description: 'This action permanently removes the selected user account.',
+        confirmLabel: 'Delete user',
+        cancelLabel: 'Keep user',
+      })
+
+      if (!isConfirmed) {
+        return
+      }
     }
 
     const requestMap = {

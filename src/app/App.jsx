@@ -10,6 +10,7 @@ import Companies from '../pages/Dashboard/Companies'
 import Bookings from '../pages/Dashboard/Bookings'
 import Users from '../pages/Dashboard/Users'
 import EditRequests from '../pages/Dashboard/EditRequests'
+import ChangePassword from '../pages/Dashboard/ChangePassword'
 import {
   clearAuthSession,
   persistAuthSession,
@@ -18,18 +19,18 @@ import {
 
 function getAllowedPagesForRole(role) {
   if (role === 'Admin') {
-    return ['owner-requests', 'venue-requests', 'venues', 'companies', 'users', 'edit-requests']
+    return ['owner-requests', 'venue-requests', 'venues', 'companies', 'users', 'edit-requests', 'change-password']
   }
 
   if (role === 'Owner') {
-    return ['venues', 'bookings', 'edit-requests']
+    return ['venues', 'bookings', 'edit-requests', 'change-password']
   }
 
   if (role === 'User') {
-    return ['bookings']
+    return ['bookings', 'change-password']
   }
 
-  return ['venues']
+  return ['venues', 'change-password']
 }
 
 function getDefaultPageForRole(role) {
@@ -54,27 +55,46 @@ function resolvePageForRole(role, page) {
     : getDefaultPageForRole(role)
 }
 
+function getLandingPageForSession(session, bookingDraft = null) {
+  if (session?.isFirstLogin) {
+    return 'change-password'
+  }
+
+  if (bookingDraft && session?.role === 'User') {
+    return 'bookings'
+  }
+
+  return getDefaultPageForRole(session?.role)
+}
+
 function App() {
   const initialSession = readAuthSession()
   const [session, setSession] = useState(initialSession)
   const [view, setView] = useState(initialSession ? 'dashboard' : 'home')
   const [currentPage, setCurrentPage] = useState(
-    getDefaultPageForRole(initialSession?.role),
+    getLandingPageForSession(initialSession),
   )
   const [bookingDraft, setBookingDraft] = useState(null)
 
   const handleSignIn = (authUser) => {
     persistAuthSession(authUser)
     setSession(authUser)
+    setCurrentPage(getLandingPageForSession(authUser, bookingDraft))
+    setView('dashboard')
+  }
 
-    if (bookingDraft && authUser?.role === 'User') {
-      setCurrentPage('bookings')
-      setView('dashboard')
+  const handlePasswordChanged = () => {
+    if (!session) {
       return
     }
 
-    setCurrentPage(getDefaultPageForRole(authUser?.role))
-    setView('dashboard')
+    const nextSession = {
+      ...session,
+      isFirstLogin: false,
+    }
+
+    persistAuthSession(nextSession)
+    setSession(nextSession)
   }
 
   const handleLogout = () => {
@@ -179,6 +199,13 @@ function App() {
         return <Users session={session} />
       case 'edit-requests':
         return <EditRequests session={session} />
+      case 'change-password':
+        return (
+          <ChangePassword
+            session={session}
+            onPasswordChanged={handlePasswordChanged}
+          />
+        )
       case 'venues':
         return <Venues session={session} />
       case 'owner-requests':
