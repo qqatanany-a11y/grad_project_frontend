@@ -335,6 +335,18 @@ function AuthPage({ onSignIn, onBack }) {
     setSubmitError('')
   }
 
+  const heroTitle = isSignUp ? 'Create your account today' : 'Sign in to continue'
+  const heroSubtitle = isSignUp
+    ? 'Sign up to save your details, manage bookings, and start planning your event in one place.'
+    : 'Access your account, review your bookings, and continue planning your event without losing progress.'
+  const formTitle = isSignUp ? 'Create your account' : 'Sign in to your account'
+  const formSubtitle = isSignUp
+    ? 'Enter your details to create a new account.'
+    : 'Enter your email and password to continue.'
+  const toggleLabel = isSignUp
+    ? 'Already have an account? Sign in'
+    : 'Need an account? Sign up'
+
   return (
     <>
       <style>{styles}</style>
@@ -346,8 +358,8 @@ function AuthPage({ onSignIn, onBack }) {
           <img src="/event-hero.png" alt="Elegant event setup" />
           <div className="ma-image-overlay" />
           <div className="ma-image-text">
-            <h1>Plan Your Perfect Event!</h1>
-            <p>The platform for creating unforgettable moments, effortlessly.</p>
+            <h1>{heroTitle}</h1>
+            <p>{heroSubtitle}</p>
           </div>
         </div>
 
@@ -363,8 +375,8 @@ function AuthPage({ onSignIn, onBack }) {
               </button>
             )}
             <div className="ma-form-header">
-              <h2>{isSignUp ? 'Create an account' : 'Welcome back'}</h2>
-              <p>{isSignUp ? "Let's get started with your event planning." : 'Enter your details to sign in.'}</p>
+              <h2>{formTitle}</h2>
+              <p>{formSubtitle}</p>
             </div>
 
             <form className="ma-form" onSubmit={handleSubmit} noValidate>
@@ -412,7 +424,7 @@ function AuthPage({ onSignIn, onBack }) {
 
             <div className="ma-toggle-wrap">
               <button type="button" className="ma-toggle-btn" onClick={switchMode}>
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                {toggleLabel}
               </button>
             </div>
           </div>
