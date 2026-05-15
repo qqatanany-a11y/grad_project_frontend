@@ -1674,10 +1674,15 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     }
 
     if (selectedVenueTimeSlots.length === 0) {
-      return `No fixed slots are available on ${formatVenueDateLabel(bookingForm.date)}.`
+      return f('No fixed slots are available on {date}.', {
+        date: formatVenueDateLabel(bookingForm.date),
+      })
     }
 
-    return `${selectedVenueTimeSlots.length} fixed slot${selectedVenueTimeSlots.length === 1 ? '' : 's'} available on ${formatVenueDateLabel(bookingForm.date)}.`
+    return f('Available fixed slots on {date}: {count}', {
+      date: formatVenueDateLabel(bookingForm.date),
+      count: selectedVenueTimeSlots.length,
+    })
   }, [
     bookingAvailabilityError,
     bookingForm.date,
@@ -1804,11 +1809,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     }
 
     if (selectedVenueTimeSlots.length === 0) {
-      return 'This venue does not have any bookable fixed slots on the selected date.'
+      return f('This venue does not have any bookable fixed slots on the selected date.')
     }
 
     if (!selectedBookingSlot) {
-      return 'Choose one of the available fixed slots before continuing.'
+      return f('Choose one of the available fixed slots before continuing.')
     }
 
     return null
@@ -1842,7 +1847,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     if (!bookingForm.date) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Choose a booking date before continuing.',
+        message: f('Choose a booking date before continuing.'),
       })
       return
     }
@@ -1850,7 +1855,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     if (!selectedBookingSlot) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Choose one of the available fixed slots before continuing.',
+        message: f('Choose one of the available fixed slots before continuing.'),
       })
       return
     }
@@ -2340,8 +2345,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           >
                             <span className="hp-booking-step-num">{step.number}</span>
                             <div className="hp-booking-step-copy">
-                              <span className="hp-booking-step-label">{step.label}</span>
-                              <span className="hp-booking-step-desc">{step.desc}</span>
+                              <span className="hp-booking-step-label">{f(step.label)}</span>
+                              <span className="hp-booking-step-desc">{f(step.desc)}</span>
                             </div>
                           </div>
                         ))}
@@ -2350,9 +2355,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                       {bookingStep === 1 ? (
                         <div className="hp-booking-stage">
                           <div className="hp-booking-stage-head">
-                            <p className="hp-booking-stage-title">Step 1: Event Details</p>
+                            <p className="hp-booking-stage-title">{f('Step 1: Event Details')}</p>
                             <p className="hp-booking-stage-copy">
-                              Pick the booking date, add the guest count, then choose one scheduled fixed slot.
+                              {f('Pick the booking date, add the guest count, then choose one scheduled fixed slot.')}
                             </p>
                           </div>
 
@@ -2423,20 +2428,20 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                       <div className="hp-booking-slot-content">
                                         <div className="hp-booking-slot-badges">
                                           <span className="hp-booking-slot-badge">{slotDateLabel}</span>
-                                          <span className="hp-booking-slot-badge">Scheduled slot</span>
+                                          <span className="hp-booking-slot-badge">{f('Scheduled slot')}</span>
                                         </div>
                                         <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
                                         <div className="hp-booking-slot-meta">
-                                          <span className="hp-booking-slot-meta-item">Start: {slot.startTime}</span>
-                                          <span className="hp-booking-slot-meta-item">End: {slot.endTime}</span>
+                                          <span className="hp-booking-slot-meta-item">{f('Start Time')}: {slot.startTime}</span>
+                                          <span className="hp-booking-slot-meta-item">{f('End Time')}: {slot.endTime}</span>
                                         </div>
                                         <p className="hp-booking-slot-copy">
-                                          Fixed booking slot prepared by the venue owner for this exact date.
+                                          {f('Fixed booking slot prepared by the venue owner for this exact date.')}
                                         </p>
                                       </div>
                                     </div>
                                     <div className="hp-booking-slot-price">
-                                      <span className="hp-booking-slot-price-label">Slot price</span>
+                                      <span className="hp-booking-slot-price-label">{f('Slot price')}</span>
                                       <span className="hp-booking-slot-price-value">{formatVenuePrice(slot.price)}</span>
                                     </div>
                                   </label>
@@ -2450,7 +2455,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                       {bookingStep === 2 ? (
                         <div className="hp-booking-stage">
                           <div className="hp-booking-stage-head">
-                            <p className="hp-booking-stage-title">Step 2: Optional Add-ons</p>
+                            <p className="hp-booking-stage-title">{f('Step 2: Optional Add-ons')}</p>
                             <p className="hp-booking-stage-copy">
                               Choose any extra services configured for this venue. These are added on top of the venue booking price.
                             </p>
@@ -2502,7 +2507,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Base Estimate</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedBasePrice === null ? 'Choose a slot' : formatVenuePrice(estimatedBasePrice)}
+                                {estimatedBasePrice === null ? f('Choose a slot') : formatVenuePrice(estimatedBasePrice)}
                               </span>
                             </div>
                             <div className="hp-booking-summary-card">
@@ -2522,7 +2527,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                       {bookingStep === 3 ? (
                         <div className="hp-booking-stage">
                           <div className="hp-booking-stage-head">
-                            <p className="hp-booking-stage-title">Step 3: Documents & Review</p>
+                            <p className="hp-booking-stage-title">{f('Step 3: Documents & Review')}</p>
                             <p className="hp-booking-stage-copy">
                               Upload both ID documents, review your booking summary, then submit from this dialog.
                             </p>
@@ -2579,15 +2584,15 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Base Estimate</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedBasePrice === null ? 'Choose a slot' : formatVenuePrice(estimatedBasePrice)}
+                                {estimatedBasePrice === null ? f('Choose a slot') : formatVenuePrice(estimatedBasePrice)}
                               </span>
                             </div>
                             <div className="hp-booking-summary-card">
-                              <span className="hp-booking-summary-label">Selected Add-ons</span>
+                              <span className="hp-booking-summary-label">{f('Selected Add-ons')}</span>
                               <span className="hp-booking-summary-value">
                                 {selectedBookingServices.length > 0
                                   ? selectedBookingServices.map((option) => option.serviceName).join(', ')
-                                  : 'No add-ons'}
+                                  : f('No add-ons')}
                               </span>
                             </div>
                             <div className="hp-booking-summary-card">
@@ -2602,9 +2607,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
                       {bookingStep === 4 ? (
                         <div className="hp-booking-success">
-                          <p className="hp-booking-success-title">Booking Submitted</p>
+                          <p className="hp-booking-success-title">{f('Booking Submitted')}</p>
                           <p className="hp-booking-success-copy">
-                            Your booking for {selectedVenue.name || 'this venue'} on {formatBookingDate(bookingForm.date)} was created successfully. Open My Bookings to track the status.
+                            {f('Your booking for {venue} on {date} was created successfully. Open My Bookings to track the status.', {
+                              venue: selectedVenue.name || f('this venue'),
+                              date: formatBookingDate(bookingForm.date),
+                            })}
                           </p>
                         </div>
                       ) : null}
@@ -2623,7 +2631,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                               className="hp-booking-btn"
                               onClick={startVenueBookingFlow}
                             >
-                              Continue to Add-ons
+                              {f('Continue to Add-ons')}
                             </button>
                             <button
                               type="button"
@@ -2642,7 +2650,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                               className="hp-booking-btn"
                               onClick={() => goToBookingStep(3)}
                             >
-                              Continue to Review
+                              {f('Continue to Review')}
                             </button>
                             <button
                               type="button"
@@ -2685,7 +2693,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                 onNavigate('bookings')
                               }}
                             >
-                              Open My Bookings
+                              {f('Open My Bookings')}
                             </button>
                             <button
                               type="button"
@@ -2702,9 +2710,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                     <>
                       <div className="hp-booking-stage">
                         <div className="hp-booking-stage-head">
-                          <p className="hp-booking-stage-title">Choose Date & Slot</p>
+                          <p className="hp-booking-stage-title">{f('Choose Date & Slot')}</p>
                           <p className="hp-booking-stage-copy">
-                            Pick the booking date and one fixed slot here. After login with a user account, the rest of the flow will continue.
+                            {f('Pick the booking date and one fixed slot here. After login with a user account, the rest of the flow will continue.')}
                           </p>
                         </div>
 
@@ -2763,20 +2771,20 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                     <div className="hp-booking-slot-content">
                                       <div className="hp-booking-slot-badges">
                                         <span className="hp-booking-slot-badge">{slotDateLabel}</span>
-                                        <span className="hp-booking-slot-badge">Scheduled slot</span>
+                                        <span className="hp-booking-slot-badge">{f('Scheduled slot')}</span>
                                       </div>
                                       <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
                                       <div className="hp-booking-slot-meta">
-                                        <span className="hp-booking-slot-meta-item">Start: {slot.startTime}</span>
-                                        <span className="hp-booking-slot-meta-item">End: {slot.endTime}</span>
+                                        <span className="hp-booking-slot-meta-item">{f('Start Time')}: {slot.startTime}</span>
+                                        <span className="hp-booking-slot-meta-item">{f('End Time')}: {slot.endTime}</span>
                                       </div>
                                       <p className="hp-booking-slot-copy">
-                                        Fixed booking slot prepared by the venue owner for this exact date.
+                                        {f('Fixed booking slot prepared by the venue owner for this exact date.')}
                                       </p>
                                     </div>
                                   </div>
                                   <div className="hp-booking-slot-price">
-                                    <span className="hp-booking-slot-price-label">Slot price</span>
+                                    <span className="hp-booking-slot-price-label">{f('Slot price')}</span>
                                     <span className="hp-booking-slot-price-value">{formatVenuePrice(slot.price)}</span>
                                   </div>
                                 </label>
@@ -2788,8 +2796,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
                       <div className={`hp-booking-status${session ? '' : ' error'}`}>
                         {session
-                          ? 'Bookings can only be completed from user accounts. Switch account to continue.'
-                          : 'Log in with a user account to continue the booking flow.'}
+                          ? f('Bookings can only be completed from user accounts. Switch account to continue.')
+                          : f('Log in with a user account to continue the booking flow.')}
                       </div>
 
                       {bookingFeedback.message ? (
@@ -2804,7 +2812,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           className="hp-booking-btn"
                           onClick={startVenueBookingFlow}
                         >
-                          {session ? 'Switch Account to Book' : 'Log In to Continue'}
+                          {session ? f('Switch Account to Book') : f('Log In to Continue')}
                         </button>
                       </div>
                     </>

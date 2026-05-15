@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../../i18n/I18nProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { validateEmail } from '../../lib/validation'
 import AuthField from './AuthField'
@@ -10,6 +11,7 @@ const loginInitialValues = {
 }
 
 function LoginPage({ onSignIn, onBack, onSwitchToSignUp }) {
+  const { f } = useI18n()
   const [values, setValues] = useState(loginInitialValues)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -115,10 +117,10 @@ function LoginPage({ onSignIn, onBack, onSwitchToSignUp }) {
           maxLength={64}
         />
 
-        {submitError ? <p className="ma-error">{submitError}</p> : null}
+        {submitError ? <p className="ma-error">{f(submitError)}</p> : null}
 
         <button type="submit" className="ma-submit" disabled={submitting}>
-          {submitting ? 'Signing in...' : 'Sign In'}
+          {submitting ? f('Signing in...') : f('Sign In')}
         </button>
       </form>
     </AuthLayout>

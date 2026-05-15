@@ -1,4 +1,5 @@
 import LanguageToggle from '../../i18n/LanguageToggle'
+import { useI18n } from '../../i18n/I18nProvider'
 import authPageStyles from './authPageStyles'
 
 function AuthLayout({
@@ -11,6 +12,8 @@ function AuthLayout({
   onFooterAction,
   children,
 }) {
+  const { f } = useI18n()
+
   return (
     <>
       <style>{authPageStyles}</style>
@@ -18,11 +21,11 @@ function AuthLayout({
         <LanguageToggle className="ma-lang" />
 
         <div className="ma-image-panel">
-          <img src="/event-hero.png" alt="Elegant event setup" />
+          <img src="/event-hero.jpg" alt={f('Elegant event setup')} />
           <div className="ma-image-overlay" />
           <div className="ma-image-text">
-            <h1>{heroTitle}</h1>
-            <p>{heroSubtitle}</p>
+            <h1>{f(heroTitle)}</h1>
+            <p>{f(heroSubtitle)}</p>
           </div>
         </div>
 
@@ -33,13 +36,13 @@ function AuthLayout({
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4">
                   <path d="M9 2L4 7l5 5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Back to Home
+                {f('Back to Home')}
               </button>
             ) : null}
 
             <div className="ma-form-header">
-              <h2>{formTitle}</h2>
-              <p>{formSubtitle}</p>
+              <h2>{f(formTitle)}</h2>
+              <p>{f(formSubtitle)}</p>
             </div>
 
             {children}
@@ -47,7 +50,7 @@ function AuthLayout({
             {footerLabel && onFooterAction ? (
               <div className="ma-toggle-wrap">
                 <button type="button" className="ma-toggle-btn" onClick={onFooterAction}>
-                  {footerLabel}
+                  {f(footerLabel)}
                 </button>
               </div>
             ) : null}

@@ -833,7 +833,7 @@ function Venues({ session }) {
       await loadVenueAvailability(venue.id)
     } catch (error) {
       setAvailabilityError(
-        error instanceof Error ? error.message : 'Unable to load fixed slots for this venue.',
+        error instanceof Error ? error.message : f('Unable to load fixed slots for this venue.'),
       )
     }
   }
@@ -918,22 +918,22 @@ function Venues({ session }) {
     const nextPrice = Number(availabilityFormValues.price)
 
     if (!nextDate) {
-      setAvailabilityError('Choose the slot date first.')
+      setAvailabilityError(f('Choose the slot date first.'))
       return
     }
 
     if (!nextStartTime || !nextEndTime) {
-      setAvailabilityError('Choose both the start and end time for the slot.')
+      setAvailabilityError(f('Choose both the start and end time for the slot.'))
       return
     }
 
     if (nextEndTime <= nextStartTime) {
-      setAvailabilityError('End time must be after start time.')
+      setAvailabilityError(f('End time must be after start time.'))
       return
     }
 
     if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
-      setAvailabilityError('Enter a valid slot price greater than zero.')
+      setAvailabilityError(f('Enter a valid slot price greater than zero.'))
       return
     }
 
@@ -945,7 +945,7 @@ function Venues({ session }) {
     )
 
     if (duplicateSlot) {
-      setAvailabilityError('This exact slot already exists for the selected date.')
+      setAvailabilityError(f('This exact slot already exists for the selected date.'))
       return
     }
 
@@ -978,11 +978,11 @@ function Venues({ session }) {
       setAvailabilityError('')
       setFeedback({
         tone: 'idle',
-        message: 'Fixed slot added successfully.',
+        message: f('Fixed slot added successfully.'),
       })
     } catch (error) {
       setAvailabilityError(
-        error instanceof Error ? error.message : 'Unable to add the fixed slot.',
+        error instanceof Error ? error.message : f('Unable to add the fixed slot.'),
       )
     } finally {
       setSavingAvailabilityVenueId(null)
@@ -995,11 +995,14 @@ function Venues({ session }) {
     }
 
     const isConfirmed = await confirm({
-      title: 'Delete fixed slot',
-      message: `Remove the slot on ${formatVenueDateLabel(slot.date)} from ${formatVenueTimeSlot(slot)}?`,
-      description: 'This action deletes the slot from booking availability for users.',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: f('Delete fixed slot'),
+      message: f('Remove the slot on {date} from {time}?', {
+        date: formatVenueDateLabel(slot.date),
+        time: formatVenueTimeSlot(slot),
+      }),
+      description: f('This action deletes the slot from booking availability for users.'),
+      confirmLabel: f('Delete'),
+      cancelLabel: f('Cancel'),
       tone: 'danger',
     })
 
@@ -1024,11 +1027,11 @@ function Venues({ session }) {
       setAvailabilityError('')
       setFeedback({
         tone: 'idle',
-        message: 'Fixed slot deleted successfully.',
+        message: f('Fixed slot deleted successfully.'),
       })
     } catch (error) {
       setAvailabilityError(
-        error instanceof Error ? error.message : 'Unable to delete the fixed slot.',
+        error instanceof Error ? error.message : f('Unable to delete the fixed slot.'),
       )
     } finally {
       setSavingAvailabilityVenueId(null)
@@ -1440,9 +1443,7 @@ function Venues({ session }) {
           </div>
 
           <div className="vp-note">
-            Fixed slots are now the only booking model in the system. After the venue is approved,
-            open the venue card and add dated slots from the fixed slots dialog using the date and
-            time pickers.
+            {f('Fixed slots are now the only booking model in the system. After the venue is approved, open the venue card and add dated slots from the fixed slots dialog using the date and time pickers.')}
           </div>
 
           <div className="vp-photo-picker">
@@ -1582,7 +1583,7 @@ function Venues({ session }) {
 
                 <p className="vp-price-copy">{getPricingSummary(venue)}</p>
                 <p className="vp-card-copy" style={{ marginTop: '0.5rem' }}>
-                  Fixed slots are booked by date and time only.
+                  {f('Fixed slots are booked by date and time only.')}
                 </p>
                 <p className="vp-card-copy" style={{ marginTop: '0.5rem' }}>
                   Address: {venue.address || '--'}
@@ -1597,7 +1598,7 @@ function Venues({ session }) {
                       Edit
                     </button>
                     <button className="vp-button secondary" onClick={() => openSlotManager(venue)}>
-                      Manage Fixed Slots
+                      {f('Manage Fixed Slots')}
                     </button>
                     <button
                       className="vp-button secondary"
@@ -1719,8 +1720,9 @@ function Venues({ session }) {
               <div>
                 <p className="vp-slot-modal-title">Manage Fixed Slots</p>
                 <p className="vp-slot-modal-copy">
-                  Add dated booking slots for {slotManagerVenue.name || 'this venue'} using the
-                  system date and time pickers.
+                  {f('Add dated booking slots for {venue} using the system date and time pickers.', {
+                    venue: slotManagerVenue.name || f('this venue'),
+                  })}
                 </p>
               </div>
               <button
@@ -1742,8 +1744,7 @@ function Venues({ session }) {
                 <div>
                   <label className="vp-label">Fixed Slots</label>
                   <p className="vp-slot-form-copy">
-                    Duplicate slots with the same date and time are blocked before saving, and the
-                    backend still validates exact duplicates and overlaps.
+                    {f('Duplicate slots with the same date and time are blocked before saving, and the backend still validates exact duplicates and overlaps.')}
                   </p>
                 </div>
 
@@ -1808,17 +1809,18 @@ function Venues({ session }) {
                     onClick={addVenueAvailability}
                     disabled={savingAvailabilityVenueId === slotManagerVenue.id}
                   >
-                    {savingAvailabilityVenueId === slotManagerVenue.id ? 'Saving...' : '+ Add Fixed Slot'}
+                    {savingAvailabilityVenueId === slotManagerVenue.id ? f('Saving...') : f('+ Add Fixed Slot')}
                   </button>
                 </div>
               </div>
 
               <div className="vp-slot-toolbar">
                 <div>
-                  <label className="vp-label">Configured Fixed Slots</label>
+                  <label className="vp-label">{f('Configured Fixed Slots')}</label>
                   <div className="vp-slot-summary">
-                    {activeVenueAvailabilitySlots.length} slot
-                    {activeVenueAvailabilitySlots.length === 1 ? '' : 's'} configured for this venue.
+                    {f('Configured fixed slots for this venue: {count}', {
+                      count: activeVenueAvailabilitySlots.length,
+                    })}
                   </div>
                 </div>
                 <button
@@ -1827,12 +1829,12 @@ function Venues({ session }) {
                   onClick={() => openSlotManager(slotManagerVenue)}
                   disabled={loadingAvailabilityVenueId === slotManagerVenue.id}
                 >
-                  {loadingAvailabilityVenueId === slotManagerVenue.id ? 'Refreshing...' : 'Refresh'}
+                  {loadingAvailabilityVenueId === slotManagerVenue.id ? f('Refreshing...') : f('Refresh')}
                 </button>
               </div>
 
               {loadingAvailabilityVenueId === slotManagerVenue.id ? (
-                <div className="vp-note">Loading fixed slots...</div>
+                <div className="vp-note">{f('Loading fixed slots...')}</div>
               ) : activeVenueAvailabilitySlots.length > 0 ? (
                 <div className="vp-slot-list">
                   {activeVenueAvailabilitySlots.map((slot) => (
@@ -1847,9 +1849,9 @@ function Venues({ session }) {
 
                       <div className="vp-slot-meta">
                         <span className={`vp-slot-badge${slot.isBooked ? ' booked' : ''}`}>
-                          {slot.isBooked ? 'Booked' : 'Available'}
+                          {slot.isBooked ? f('Booked') : f('Available')}
                         </span>
-                        <span className="vp-slot-badge">Fixed Slot</span>
+                        <span className="vp-slot-badge">{f('Fixed Slot')}</span>
                       </div>
 
                       <div className="vp-slot-actions">
@@ -1859,7 +1861,7 @@ function Venues({ session }) {
                           onClick={() => deleteVenueAvailability(slot)}
                           disabled={slot.isBooked || savingAvailabilityVenueId === slotManagerVenue.id}
                         >
-                          {slot.isBooked ? 'Booked Slot' : 'Remove'}
+                          {slot.isBooked ? f('Booked Slot') : f('Remove')}
                         </button>
                       </div>
                     </div>
@@ -1867,7 +1869,7 @@ function Venues({ session }) {
                 </div>
               ) : (
                 <div className="vp-slot-empty">
-                  No fixed slots added for this venue yet. Add the first one from the form above.
+                  {f('No fixed slots added for this venue yet. Add the first one from the form above.')}
                 </div>
               )}
             </div>

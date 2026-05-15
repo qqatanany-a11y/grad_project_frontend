@@ -903,11 +903,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     if (!formValues.date) {
-      return 'Choose a booking date to load the scheduled fixed slots for this venue.'
+      return f('Choose a booking date to load the scheduled fixed slots for this venue.')
     }
 
     if (loadingAvailability) {
-      return 'Loading the scheduled fixed slots for the selected date...'
+      return f('Loading the scheduled fixed slots for the selected date...')
     }
 
     if (availabilityError) {
@@ -915,14 +915,20 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     if (availableTimeSlots.length === 0) {
-      return `No fixed slots are available on ${formatVenueDateLabel(formValues.date)}.`
+      return f('No fixed slots are available on {date}.', {
+        date: formatVenueDateLabel(formValues.date),
+      })
     }
 
-    return `${availableTimeSlots.length} fixed slot${availableTimeSlots.length === 1 ? '' : 's'} available on ${formatVenueDateLabel(formValues.date)}.`
+    return f('Available fixed slots on {date}: {count}', {
+      date: formatVenueDateLabel(formValues.date),
+      count: availableTimeSlots.length,
+    })
   }, [
     availabilityError,
     availableTimeSlots.length,
     formValues.date,
+    f,
     loadingAvailability,
     selectedVenue,
     usesVenueAvailability,
@@ -937,15 +943,15 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
   const getBookingTimingValidationMessage = () => {
     if (!selectedVenue?.id) {
-      return 'Choose a venue before submitting.'
+      return f('Choose a venue before submitting.')
     }
 
     if (!formValues.date) {
-      return 'Choose a booking date before submitting.'
+      return f('Choose a booking date before submitting.')
     }
 
     if (loadingAvailability) {
-      return 'Loading the scheduled fixed slots for the selected date...'
+      return f('Loading the scheduled fixed slots for the selected date...')
     }
 
     if (availabilityError) {
@@ -953,11 +959,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     if (availableTimeSlots.length === 0) {
-      return 'This venue does not have any bookable fixed slots on the selected date.'
+      return f('This venue does not have any bookable fixed slots on the selected date.')
     }
 
     if (!selectedTimeSlot) {
-      return 'Choose one of the available fixed slots before submitting.'
+      return f('Choose one of the available fixed slots before submitting.')
     }
 
     return null
@@ -1449,7 +1455,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
               {availableTimeSlots.length > 0 ? (
                 <div style={{ marginTop: '1rem' }}>
-                  <label className="bk-label">Available Fixed Slots</label>
+                  <label className="bk-label">{f('Available Fixed Slots')}</label>
                   <div className="bk-slot-list">
                     {availableTimeSlots.map((slot) => {
                       const selected = String(formValues.venueAvailabilityId) === String(slot.id)
@@ -1467,20 +1473,20 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                             <div className="bk-slot-content">
                               <div className="bk-slot-badges">
                                 <span className="bk-slot-badge">{slotDateLabel}</span>
-                                <span className="bk-slot-badge">Scheduled slot</span>
+                                <span className="bk-slot-badge">{f('Scheduled slot')}</span>
                               </div>
                               <p className="bk-option-title">{formatVenueTimeSlot(slot)}</p>
                               <div className="bk-slot-meta">
-                                <span className="bk-slot-meta-item">Start: {slot.startTime}</span>
-                                <span className="bk-slot-meta-item">End: {slot.endTime}</span>
+                                <span className="bk-slot-meta-item">{f('Start Time')}: {slot.startTime}</span>
+                                <span className="bk-slot-meta-item">{f('End Time')}: {slot.endTime}</span>
                               </div>
                               <p className="bk-option-copy">
-                                Fixed booking slot prepared by the venue owner for this exact date.
+                                {f('Fixed booking slot prepared by the venue owner for this exact date.')}
                               </p>
                             </div>
                           </div>
                           <div className="bk-slot-price">
-                            <span className="bk-slot-price-label">Slot price</span>
+                            <span className="bk-slot-price-label">{f('Slot price')}</span>
                             <span className="bk-slot-price-value">{formatCurrency(slot.price)}</span>
                           </div>
                         </label>
@@ -1533,7 +1539,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Base Estimate</span>
                   <span className="bk-summary-value">
-                    {estimatedBasePrice === null ? 'Choose a slot' : formatCurrency(estimatedBasePrice)}
+                    {estimatedBasePrice === null ? f('Choose a slot') : formatCurrency(estimatedBasePrice)}
                   </span>
                 </div>
                 <div className="bk-summary-card">
@@ -1543,7 +1549,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Estimated Total</span>
                   <span className="bk-summary-value">
-                    {estimatedTotal === null ? 'Calculated after slot selection' : formatCurrency(estimatedTotal)}
+                    {estimatedTotal === null ? f('Calculated after slot selection') : formatCurrency(estimatedTotal)}
                   </span>
                 </div>
               </div>

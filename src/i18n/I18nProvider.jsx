@@ -24,11 +24,7 @@ function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function translateText(text, dictionary) {
-  if (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text)) {
-    return text
-  }
-
+function translateDictionaryValue(text, dictionary) {
   if (dictionary[text]) {
     return dictionary[text]
   }
@@ -36,25 +32,35 @@ function translateText(text, dictionary) {
   const caseInsensitiveKey = Object.keys(dictionary).find(
     (key) => key.toLowerCase() === text.toLowerCase(),
   )
-  if (caseInsensitiveKey) {
-    return dictionary[caseInsensitiveKey]
+
+  return caseInsensitiveKey ? dictionary[caseInsensitiveKey] : text
+}
+
+function translateText(text, dictionary) {
+  if (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(text)) {
+    return text
+  }
+
+  const exactOrCaseInsensitiveValue = translateDictionaryValue(text, dictionary)
+  if (exactOrCaseInsensitiveValue !== text) {
+    return exactOrCaseInsensitiveValue
   }
 
   const requiredMatch = text.match(/^(.+) is required\.$/)
   if (requiredMatch) {
-    const label = dictionary[requiredMatch[1]] ?? requiredMatch[1]
+    const label = translateDictionaryValue(requiredMatch[1], dictionary)
     return `${label} ${dictionary['is required.'] ?? 'is required.'}`
   }
 
   const lettersMatch = text.match(/^(.+) can only contain Arabic or English letters\.$/)
   if (lettersMatch) {
-    const label = dictionary[lettersMatch[1]] ?? lettersMatch[1]
+    const label = translateDictionaryValue(lettersMatch[1], dictionary)
     return `${label} ${dictionary['can only contain Arabic or English letters.'] ?? 'can only contain Arabic or English letters.'}`
   }
 
   const digitsMatch = text.match(/^(.+) must be 10 digits only\.$/)
   if (digitsMatch) {
-    const label = dictionary[digitsMatch[1]] ?? digitsMatch[1]
+    const label = translateDictionaryValue(digitsMatch[1], dictionary)
     return `${label} ${dictionary['must be 10 digits only.'] ?? 'must be 10 digits only.'}`
   }
 
