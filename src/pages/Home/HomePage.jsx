@@ -2,10 +2,9 @@
 import { apiRequest, getVenueAvailableSlots } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
+  formatVenueDateLabel,
   formatVenueTimeSlot,
   getVenueAvailabilitySlots,
-  getVenueTimeSlots,
-  parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
 import LanguageToggle from '../../i18n/LanguageToggle'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -909,24 +908,68 @@ const styles = `
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    align-items: center;
-    padding: 0.95rem 1rem;
+    align-items: stretch;
+    padding: 1rem 1.05rem;
     border: 1.5px solid var(--border);
-    border-radius: 14px;
-    background: #fff;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
     cursor: pointer;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.05);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .hp-booking-slot-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(79,70,229,0.24);
+    box-shadow: 0 22px 42px rgba(79,70,229,0.12);
   }
   .hp-booking-slot-card.selected {
-    border-color: rgba(79,70,229,0.28);
-    background: rgba(79,70,229,0.05);
+    border-color: rgba(79,70,229,0.32);
+    background: linear-gradient(180deg, rgba(79,70,229,0.08) 0%, rgba(79,70,229,0.04) 100%);
+    box-shadow: 0 24px 46px rgba(79,70,229,0.16);
   }
   .hp-booking-slot-main {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.85rem;
     align-items: flex-start;
+    min-width: 0;
+    flex: 1;
   }
   .hp-booking-slot-main input {
-    margin-top: 0.2rem;
+    margin-top: 0.28rem;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+  .hp-booking-slot-content {
+    min-width: 0;
+    display: grid;
+    gap: 0.55rem;
+  }
+  .hp-booking-slot-badges {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+  .hp-booking-slot-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.62rem;
+    border-radius: 999px;
+    border: 1px solid rgba(79,70,229,0.14);
+    background: rgba(79,70,229,0.07);
+    color: var(--primary-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .hp-booking-slot-meta {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .hp-booking-slot-meta-item {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 600;
   }
   .hp-booking-slot-title {
     margin: 0 0 0.2rem;
@@ -940,8 +983,24 @@ const styles = `
     color: var(--muted);
   }
   .hp-booking-slot-price {
+    min-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.25rem;
+    text-align: right;
+  }
+  .hp-booking-slot-price-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+  .hp-booking-slot-price-value {
     white-space: nowrap;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: var(--primary);
   }
@@ -1262,37 +1321,15 @@ function getVenueCategoryLabel(value) {
 }
 
 function getPricingTypeValue(venue) {
-  const rawValue = venue?.pricingType ?? venue?.PricingType ?? 'Hourly'
-
-  if (rawValue === 2 || rawValue === 'FixedSlots') {
-    return 'FixedSlots'
-  }
-
-  return 'Hourly'
+  return 'FixedSlots'
 }
 
 function getPricingTypeLabel(value) {
-  return value === 'FixedSlots' || value === 2 ? 'Fixed Slots' : 'Hourly'
-}
-
-function getVenuePriceValue(venue) {
-  const amount = Number(venue?.pricePerHour ?? venue?.PricePerHour)
-  return Number.isFinite(amount) ? amount : null
+  return 'Fixed Slots'
 }
 
 function getVenuePriceSummary(venue, f = (text) => text) {
-  const pricingType = getPricingTypeValue(venue)
-  const priceValue = getVenuePriceValue(venue)
-
-  if (pricingType === 'Hourly' && priceValue !== null) {
-    return `${priceValue} ${f('JOD')} / ${f('per hour')}`
-  }
-
-  if (pricingType === 'FixedSlots' && priceValue !== null) {
-    return `${priceValue} ${f('JOD')} / ${f('per slot')}`
-  }
-
-  return pricingType === 'FixedSlots' ? f('Fixed slot pricing') : f('Price available on request')
+  return f('Slot prices are shown during booking')
 }
 
 function getVenueBusinessName(venue) {
@@ -1380,7 +1417,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   const [bookingFeedback, setBookingFeedback] = useState({ tone: 'idle', message: '' })
   const isBookingUser = session?.role === 'User'
   const bookingSteps = [
-    { number: 1, label: 'Details', desc: 'Date, guests, and time' },
+    { number: 1, label: 'Details', desc: 'Date, guests, and slot' },
     { number: 2, label: 'Add-ons', desc: 'Optional venue services' },
     { number: 3, label: 'Review', desc: 'Documents and confirmation' },
   ]
@@ -1470,42 +1507,21 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     return selectedVenue ? getPricingTypeValue(selectedVenue) === 'FixedSlots' : false
   }, [selectedVenue])
 
-  const selectedVenueOwnerTimeSlots = useMemo(() => {
-    return selectedVenue ? getVenueTimeSlots(selectedVenue, { activeOnly: true }) : []
-  }, [selectedVenue])
-
   const selectedVenueTimeSlots = useMemo(() => {
-    if (!selectedVenue) {
+    if (!selectedVenue || !bookingForm.date) {
       return []
     }
 
-    if (selectedVenueUsesAvailability) {
-      return bookingForm.date ? bookingAvailabilitySlots : []
-    }
-
-    return selectedVenueOwnerTimeSlots
-  }, [
-    bookingAvailabilitySlots,
-    bookingForm.date,
-    selectedVenue,
-    selectedVenueOwnerTimeSlots,
-    selectedVenueUsesAvailability,
-  ])
+    return bookingAvailabilitySlots
+  }, [bookingAvailabilitySlots, bookingForm.date, selectedVenue])
 
   const selectedBookingSlot = useMemo(() => {
-    const selectedSlotId = selectedVenueUsesAvailability
-      ? bookingForm.venueAvailabilityId
-      : bookingForm.timeSlotId
-
     return (
-      selectedVenueTimeSlots.find((slot) => String(slot.id) === String(selectedSlotId)) ?? null
+      selectedVenueTimeSlots.find(
+        (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
+      ) ?? null
     )
-  }, [
-    bookingForm.timeSlotId,
-    bookingForm.venueAvailabilityId,
-    selectedVenueTimeSlots,
-    selectedVenueUsesAvailability,
-  ])
+  }, [bookingForm.venueAvailabilityId, selectedVenueTimeSlots])
 
   const selectedVenuePhotoSet = useMemo(
     () =>
@@ -1563,30 +1579,21 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   }, [bookingForm.date, selectedVenue?.id, selectedVenueUsesAvailability])
 
   useEffect(() => {
-    const selectedSlotId = selectedVenueUsesAvailability
-      ? bookingForm.venueAvailabilityId
-      : bookingForm.timeSlotId
-
-    if (!selectedSlotId) {
+    if (!bookingForm.venueAvailabilityId) {
       return
     }
 
     const selectedStillAvailable = selectedVenueTimeSlots.some(
-      (slot) => String(slot.id) === String(selectedSlotId),
+      (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
     )
 
     if (!selectedStillAvailable) {
       setBookingForm((currentForm) => ({
         ...currentForm,
-        ...(selectedVenueUsesAvailability ? { venueAvailabilityId: '' } : { timeSlotId: '' }),
+        venueAvailabilityId: '',
       }))
     }
-  }, [
-    bookingForm.timeSlotId,
-    bookingForm.venueAvailabilityId,
-    selectedVenueTimeSlots,
-    selectedVenueUsesAvailability,
-  ])
+  }, [bookingForm.venueAvailabilityId, selectedVenueTimeSlots])
 
   useEffect(() => {
     if (!selectedVenue?.id || !isBookingUser) {
@@ -1643,34 +1650,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   }, [selectedBookingServices])
 
   const estimatedBasePrice = useMemo(() => {
-    if (!selectedVenue) return null
-
-    if (selectedVenueTimeSlots.length > 0) {
-      return selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
-    }
-
-    const pricingType = getPricingTypeValue(selectedVenue)
-    const pricePerHour = getVenuePriceValue(selectedVenue)
-
-    if (pricingType !== 'Hourly' || pricePerHour === null || pricePerHour <= 0) {
-      return null
-    }
-
-    const startMinutes = parseTimeToMinutes(bookingForm.startTime)
-    const endMinutes = parseTimeToMinutes(bookingForm.endTime)
-
-    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-      return null
-    }
-
-    return ((endMinutes - startMinutes) / 60) * pricePerHour
-  }, [
-    bookingForm.endTime,
-    bookingForm.startTime,
-    selectedBookingSlot,
-    selectedVenue,
-    selectedVenueTimeSlots.length,
-  ])
+    return selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
+  }, [selectedBookingSlot])
 
   const estimatedTotal =
     estimatedBasePrice === null ? null : estimatedBasePrice + servicesTotal
@@ -1681,11 +1662,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     }
 
     if (!bookingForm.date) {
-      return f('Choose a booking date to check whether this venue is available.')
+      return f('Choose a booking date to load the scheduled fixed slots for this venue.')
     }
 
     if (bookingLoadingAvailability) {
-      return f('Checking venue availability for the selected date...')
+      return f('Loading the scheduled fixed slots for the selected date...')
     }
 
     if (bookingAvailabilityError) {
@@ -1693,10 +1674,10 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     }
 
     if (selectedVenueTimeSlots.length === 0) {
-      return f('This venue is not available for booking on the selected date.')
+      return `No fixed slots are available on ${formatVenueDateLabel(bookingForm.date)}.`
     }
 
-    return f('This venue is available for booking on the selected date.')
+    return `${selectedVenueTimeSlots.length} fixed slot${selectedVenueTimeSlots.length === 1 ? '' : 's'} available on ${formatVenueDateLabel(bookingForm.date)}.`
   }, [
     bookingAvailabilityError,
     bookingForm.date,
@@ -1708,19 +1689,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   ])
 
   const selectedBookingTimeLabel = useMemo(() => {
-    if (selectedBookingSlot) {
-      return formatVenueTimeSlot(selectedBookingSlot)
-    }
-
-    if (bookingForm.startTime && bookingForm.endTime) {
-      return formatVenueTimeSlot({
-        startTime: bookingForm.startTime,
-        endTime: bookingForm.endTime,
-      })
-    }
-
-    return '--'
-  }, [bookingForm.endTime, bookingForm.startTime, selectedBookingSlot])
+    return selectedBookingSlot ? formatVenueTimeSlot(selectedBookingSlot) : '--'
+  }, [selectedBookingSlot])
 
   const clearBookingFeedback = () => {
     setBookingFeedback({ tone: 'idle', message: '' })
@@ -1738,7 +1708,6 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       [name]: value,
       ...(name === 'date'
         ? {
-            timeSlotId: '',
             venueAvailabilityId: '',
           }
         : {}),
@@ -1749,8 +1718,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     clearBookingFeedback()
     setBookingForm((currentForm) => ({
       ...currentForm,
-      timeSlotId: selectedVenueUsesAvailability ? '' : String(slotId),
-      venueAvailabilityId: selectedVenueUsesAvailability ? String(slotId) : '',
+      venueAvailabilityId: String(slotId),
     }))
   }
 
@@ -1827,41 +1795,20 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       return 'Enter a valid guests count before continuing.'
     }
 
-    if (selectedVenueUsesAvailability) {
-      if (bookingLoadingAvailability) {
-        return 'Checking venue availability for the selected date...'
-      }
-
-      if (bookingAvailabilityError) {
-        return bookingAvailabilityError
-      }
-
-      if (selectedVenueTimeSlots.length === 0) {
-        return 'This venue is not available for booking on the selected date.'
-      }
-
-      if (!selectedBookingSlot) {
-        return 'Choose one of the active venue time slots before continuing.'
-      }
-
-      return null
+    if (bookingLoadingAvailability) {
+      return 'Loading the scheduled fixed slots for the selected date...'
     }
 
-    if (selectedVenueTimeSlots.length > 0 && !selectedBookingSlot) {
-      return 'Choose one of the active venue time slots before continuing.'
+    if (bookingAvailabilityError) {
+      return bookingAvailabilityError
     }
 
     if (selectedVenueTimeSlots.length === 0) {
-      const startMinutes = parseTimeToMinutes(bookingForm.startTime)
-      const endMinutes = parseTimeToMinutes(bookingForm.endTime)
+      return 'This venue does not have any bookable fixed slots on the selected date.'
+    }
 
-      if (startMinutes === null || endMinutes === null) {
-        return 'Enter both start and end times before continuing.'
-      }
-
-      if (endMinutes <= startMinutes) {
-        return 'End time must be later than start time.'
-      }
+    if (!selectedBookingSlot) {
+      return 'Choose one of the available fixed slots before continuing.'
     }
 
     return null
@@ -1900,10 +1847,10 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       return
     }
 
-    if (selectedVenueTimeSlots.length > 0 && !selectedBookingSlot) {
+    if (!selectedBookingSlot) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Choose one of the active venue time slots before continuing.',
+        message: 'Choose one of the available fixed slots before continuing.',
       })
       return
     }
@@ -1912,11 +1859,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       venueId: Number(selectedVenue.id),
       venueCategory: getVenueCategoryValue(selectedVenue),
       date: bookingForm.date,
-      ...(selectedBookingSlot
-        ? selectedVenueUsesAvailability
-          ? { venueAvailabilityId: Number(selectedBookingSlot.id) }
-          : { timeSlotId: Number(selectedBookingSlot.id) }
-        : {}),
+      venueAvailabilityId: Number(selectedBookingSlot.id),
     }
 
     clearBookingFeedback()
@@ -1957,14 +1900,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           venueId: Number(selectedVenue.id),
           date: `${bookingForm.date}T00:00:00Z`,
           guestsCount: Number(bookingForm.guestsCount),
-          ...(selectedBookingSlot
-            ? selectedVenueUsesAvailability
-              ? { venueAvailabilityId: Number(selectedBookingSlot.id) }
-              : { timeSlotId: Number(selectedBookingSlot.id) }
-            : {
-                startTime: bookingForm.startTime,
-                endTime: bookingForm.endTime,
-              }),
+          venueAvailabilityId: Number(selectedBookingSlot.id),
           venueServiceOptionIds: bookingForm.venueServiceOptionIds,
           brideIdDocumentDataUrl: bookingForm.brideIdDocumentDataUrl,
           bridegroomIdDocumentDataUrl: bookingForm.bridegroomIdDocumentDataUrl,
@@ -2416,7 +2352,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           <div className="hp-booking-stage-head">
                             <p className="hp-booking-stage-title">Step 1: Event Details</p>
                             <p className="hp-booking-stage-copy">
-                              Pick the booking date, add the guest count, then choose a slot or manual time range.
+                              Pick the booking date, add the guest count, then choose one scheduled fixed slot.
                             </p>
                           </div>
 
@@ -2451,45 +2387,15 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                 value={
                                   selectedBookingSlot
                                     ? formatVenuePrice(selectedBookingSlot.price)
-                                    : estimatedBasePrice !== null
-                                      ? formatVenuePrice(estimatedBasePrice)
-                                      : selectedVenueUsesAvailability && !bookingForm.date
-                                        ? f('Choose a date first')
-                                        : selectedVenueTimeSlots.length > 0
-                                          ? f('Choose a slot')
-                                          : selectedVenueUsesAvailability
-                                            ? f('No availability for this date')
-                                            : f('Enter time to estimate')
+                                    : !bookingForm.date
+                                      ? f('Choose a date first')
+                                      : selectedVenueTimeSlots.length > 0
+                                        ? f('Choose a slot')
+                                        : f('No fixed slots for this date')
                                 }
                                 readOnly
                               />
                             </div>
-
-                            {!selectedVenueUsesAvailability && selectedVenueTimeSlots.length === 0 ? (
-                              <>
-                                <div className="hp-booking-field">
-                                  <label className="hp-booking-label">Start Time</label>
-                                  <input
-                                    className="hp-booking-input"
-                                    type="time"
-                                    name="startTime"
-                                    value={bookingForm.startTime}
-                                    onChange={handleBookingFieldChange}
-                                  />
-                                </div>
-
-                                <div className="hp-booking-field">
-                                  <label className="hp-booking-label">End Time</label>
-                                  <input
-                                    className="hp-booking-input"
-                                    type="time"
-                                    name="endTime"
-                                    value={bookingForm.endTime}
-                                    onChange={handleBookingFieldChange}
-                                  />
-                                </div>
-                              </>
-                            ) : null}
                           </div>
 
                           {bookingAvailabilitySummary ? (
@@ -2499,9 +2405,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           {selectedVenueTimeSlots.length > 0 ? (
                             <div className="hp-booking-slot-list">
                               {selectedVenueTimeSlots.map((slot) => {
-                                const isSelected = selectedVenueUsesAvailability
-                                  ? String(bookingForm.venueAvailabilityId) === String(slot.id)
-                                  : String(bookingForm.timeSlotId) === String(slot.id)
+                                const isSelected = String(bookingForm.venueAvailabilityId) === String(slot.id)
+                                const slotDateLabel = formatVenueDateLabel(slot.date || bookingForm.date)
 
                                 return (
                                   <label
@@ -2515,23 +2420,28 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                         checked={isSelected}
                                         onChange={() => selectBookingSlot(slot.id)}
                                       />
-                                      <div>
+                                      <div className="hp-booking-slot-content">
+                                        <div className="hp-booking-slot-badges">
+                                          <span className="hp-booking-slot-badge">{slotDateLabel}</span>
+                                          <span className="hp-booking-slot-badge">Scheduled slot</span>
+                                        </div>
                                         <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
+                                        <div className="hp-booking-slot-meta">
+                                          <span className="hp-booking-slot-meta-item">Start: {slot.startTime}</span>
+                                          <span className="hp-booking-slot-meta-item">End: {slot.endTime}</span>
+                                        </div>
                                         <p className="hp-booking-slot-copy">
-                                          {selectedVenueUsesAvailability
-                                            ? f('Available slot for the selected date.')
-                                            : f('Active owner-defined slot available for this booking.')}
+                                          Fixed booking slot prepared by the venue owner for this exact date.
                                         </p>
                                       </div>
                                     </div>
-                                    <span className="hp-booking-slot-price">{formatVenuePrice(slot.price)}</span>
+                                    <div className="hp-booking-slot-price">
+                                      <span className="hp-booking-slot-price-label">Slot price</span>
+                                      <span className="hp-booking-slot-price-value">{formatVenuePrice(slot.price)}</span>
+                                    </div>
                                   </label>
                                 )
                               })}
-                            </div>
-                          ) : !selectedVenueUsesAvailability ? (
-                            <div className="hp-booking-note">
-                              This venue does not have venue management slots yet. Use manual start and end times to continue.
                             </div>
                           ) : null}
                         </div>
@@ -2592,7 +2502,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Base Estimate</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedBasePrice === null ? 'Depends on selected time' : formatVenuePrice(estimatedBasePrice)}
+                                {estimatedBasePrice === null ? 'Choose a slot' : formatVenuePrice(estimatedBasePrice)}
                               </span>
                             </div>
                             <div className="hp-booking-summary-card">
@@ -2669,7 +2579,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Base Estimate</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedBasePrice === null ? 'Depends on selected time' : formatVenuePrice(estimatedBasePrice)}
+                                {estimatedBasePrice === null ? 'Choose a slot' : formatVenuePrice(estimatedBasePrice)}
                               </span>
                             </div>
                             <div className="hp-booking-summary-card">
@@ -2792,9 +2702,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                     <>
                       <div className="hp-booking-stage">
                         <div className="hp-booking-stage-head">
-                          <p className="hp-booking-stage-title">Choose Date & Time</p>
+                          <p className="hp-booking-stage-title">Choose Date & Slot</p>
                           <p className="hp-booking-stage-copy">
-                            Pick the booking date and slot here. After login with a user account, the rest of the flow will continue.
+                            Pick the booking date and one fixed slot here. After login with a user account, the rest of the flow will continue.
                           </p>
                         </div>
 
@@ -2817,13 +2727,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                               value={
                                 selectedBookingSlot
                                   ? formatVenuePrice(selectedBookingSlot.price)
-                                  : selectedVenueUsesAvailability && !bookingForm.date
+                                  : !bookingForm.date
                                     ? f('Choose a date first')
                                     : selectedVenueTimeSlots.length > 0
                                       ? f('Choose a slot')
-                                      : selectedVenueUsesAvailability
-                                        ? f('No availability for this date')
-                                        : f('Continue after login')
+                                      : f('No fixed slots for this date')
                               }
                               readOnly
                             />
@@ -2837,9 +2745,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                         {selectedVenueTimeSlots.length > 0 ? (
                           <div className="hp-booking-slot-list">
                             {selectedVenueTimeSlots.map((slot) => {
-                              const isSelected = selectedVenueUsesAvailability
-                                ? String(bookingForm.venueAvailabilityId) === String(slot.id)
-                                : String(bookingForm.timeSlotId) === String(slot.id)
+                              const isSelected = String(bookingForm.venueAvailabilityId) === String(slot.id)
+                              const slotDateLabel = formatVenueDateLabel(slot.date || bookingForm.date)
 
                               return (
                                 <label
@@ -2853,23 +2760,28 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                       checked={isSelected}
                                       onChange={() => selectBookingSlot(slot.id)}
                                     />
-                                    <div>
+                                    <div className="hp-booking-slot-content">
+                                      <div className="hp-booking-slot-badges">
+                                        <span className="hp-booking-slot-badge">{slotDateLabel}</span>
+                                        <span className="hp-booking-slot-badge">Scheduled slot</span>
+                                      </div>
                                       <p className="hp-booking-slot-title">{formatVenueTimeSlot(slot)}</p>
+                                      <div className="hp-booking-slot-meta">
+                                        <span className="hp-booking-slot-meta-item">Start: {slot.startTime}</span>
+                                        <span className="hp-booking-slot-meta-item">End: {slot.endTime}</span>
+                                      </div>
                                       <p className="hp-booking-slot-copy">
-                                        {selectedVenueUsesAvailability
-                                          ? f('Available slot for the selected date.')
-                                          : f('Active owner-defined slot prepared for direct booking.')}
+                                        Fixed booking slot prepared by the venue owner for this exact date.
                                       </p>
                                     </div>
                                   </div>
-                                  <span className="hp-booking-slot-price">{formatVenuePrice(slot.price)}</span>
+                                  <div className="hp-booking-slot-price">
+                                    <span className="hp-booking-slot-price-label">Slot price</span>
+                                    <span className="hp-booking-slot-price-value">{formatVenuePrice(slot.price)}</span>
+                                  </div>
                                 </label>
                               )
                             })}
-                          </div>
-                        ) : !selectedVenueUsesAvailability ? (
-                          <div className="hp-booking-note">
-                            Manual time selection will continue after login from the booking page.
                           </div>
                         ) : null}
                       </div>

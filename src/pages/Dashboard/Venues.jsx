@@ -3,10 +3,10 @@ import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
-  buildVenueTimeSlotPayload,
-  getVenueTimeSlots,
+  formatVenueDateLabel,
+  formatVenueTimeSlot,
   normalizeTimeValue,
-  validateVenueTimeSlots,
+  normalizeVenueAvailabilitySlot,
 } from '../../lib/venueTimeSlots'
 import { useI18n } from '../../i18n/I18nProvider'
 import { makeDashStyles } from './dashboardPageStyles'
@@ -42,37 +42,107 @@ const styles =
     }
     .vp-slot-card {
       border: 1.5px solid #e2e8f0;
-      background: #fff;
-      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+      border-radius: 18px;
       padding: 1rem;
       display: grid;
       gap: 0.85rem;
+      box-shadow: 0 10px 28px rgba(79,70,229,0.08);
     }
     .vp-slot-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 160px auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0.75rem;
-      align-items: end;
     }
-    .vp-slot-toggle {
+    .vp-slot-card-top {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      min-height: 2.75rem;
-      color: #64748b;
-      font-size: 0.85rem;
-      font-weight: 600;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
-    .vp-slot-remove {
+    .vp-slot-main {
+      display: grid;
+      gap: 0.22rem;
+    }
+    .vp-slot-time {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #1e1b4b;
+      letter-spacing: -0.02em;
+    }
+    .vp-slot-copy {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.55;
+    }
+    .vp-slot-price {
+      font-size: 0.96rem;
+      font-weight: 900;
+      color: #4338ca;
+      white-space: nowrap;
+    }
+    .vp-slot-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .vp-slot-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.28rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      border: 1px solid rgba(79,70,229,0.16);
+      background: rgba(79,70,229,0.08);
+      color: #4f46e5;
+    }
+    .vp-slot-badge.booked {
+      border-color: rgba(245,158,11,0.24);
+      background: rgba(245,158,11,0.12);
+      color: #b45309;
+    }
+    .vp-slot-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .vp-slot-remove,
+    .vp-slot-submit {
       height: 2.75rem;
       padding: 0 1rem;
-      border-radius: 10px;
+      border-radius: 12px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+    .vp-slot-remove:hover,
+    .vp-slot-submit:hover {
+      transform: translateY(-1px);
+    }
+    .vp-slot-submit {
+      border: none;
+      background: linear-gradient(135deg, #4f46e5, #3730a3);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(79,70,229,0.22);
+    }
+    .vp-slot-submit:disabled,
+    .vp-slot-remove:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
+    }
+    .vp-slot-remove {
       border: 1.5px solid rgba(244,63,94,0.22);
       background: rgba(244,63,94,0.08);
       color: #be123c;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
     }
     .vp-slot-empty {
       padding: 1rem;
@@ -81,6 +151,95 @@ const styles =
       border-radius: 12px;
       color: #64748b;
       font-size: 0.85rem;
+    }
+    .vp-slot-form-card {
+      border: 1.5px solid rgba(79,70,229,0.14);
+      background: linear-gradient(180deg, rgba(79,70,229,0.05), rgba(255,255,255,0.95));
+      border-radius: 18px;
+      padding: 1rem;
+      display: grid;
+      gap: 0.9rem;
+    }
+    .vp-slot-form-copy {
+      margin: 0;
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .vp-slot-summary {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .vp-slot-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1150;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      background: rgba(15,23,42,0.46);
+      backdrop-filter: blur(10px);
+    }
+    .vp-slot-modal {
+      width: min(100%, 960px);
+      max-height: calc(100vh - 2.5rem);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(99,102,241,0.16);
+      background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+      box-shadow: 0 36px 90px rgba(15,23,42,0.28);
+    }
+    .vp-slot-modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.15rem 1.25rem;
+      background:
+        radial-gradient(circle at top right, rgba(244,63,94,0.08), transparent 42%),
+        linear-gradient(135deg, rgba(79,70,229,0.08), rgba(244,63,94,0.04));
+      border-bottom: 1px solid rgba(226,232,240,0.9);
+    }
+    .vp-slot-modal-title {
+      margin: 0 0 0.25rem;
+      font-size: 1.08rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #1e1b4b;
+    }
+    .vp-slot-modal-copy {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .vp-slot-modal-close {
+      width: 2.6rem;
+      height: 2.6rem;
+      border: 1.5px solid rgba(79,70,229,0.14);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      color: #475569;
+      cursor: pointer;
+      font: inherit;
+      font-size: 1.2rem;
+      line-height: 1;
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+    .vp-slot-modal-close:hover {
+      background: #fff;
+      transform: translateY(-1px);
+    }
+    .vp-slot-modal-body {
+      padding: 1rem 1.25rem 1.25rem;
+      overflow: auto;
+      display: grid;
+      gap: 1rem;
     }
     .vp-service-panel {
       margin-top: 1rem;
@@ -289,6 +448,15 @@ const styles =
       .vp-card-media {
         height: 170px;
       }
+      .vp-slot-modal {
+        width: 100%;
+        max-height: calc(100vh - 2rem);
+      }
+      .vp-slot-modal-head,
+      .vp-slot-modal-body {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
     }
   `
 
@@ -297,10 +465,8 @@ const CATEGORY_OPTIONS = [
   { value: 'Farm', label: 'Farm', apiValue: 2 },
 ]
 
-const PRICING_OPTIONS = [
-  { value: 'Hourly', label: 'Hourly', apiValue: 1 },
-  { value: 'FixedSlots', label: 'Fixed Slots', apiValue: 2 },
-]
+const FIXED_PRICING_VALUE = 'FixedSlots'
+const FIXED_PRICING_API_VALUE = 2
 
 const emptyForm = {
   name: '',
@@ -309,12 +475,9 @@ const emptyForm = {
   address: '',
   capacity: '',
   category: 'WeddingHall',
-  pricingType: 'Hourly',
-  pricePerHour: '',
   isActive: true,
   photoItems: [],
   coverPhotoIndex: 0,
-  timeSlots: [],
 }
 
 const defaultServiceForm = {
@@ -322,26 +485,16 @@ const defaultServiceForm = {
   price: '',
 }
 
+const emptyAvailabilityForm = {
+  date: '',
+  startTime: '',
+  endTime: '',
+  price: '',
+}
+
 const MAX_VENUE_IMAGE_WIDTH = 1600
 const MAX_VENUE_IMAGE_HEIGHT = 1200
 const VENUE_IMAGE_QUALITY = 0.82
-let nextTimeSlotKey = 0
-
-function createTimeSlotFormValue(slot = {}) {
-  nextTimeSlotKey += 1
-
-  return {
-    clientId: slot.clientId ?? `slot-${nextTimeSlotKey}`,
-    id: slot.id ?? null,
-    startTime: normalizeTimeValue(String(slot.startTime ?? '')),
-    endTime: normalizeTimeValue(String(slot.endTime ?? '')),
-    price:
-      slot.price === null || slot.price === undefined || slot.price === ''
-        ? ''
-        : String(slot.price),
-    isActive: slot.isActive !== false,
-  }
-}
 
 function readValue(source, ...keys) {
   for (const key of keys) {
@@ -359,6 +512,42 @@ function formatCurrency(value) {
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '--'
   return `${amount.toFixed(2)} JOD`
+}
+
+function getTodayDateValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function sortAvailabilitySlots(leftSlot, rightSlot) {
+  const leftDate = String(leftSlot?.date ?? '').slice(0, 10)
+  const rightDate = String(rightSlot?.date ?? '').slice(0, 10)
+
+  if (leftDate !== rightDate) {
+    return leftDate.localeCompare(rightDate)
+  }
+
+  const leftStart = normalizeTimeValue(String(leftSlot?.startTime ?? ''))
+  const rightStart = normalizeTimeValue(String(rightSlot?.startTime ?? ''))
+
+  if (leftStart !== rightStart) {
+    return leftStart.localeCompare(rightStart)
+  }
+
+  const leftEnd = normalizeTimeValue(String(leftSlot?.endTime ?? ''))
+  const rightEnd = normalizeTimeValue(String(rightSlot?.endTime ?? ''))
+
+  return leftEnd.localeCompare(rightEnd)
+}
+
+function normalizeAvailabilitySlotList(slots) {
+  if (!Array.isArray(slots)) {
+    return []
+  }
+
+  return slots
+    .map((slot) => normalizeVenueAvailabilitySlot(slot))
+    .filter((slot) => slot.id && slot.date && slot.startTime && slot.endTime)
+    .sort(sortAvailabilitySlots)
 }
 
 function readImageFileAsDataUrl(file) {
@@ -414,43 +603,19 @@ function toVenueCategoryApiValue(value) {
 }
 
 function getPricingTypeValue(venue) {
-  const rawValue = readValue(venue, 'pricingType', 'PricingType')
-
-  if (rawValue === 2 || rawValue === 'FixedSlots') {
-    return 'FixedSlots'
-  }
-
-  return 'Hourly'
+  return FIXED_PRICING_VALUE
 }
 
 function getPricingTypeLabel(value) {
-  return value === 'FixedSlots' || value === 2 ? 'Fixed Slots' : 'Hourly'
+  return 'Fixed Slots'
 }
 
 function toPricingTypeApiValue(value) {
-  return value === 'FixedSlots' ? 2 : 1
-}
-
-function getPriceValue(source) {
-  const rawValue = readValue(source, 'pricePerHour', 'PricePerHour')
-  const amount = Number(rawValue)
-
-  return Number.isFinite(amount) ? amount : null
+  return FIXED_PRICING_API_VALUE
 }
 
 function getPricingSummary(venue) {
-  const pricingType = getPricingTypeValue(venue)
-  const pricePerHour = getPriceValue(venue)
-
-  if (pricingType === 'Hourly' && pricePerHour !== null) {
-    return `${formatCurrency(pricePerHour)} / hour`
-  }
-
-  if (pricingType === 'FixedSlots' && pricePerHour !== null) {
-    return `${formatCurrency(pricePerHour)} / slot`
-  }
-
-  return pricingType === 'FixedSlots' ? 'Fixed slot pricing' : 'Price shared during confirmation'
+  return 'Fixed slot pricing'
 }
 
 function normalizeVenue(venue) {
@@ -467,8 +632,6 @@ function normalizeVenue(venue) {
     companyName: readValue(venue, 'companyName', 'CompanyName') ?? '',
     category: getVenueCategoryValue(venue),
     pricingType: getPricingTypeValue(venue),
-    pricePerHour: getPriceValue(venue),
-    timeSlots: getVenueTimeSlots(venue),
     coverPhotoUrl,
     galleryPhotoUrls,
     photoUrls,
@@ -499,6 +662,7 @@ function normalizeVenueServiceOption(option) {
 
 function Venues({ session }) {
   const { confirm } = useAppDialog()
+  const { direction, f } = useI18n()
   const [venues, setVenues] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -515,6 +679,15 @@ function Venues({ session }) {
   const [loadingServiceVenueId, setLoadingServiceVenueId] = useState(null)
   const [savingServiceVenueId, setSavingServiceVenueId] = useState(null)
   const [processingPhotos, setProcessingPhotos] = useState(false)
+  const [slotManagerVenue, setSlotManagerVenue] = useState(null)
+  const [venueAvailabilityByVenue, setVenueAvailabilityByVenue] = useState({})
+  const [loadingAvailabilityVenueId, setLoadingAvailabilityVenueId] = useState(null)
+  const [savingAvailabilityVenueId, setSavingAvailabilityVenueId] = useState(null)
+  const [availabilityFormValues, setAvailabilityFormValues] = useState({
+    ...emptyAvailabilityForm,
+    date: getTodayDateValue(),
+  })
+  const [availabilityError, setAvailabilityError] = useState('')
 
   const isOwner = session?.role === 'Owner'
   const isAdmin = session?.role === 'Admin'
@@ -608,6 +781,71 @@ function Venues({ session }) {
     }
   }, [session?.role, session?.token])
 
+  useEffect(() => {
+    if (!slotManagerVenue) {
+      return undefined
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !savingAvailabilityVenueId) {
+        setSlotManagerVenue(null)
+        setAvailabilityError('')
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [savingAvailabilityVenueId, slotManagerVenue])
+
+  const resetAvailabilityForm = (date = getTodayDateValue()) => {
+    setAvailabilityFormValues({
+      ...emptyAvailabilityForm,
+      date,
+    })
+  }
+
+  const loadVenueAvailability = async (venueId) => {
+    setLoadingAvailabilityVenueId(venueId)
+
+    try {
+      const data = await apiRequest(`/api/venue-availabilities/owner/${venueId}`, {
+        token: session?.token,
+      })
+
+      const nextSlots = normalizeAvailabilitySlotList(data)
+      setVenueAvailabilityByVenue((currentMap) => ({
+        ...currentMap,
+        [venueId]: nextSlots,
+      }))
+
+      return nextSlots
+    } finally {
+      setLoadingAvailabilityVenueId(null)
+    }
+  }
+
+  const openSlotManager = async (venue) => {
+    setSlotManagerVenue(venue)
+    setAvailabilityError('')
+    resetAvailabilityForm(getTodayDateValue())
+
+    try {
+      await loadVenueAvailability(venue.id)
+    } catch (error) {
+      setAvailabilityError(
+        error instanceof Error ? error.message : 'Unable to load fixed slots for this venue.',
+      )
+    }
+  }
+
+  const activeVenueAvailabilitySlots = useMemo(() => {
+    if (!slotManagerVenue?.id) {
+      return []
+    }
+
+    return venueAvailabilityByVenue[slotManagerVenue.id] ?? []
+  }, [slotManagerVenue, venueAvailabilityByVenue])
+
   const filteredVenues = useMemo(() => {
     const query = search.trim().toLowerCase()
 
@@ -654,42 +892,147 @@ function Venues({ session }) {
       address: venue.address ?? '',
       capacity: String(venue.capacity ?? ''),
       category: getVenueCategoryValue(venue),
-      pricingType: getPricingTypeValue(venue),
-      pricePerHour: venue.pricePerHour === null ? '' : String(venue.pricePerHour),
       isActive: Boolean(venue.isActive),
       photoItems,
       coverPhotoIndex,
-      timeSlots: getVenueTimeSlots(venue).map((slot) => createTimeSlotFormValue(slot)),
     })
     setShowForm(true)
   }
 
-  const addTimeSlotRow = () => {
-    setFormValues((currentValues) => ({
+  const handleAvailabilityChange = ({ target: { name, value } }) => {
+    setAvailabilityError('')
+    setAvailabilityFormValues((currentValues) => ({
       ...currentValues,
-      timeSlots: [...currentValues.timeSlots, createTimeSlotFormValue()],
+      [name]: name === 'startTime' || name === 'endTime' ? normalizeTimeValue(value) : value,
     }))
   }
 
-  const updateTimeSlot = (clientId, field, value) => {
-    setFormValues((currentValues) => ({
-      ...currentValues,
-      timeSlots: currentValues.timeSlots.map((slot) =>
-        slot.clientId === clientId
-          ? {
-              ...slot,
-              [field]: field === 'isActive' ? value : value,
-            }
-          : slot,
-      ),
-    }))
+  const addVenueAvailability = async () => {
+    if (!slotManagerVenue?.id) {
+      return
+    }
+
+    const nextDate = String(availabilityFormValues.date ?? '').trim()
+    const nextStartTime = normalizeTimeValue(String(availabilityFormValues.startTime ?? ''))
+    const nextEndTime = normalizeTimeValue(String(availabilityFormValues.endTime ?? ''))
+    const nextPrice = Number(availabilityFormValues.price)
+
+    if (!nextDate) {
+      setAvailabilityError('Choose the slot date first.')
+      return
+    }
+
+    if (!nextStartTime || !nextEndTime) {
+      setAvailabilityError('Choose both the start and end time for the slot.')
+      return
+    }
+
+    if (nextEndTime <= nextStartTime) {
+      setAvailabilityError('End time must be after start time.')
+      return
+    }
+
+    if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+      setAvailabilityError('Enter a valid slot price greater than zero.')
+      return
+    }
+
+    const duplicateSlot = activeVenueAvailabilitySlots.some(
+      (slot) =>
+        slot.date === nextDate &&
+        slot.startTime === nextStartTime &&
+        slot.endTime === nextEndTime,
+    )
+
+    if (duplicateSlot) {
+      setAvailabilityError('This exact slot already exists for the selected date.')
+      return
+    }
+
+    setSavingAvailabilityVenueId(slotManagerVenue.id)
+
+    try {
+      const result = await apiRequest('/api/venue-availabilities', {
+        method: 'POST',
+        token: session?.token,
+        body: {
+          venueId: Number(slotManagerVenue.id),
+          date: nextDate,
+          startTime: `${nextStartTime}:00`,
+          endTime: `${nextEndTime}:00`,
+          price: nextPrice,
+        },
+      })
+
+      const normalizedResult = normalizeVenueAvailabilitySlot(result)
+      const nextSlots = normalizeAvailabilitySlotList([
+        ...activeVenueAvailabilitySlots,
+        normalizedResult,
+      ])
+
+      setVenueAvailabilityByVenue((currentMap) => ({
+        ...currentMap,
+        [slotManagerVenue.id]: nextSlots,
+      }))
+      resetAvailabilityForm(nextDate)
+      setAvailabilityError('')
+      setFeedback({
+        tone: 'idle',
+        message: 'Fixed slot added successfully.',
+      })
+    } catch (error) {
+      setAvailabilityError(
+        error instanceof Error ? error.message : 'Unable to add the fixed slot.',
+      )
+    } finally {
+      setSavingAvailabilityVenueId(null)
+    }
   }
 
-  const removeTimeSlot = (clientId) => {
-    setFormValues((currentValues) => ({
-      ...currentValues,
-      timeSlots: currentValues.timeSlots.filter((slot) => slot.clientId !== clientId),
-    }))
+  const deleteVenueAvailability = async (slot) => {
+    if (!slotManagerVenue?.id) {
+      return
+    }
+
+    const isConfirmed = await confirm({
+      title: 'Delete fixed slot',
+      message: `Remove the slot on ${formatVenueDateLabel(slot.date)} from ${formatVenueTimeSlot(slot)}?`,
+      description: 'This action deletes the slot from booking availability for users.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      tone: 'danger',
+    })
+
+    if (!isConfirmed) {
+      return
+    }
+
+    setSavingAvailabilityVenueId(slotManagerVenue.id)
+
+    try {
+      await apiRequest(`/api/venue-availabilities/${slot.id}`, {
+        method: 'DELETE',
+        token: session?.token,
+      })
+
+      setVenueAvailabilityByVenue((currentMap) => ({
+        ...currentMap,
+        [slotManagerVenue.id]: (currentMap[slotManagerVenue.id] ?? []).filter(
+          (currentSlot) => String(currentSlot.id) !== String(slot.id),
+        ),
+      }))
+      setAvailabilityError('')
+      setFeedback({
+        tone: 'idle',
+        message: 'Fixed slot deleted successfully.',
+      })
+    } catch (error) {
+      setAvailabilityError(
+        error instanceof Error ? error.message : 'Unable to delete the fixed slot.',
+      )
+    } finally {
+      setSavingAvailabilityVenueId(null)
+    }
   }
 
   const handlePhotoSelection = async (event) => {
@@ -755,43 +1098,11 @@ function Venues({ session }) {
     }
 
     const capacity = Number(formValues.capacity)
-    const pricePerHour =
-      formValues.pricePerHour.trim() === '' ? null : Number(formValues.pricePerHour)
-    const timeSlots = buildVenueTimeSlotPayload(formValues.timeSlots)
-    const slotValidationMessage = validateVenueTimeSlots(formValues.timeSlots)
 
     if (!Number.isFinite(capacity) || capacity <= 0) {
       setFeedback({
         tone: 'error',
         message: 'Enter a valid capacity before submitting the venue request.',
-      })
-      return
-    }
-
-    if (slotValidationMessage) {
-      setFeedback({
-        tone: 'error',
-        message: slotValidationMessage,
-      })
-      return
-    }
-
-    if (
-      formValues.pricingType === 'Hourly' &&
-      timeSlots.length === 0 &&
-      (pricePerHour === null || !Number.isFinite(pricePerHour) || pricePerHour <= 0)
-    ) {
-      setFeedback({
-        tone: 'error',
-        message: 'Enter a valid hourly price for hourly venues.',
-      })
-      return
-    }
-
-    if (pricePerHour !== null && (!Number.isFinite(pricePerHour) || pricePerHour < 0)) {
-      setFeedback({
-        tone: 'error',
-        message: 'Enter a valid price before submitting the venue request.',
       })
       return
     }
@@ -824,9 +1135,9 @@ function Venues({ session }) {
       address: formValues.address.trim(),
       capacity,
       category: toVenueCategoryApiValue(formValues.category),
-      pricingType: toPricingTypeApiValue(formValues.pricingType),
-      pricePerHour,
-      timeSlots,
+      pricingType: toPricingTypeApiValue(FIXED_PRICING_VALUE),
+      pricePerHour: null,
+      timeSlots: [],
     }
 
     if (hasPhotoSelection) {
@@ -1107,39 +1418,6 @@ function Venues({ session }) {
               </select>
             </div>
 
-            <div className="vp-field">
-              <label className="vp-label">Pricing Model</label>
-              <select
-                className="vp-select"
-                name="pricingType"
-                value={formValues.pricingType}
-                onChange={handleChange}
-                required
-              >
-                {PRICING_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="vp-field">
-              <label className="vp-label">
-                {formValues.pricingType === 'FixedSlots' ? 'Slot Price (JOD)' : 'Hourly Price (JOD)'}
-              </label>
-              <input
-                className="vp-input"
-                name="pricePerHour"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formValues.pricePerHour}
-                onChange={handleChange}
-                required={formValues.pricingType === 'Hourly'}
-              />
-            </div>
-
             {editId ? (
               <div className="vp-field">
                 <label className="vp-label">Active Status</label>
@@ -1161,81 +1439,10 @@ function Venues({ session }) {
             <textarea className="vp-textarea" name="description" value={formValues.description} onChange={handleChange} />
           </div>
 
-          <div className="vp-slot-section">
-            <div className="vp-slot-toolbar">
-              <div>
-                <label className="vp-label">Time Slots</label>
-                <div className="vp-photo-count">
-                  Owner-defined booking slots override manual time entry for users.
-                </div>
-              </div>
-              <button className="vp-button secondary" type="button" onClick={addTimeSlotRow}>
-                + Add Slot
-              </button>
-            </div>
-
-            {formValues.timeSlots.length > 0 ? (
-              <div className="vp-slot-list">
-                {formValues.timeSlots.map((slot) => (
-                  <div key={slot.clientId} className="vp-slot-card">
-                    <div className="vp-slot-grid">
-                      <div className="vp-field">
-                        <label className="vp-label">Start Time</label>
-                        <input
-                          className="vp-input"
-                          type="time"
-                          value={slot.startTime}
-                          onChange={(event) => updateTimeSlot(slot.clientId, 'startTime', event.target.value)}
-                        />
-                      </div>
-
-                      <div className="vp-field">
-                        <label className="vp-label">End Time</label>
-                        <input
-                          className="vp-input"
-                          type="time"
-                          value={slot.endTime}
-                          onChange={(event) => updateTimeSlot(slot.clientId, 'endTime', event.target.value)}
-                        />
-                      </div>
-
-                      <div className="vp-field">
-                        <label className="vp-label">Price (JOD)</label>
-                        <input
-                          className="vp-input"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={slot.price}
-                          onChange={(event) => updateTimeSlot(slot.clientId, 'price', event.target.value)}
-                        />
-                      </div>
-
-                      <label className="vp-slot-toggle">
-                        <input
-                          type="checkbox"
-                          checked={slot.isActive}
-                          onChange={(event) => updateTimeSlot(slot.clientId, 'isActive', event.target.checked)}
-                        />
-                        Active
-                      </label>
-
-                      <button
-                        type="button"
-                        className="vp-slot-remove"
-                        onClick={() => removeTimeSlot(slot.clientId)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="vp-slot-empty">
-                No time slots added yet. Leave this empty only if the venue should keep the manual booking fallback.
-              </div>
-            )}
+          <div className="vp-note">
+            Fixed slots are now the only booking model in the system. After the venue is approved,
+            open the venue card and add dated slots from the fixed slots dialog using the date and
+            time pickers.
           </div>
 
           <div className="vp-photo-picker">
@@ -1375,6 +1582,9 @@ function Venues({ session }) {
 
                 <p className="vp-price-copy">{getPricingSummary(venue)}</p>
                 <p className="vp-card-copy" style={{ marginTop: '0.5rem' }}>
+                  Fixed slots are booked by date and time only.
+                </p>
+                <p className="vp-card-copy" style={{ marginTop: '0.5rem' }}>
                   Address: {venue.address || '--'}
                 </p>
                 {venue.companyName ? (
@@ -1385,6 +1595,9 @@ function Venues({ session }) {
                   <div className="vp-card-actions">
                     <button className="vp-button secondary" onClick={() => startEdit(venue)}>
                       Edit
+                    </button>
+                    <button className="vp-button secondary" onClick={() => openSlotManager(venue)}>
+                      Manage Fixed Slots
                     </button>
                     <button
                       className="vp-button secondary"
@@ -1490,6 +1703,177 @@ function Venues({ session }) {
           })}
         </div>
       )}
+
+      {slotManagerVenue ? (
+        <div
+          className="vp-slot-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !savingAvailabilityVenueId) {
+              setSlotManagerVenue(null)
+              setAvailabilityError('')
+            }
+          }}
+        >
+          <div className="vp-slot-modal" dir={direction}>
+            <div className="vp-slot-modal-head">
+              <div>
+                <p className="vp-slot-modal-title">Manage Fixed Slots</p>
+                <p className="vp-slot-modal-copy">
+                  Add dated booking slots for {slotManagerVenue.name || 'this venue'} using the
+                  system date and time pickers.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="vp-slot-modal-close"
+                onClick={() => {
+                  setSlotManagerVenue(null)
+                  setAvailabilityError('')
+                }}
+                disabled={Boolean(savingAvailabilityVenueId)}
+                aria-label={f('Close')}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="vp-slot-modal-body">
+              <div className="vp-slot-form-card">
+                <div>
+                  <label className="vp-label">Fixed Slots</label>
+                  <p className="vp-slot-form-copy">
+                    Duplicate slots with the same date and time are blocked before saving, and the
+                    backend still validates exact duplicates and overlaps.
+                  </p>
+                </div>
+
+                <div className="vp-slot-grid">
+                  <div className="vp-field">
+                    <label className="vp-label">Date</label>
+                    <input
+                      className="vp-input"
+                      type="date"
+                      name="date"
+                      value={availabilityFormValues.date}
+                      onChange={handleAvailabilityChange}
+                    />
+                  </div>
+
+                  <div className="vp-field">
+                    <label className="vp-label">Price (JOD)</label>
+                    <input
+                      className="vp-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="price"
+                      value={availabilityFormValues.price}
+                      onChange={handleAvailabilityChange}
+                    />
+                  </div>
+
+                  <div className="vp-field">
+                    <label className="vp-label">Start Time</label>
+                    <input
+                      className="vp-input"
+                      type="time"
+                      name="startTime"
+                      value={availabilityFormValues.startTime}
+                      onChange={handleAvailabilityChange}
+                    />
+                  </div>
+
+                  <div className="vp-field">
+                    <label className="vp-label">End Time</label>
+                    <input
+                      className="vp-input"
+                      type="time"
+                      name="endTime"
+                      value={availabilityFormValues.endTime}
+                      onChange={handleAvailabilityChange}
+                    />
+                  </div>
+                </div>
+
+                {availabilityError ? (
+                  <div className="vp-status error" style={{ marginBottom: 0 }}>
+                    {availabilityError}
+                  </div>
+                ) : null}
+
+                <div className="vp-slot-actions">
+                  <button
+                    type="button"
+                    className="vp-slot-submit"
+                    onClick={addVenueAvailability}
+                    disabled={savingAvailabilityVenueId === slotManagerVenue.id}
+                  >
+                    {savingAvailabilityVenueId === slotManagerVenue.id ? 'Saving...' : '+ Add Fixed Slot'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="vp-slot-toolbar">
+                <div>
+                  <label className="vp-label">Configured Fixed Slots</label>
+                  <div className="vp-slot-summary">
+                    {activeVenueAvailabilitySlots.length} slot
+                    {activeVenueAvailabilitySlots.length === 1 ? '' : 's'} configured for this venue.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="vp-button secondary"
+                  onClick={() => openSlotManager(slotManagerVenue)}
+                  disabled={loadingAvailabilityVenueId === slotManagerVenue.id}
+                >
+                  {loadingAvailabilityVenueId === slotManagerVenue.id ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+
+              {loadingAvailabilityVenueId === slotManagerVenue.id ? (
+                <div className="vp-note">Loading fixed slots...</div>
+              ) : activeVenueAvailabilitySlots.length > 0 ? (
+                <div className="vp-slot-list">
+                  {activeVenueAvailabilitySlots.map((slot) => (
+                    <div key={slot.id} className="vp-slot-card">
+                      <div className="vp-slot-card-top">
+                        <div className="vp-slot-main">
+                          <p className="vp-slot-time">{formatVenueTimeSlot(slot)}</p>
+                          <p className="vp-slot-copy">{formatVenueDateLabel(slot.date)}</p>
+                        </div>
+                        <span className="vp-slot-price">{formatCurrency(slot.price)}</span>
+                      </div>
+
+                      <div className="vp-slot-meta">
+                        <span className={`vp-slot-badge${slot.isBooked ? ' booked' : ''}`}>
+                          {slot.isBooked ? 'Booked' : 'Available'}
+                        </span>
+                        <span className="vp-slot-badge">Fixed Slot</span>
+                      </div>
+
+                      <div className="vp-slot-actions">
+                        <button
+                          type="button"
+                          className="vp-slot-remove"
+                          onClick={() => deleteVenueAvailability(slot)}
+                          disabled={slot.isBooked || savingAvailabilityVenueId === slotManagerVenue.id}
+                        >
+                          {slot.isBooked ? 'Booked Slot' : 'Remove'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="vp-slot-empty">
+                  No fixed slots added for this venue yet. Add the first one from the form above.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }
