@@ -335,17 +335,17 @@ function AuthPage({ onSignIn, onBack }) {
     setSubmitError('')
   }
 
-  const heroTitle = isSignUp ? 'Create your account today' : 'Sign in to continue'
+  const heroTitle = isSignUp ? 'Create your account today' : 'Plan Your Perfect Event!'
   const heroSubtitle = isSignUp
-    ? 'Sign up to save your details, manage bookings, and start planning your event in one place.'
-    : 'Access your account, review your bookings, and continue planning your event without losing progress.'
-  const formTitle = isSignUp ? 'Create your account' : 'Sign in to your account'
+    ? 'Create an account to save your details and start planning your event with ease.'
+    : 'The platform for creating unforgettable moments, effortlessly.'
+  const formTitle = isSignUp ? 'Create your account' : 'Welcome back'
   const formSubtitle = isSignUp
-    ? 'Enter your details to create a new account.'
-    : 'Enter your email and password to continue.'
+    ? 'Enter your details to create a new account and start managing your bookings.'
+    : 'Enter your details to sign in.'
   const toggleLabel = isSignUp
-    ? 'Already have an account? Sign in'
-    : 'Need an account? Sign up'
+    ? 'Already have an account? Sign in now'
+    : "Don't have an account? Sign up"
 
   return (
     <>
