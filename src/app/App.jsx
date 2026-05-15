@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import HomePage from '../pages/Home/HomePage'
 import CompanyRegistration from '../pages/Public/CompanyRegistration'
-import AuthPage from '../pages/Auth/AuthPage'
+import LoginPage from '../pages/Auth/LoginPage'
+import SignupPage from '../pages/Auth/SignupPage'
 import DashboardLayout from '../pages/Dashboard/DashboardLayout'
 import CompanyRequests from '../pages/Dashboard/CompanyRequests'
 import VenueRequests from '../pages/Dashboard/VenueRequests'
@@ -101,7 +102,7 @@ function App() {
     clearAuthSession()
     setSession(null)
     setCurrentPage(getDefaultPageForRole())
-    setView('auth')
+    setView('login')
   }
 
   const handleGoHome = () => {
@@ -119,13 +120,18 @@ function App() {
       return
     }
 
-    if (to === 'auth') {
-      setView('auth')
+    if (to === 'auth' || to === 'login') {
+      setView('login')
+      return
+    }
+
+    if (to === 'signup') {
+      setView('signup')
       return
     }
 
     if (!session) {
-      setView('auth')
+      setView('login')
       return
     }
 
@@ -149,7 +155,7 @@ function App() {
       return
     }
 
-    setView('auth')
+    setView('login')
   }
 
   if (view === 'home') {
@@ -166,11 +172,32 @@ function App() {
     return <CompanyRegistration onNavigate={navigate} />
   }
 
-  if (view === 'auth' || !session) {
+  if (view === 'login') {
     return (
-      <AuthPage
+      <LoginPage
         onSignIn={handleSignIn}
         onBack={() => setView(session ? 'dashboard' : 'home')}
+        onSwitchToSignUp={() => setView('signup')}
+      />
+    )
+  }
+
+  if (view === 'signup') {
+    return (
+      <SignupPage
+        onSignIn={handleSignIn}
+        onBack={() => setView(session ? 'dashboard' : 'home')}
+        onSwitchToLogin={() => setView('login')}
+      />
+    )
+  }
+
+  if (!session) {
+    return (
+      <LoginPage
+        onSignIn={handleSignIn}
+        onBack={() => setView('home')}
+        onSwitchToSignUp={() => setView('signup')}
       />
     )
   }
