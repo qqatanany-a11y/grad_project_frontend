@@ -226,13 +226,12 @@ function normalizeVenueRequest(request) {
 }
 
 function VenueRequests({ session }) {
-  const { prompt } = useAppDialog()
+  const { prompt, view } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [expandedId, setExpandedId] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const loadRequests = async () => {
@@ -296,10 +295,10 @@ function VenueRequests({ session }) {
         title: 'Reject request',
         message: 'Enter rejection reason (optional):',
         description: 'Add a rejection reason if you want the requester to see more context.',
-        inputLabel: 'Rejection reason (optional)',
+        inputLabel: 'Rejection Reason',
         placeholder: 'Type your note here...',
-        confirmLabel: 'Submit rejection',
-        cancelLabel: 'Maybe later',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
       })
 
       if (reason === null) {
@@ -337,6 +336,99 @@ function VenueRequests({ session }) {
     } finally {
       setBusyId(null)
     }
+  }
+
+  const openRequestDetails = (request) => {
+    void view({
+      title: request.details.name || `Request #${request.id}`,
+      kicker: 'Venue request',
+      description: 'Showing the submitted venue request data in the system dialog.',
+      confirmLabel: 'Close',
+      size: 'xwide',
+      content: (
+        <div className="vr-detail" style={{ padding: 0, background: 'transparent', borderTop: 0 }}>
+          <div className="vr-detail-grid">
+            <div className="vr-detail-item">
+              <label>Created At</label>
+              <span>{formatDate(request.createdAt)}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Capacity</label>
+              <span>{request.details.capacity ?? '--'}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Venue Type</label>
+              <span>{getVenueCategoryLabel(request.details.category)}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Pricing Model</label>
+              <span>{getPricingTypeLabel(request.details.pricingType)}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Price</label>
+              <span>{formatCurrency(request.details.pricePerHour)}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Business</label>
+              <span>{request.details.companyName || '--'}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Owner</label>
+              <span>{request.ownerName || '--'}</span>
+            </div>
+            <div className="vr-detail-item">
+              <label>Description</label>
+              <span>{request.details.description || '--'}</span>
+            </div>
+            {request.rejectionReason ? (
+              <div className="vr-detail-item">
+                <label>Rejection Reason</label>
+                <span>{request.rejectionReason}</span>
+              </div>
+            ) : null}
+          </div>
+
+          {request.details.timeSlots?.length > 0 ? (
+            <div className="vr-slot-list">
+              {request.details.timeSlots.map((slot, index) => (
+                <div key={`${request.id}-slot-${slot.id ?? index}`} className="vr-slot-item">
+                  <div>
+                    <div className="vr-slot-time">{formatVenueTimeSlot(slot)}</div>
+                    <div className="vr-slot-copy">{slot.isActive ? 'Active slot' : 'Inactive slot'}</div>
+                  </div>
+                  <span className="vr-slot-price">{formatCurrency(slot.price)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {request.details.photoUrls?.length > 0 ? (
+            <div className="vr-media">
+              {request.details.coverPhotoUrl ? (
+                <img
+                  src={request.details.coverPhotoUrl}
+                  alt={`${request.details.name || 'Venue'} cover`}
+                  className="vr-media-cover"
+                />
+              ) : null}
+
+              {request.details.galleryPhotoUrls?.length > 0 ? (
+                <div className="vr-media-grid">
+                  {request.details.galleryPhotoUrls.map((photoUrl, index) => (
+                    <img
+                      key={`${request.id}-photo-${index}`}
+                      src={photoUrl}
+                      alt={`${request.details.name || 'Venue'} photo ${index + 2}`}
+                      className="vr-media-item"
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ),
+    })
   }
 
   if (session?.role !== 'Admin') {
@@ -392,7 +484,6 @@ function VenueRequests({ session }) {
         ) : (
           filteredRequests.map((request) => {
             const status = request.status?.toLowerCase() || 'pending'
-            const isExpanded = expandedId === request.id
 
             return (
               <div key={request.id}>
@@ -431,93 +522,14 @@ function VenueRequests({ session }) {
 
                   <div>
                     <button
+                      type="button"
                       className="vr-expand"
-                      onClick={() =>
-                        setExpandedId((currentId) =>
-                          currentId === request.id ? null : request.id,
-                        )
-                      }
+                      onClick={() => openRequestDetails(request)}
                     >
-                      {isExpanded ? 'Hide' : 'View'}
+                      View
                     </button>
                   </div>
                 </div>
-
-                {isExpanded ? (
-                  <div className="vr-detail">
-                    <div className="vr-detail-grid">
-                      <div className="vr-detail-item">
-                        <label>Created At</label>
-                        <span>{formatDate(request.createdAt)}</span>
-                      </div>
-                      <div className="vr-detail-item">
-                        <label>Capacity</label>
-                        <span>{request.details.capacity ?? '--'}</span>
-                      </div>
-                      <div className="vr-detail-item">
-                        <label>Venue Type</label>
-                        <span>{getVenueCategoryLabel(request.details.category)}</span>
-                      </div>
-                      <div className="vr-detail-item">
-                        <label>Pricing Model</label>
-                        <span>{getPricingTypeLabel(request.details.pricingType)}</span>
-                      </div>
-                      <div className="vr-detail-item">
-                        <label>Price</label>
-                        <span>{formatCurrency(request.details.pricePerHour)}</span>
-                      </div>
-                      <div className="vr-detail-item">
-                        <label>Description</label>
-                        <span>{request.details.description || '--'}</span>
-                      </div>
-                      {request.rejectionReason ? (
-                        <div className="vr-detail-item">
-                          <label>Rejection Reason</label>
-                          <span>{request.rejectionReason}</span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {request.details.timeSlots?.length > 0 ? (
-                      <div className="vr-slot-list">
-                        {request.details.timeSlots.map((slot, index) => (
-                          <div key={`${request.id}-slot-${slot.id ?? index}`} className="vr-slot-item">
-                            <div>
-                              <div className="vr-slot-time">{formatVenueTimeSlot(slot)}</div>
-                              <div className="vr-slot-copy">{slot.isActive ? 'Active slot' : 'Inactive slot'}</div>
-                            </div>
-                            <span className="vr-slot-price">{formatCurrency(slot.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {request.details.photoUrls?.length > 0 ? (
-                      <div className="vr-media">
-                        {request.details.coverPhotoUrl ? (
-                          <img
-                            src={request.details.coverPhotoUrl}
-                            alt={`${request.details.name || 'Venue'} cover`}
-                            className="vr-media-cover"
-                          />
-                        ) : null}
-
-                        {request.details.galleryPhotoUrls?.length > 0 ? (
-                          <div className="vr-media-grid">
-                            {request.details.galleryPhotoUrls.map((photoUrl, index) => (
-                              <img
-                                key={`${request.id}-photo-${index}`}
-                                src={photoUrl}
-                                alt={`${request.details.name || 'Venue'} photo ${index + 2}`}
-                                className="vr-media-item"
-                              />
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
             )
           })

@@ -578,6 +578,23 @@ const styles = `
     margin-top: 1rem; flex-wrap: wrap;
   }
   .hp-hall-hint { display: inline-flex; font-size: 0.75rem; color: var(--primary); font-weight: 700; }
+  .hp-venue-empty {
+    padding: 2rem;
+    border: 1px dashed rgba(79,70,229,0.2);
+    border-radius: 22px;
+    background: #fff;
+    text-align: center;
+  }
+  .hp-venue-empty-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .hp-venue-empty-copy {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
 
   /* â”€â”€ CTA BANNER â”€â”€ */
   .hp-cta-banner {
@@ -1161,15 +1178,6 @@ const styles = `
   }
 `
 
-const VENUE_IMAGES = [
-  'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80',
-]
-
 const howItWorks = [
   {
     num: '01',
@@ -1188,45 +1196,6 @@ const howItWorks = [
     icon: '\u{1F389}',
     title: 'Approve & Celebrate',
     desc: 'Admins review and approve applications quickly, making every event a seamless success.',
-  },
-]
-
-const fallbackVenues = [
-  {
-    id: 1,
-    name: 'Grand Celebration Hall',
-    capacity: 500,
-    city: 'Amman',
-    address: 'Airport Road',
-    description: 'Ideal for weddings, large celebrations, and premium evening events.',
-    companyName: 'Ceremoniq',
-    category: 'WeddingHall',
-    pricingType: 'Hourly',
-    pricePerHour: 180,
-  },
-  {
-    id: 2,
-    name: 'Garden Wedding Farm',
-    capacity: 350,
-    city: 'Amman',
-    address: 'Jerash Road',
-    description: 'Open-air farm venue prepared for outdoor weddings, receptions, and private parties.',
-    companyName: 'Ceremoniq',
-    category: 'Farm',
-    pricingType: 'FixedSlots',
-    pricePerHour: 900,
-  },
-  {
-    id: 3,
-    name: 'Skyline Wedding Hall',
-    capacity: 240,
-    city: 'Amman',
-    address: 'Mecca Street',
-    description: 'Modern indoor hall with flexible seating for engagement parties and wedding ceremonies.',
-    companyName: 'Ceremoniq',
-    category: 'WeddingHall',
-    pricingType: 'Hourly',
-    pricePerHour: 120,
   },
 ]
 
@@ -1327,19 +1296,24 @@ function getVenuePriceSummary(venue, f = (text) => text) {
 }
 
 function getVenueBusinessName(venue) {
-  return venue?.companyName ?? venue?.CompanyName ?? 'Ceremoniq'
+  return venue?.companyName ?? venue?.CompanyName ?? ''
 }
 
 function getVenueSummary(venue) {
-  return (
-    venue.description ||
-    'A flexible venue prepared for weddings, celebrations, and memorable guest experiences.'
-  )
+  return venue?.description ?? venue?.Description ?? ''
 }
 
-function getVenueCoverPhoto(venue, fallbackIndex = 0) {
+function getVenueCity(venue) {
+  return venue?.city ?? venue?.City ?? ''
+}
+
+function getVenueAddress(venue) {
+  return venue?.address ?? venue?.Address ?? ''
+}
+
+function getVenueCoverPhoto(venue) {
   const { coverPhotoUrl } = getVenuePhotoSet(venue)
-  return coverPhotoUrl || VENUE_IMAGES[fallbackIndex % VENUE_IMAGES.length]
+  return coverPhotoUrl || ''
 }
 
 function useScrollAnimation(watchValue) {
@@ -1387,7 +1361,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   const { f } = useI18n()
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
-  const [venues, setVenues] = useState(fallbackVenues)
+  const [venues, setVenues] = useState([])
+  const [venuesLoading, setVenuesLoading] = useState(true)
   const [venueTypeFilter, setVenueTypeFilter] = useState('All')
   const [selectedVenue, setSelectedVenue] = useState(null)
   const [bookingStep, setBookingStep] = useState(1)
@@ -1430,9 +1405,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     const loadVenues = async () => {
       try {
         const data = await apiRequest('/api/Venues/all')
-        if (Array.isArray(data) && data.length > 0) setVenues(data)
+        setVenues(Array.isArray(data) ? data : [])
       } catch {
-        setVenues(fallbackVenues)
+        setVenues([])
+      } finally {
+        setVenuesLoading(false)
       }
     }
     loadVenues()
@@ -1537,6 +1514,10 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         : { coverPhotoUrl: '', galleryPhotoUrls: [], photoUrls: [] },
     [selectedVenue],
   )
+  const selectedVenueSummary = selectedVenue ? getVenueSummary(selectedVenue) : ''
+  const selectedVenueBusinessName = selectedVenue ? getVenueBusinessName(selectedVenue) : ''
+  const selectedVenueCity = selectedVenue ? getVenueCity(selectedVenue) : ''
+  const selectedVenueAddress = selectedVenue ? getVenueAddress(selectedVenue) : ''
 
   useEffect(() => {
     if (!selectedVenue?.id || !selectedVenueUsesAvailability || !bookingForm.date) {
@@ -2276,44 +2257,63 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                 </button>
               ))}
             </div>
-            <span className="hp-hall-cap">{displayedVenues.length} venues shown</span>
+            <span className="hp-hall-cap">
+              {venuesLoading ? f('Loading venues...') : `${displayedVenues.length} ${f('venues shown')}`}
+            </span>
           </div>
 
-          <div className="hp-halls-grid">
-            {displayedVenues.map((venue, index) => (
-              <button
-                key={venue.id ?? venue.name}
-                type="button"
-                className={`hp-hall-card hp-animate hp-animate-d${Math.min(index + 1, 4)}`}
-                onClick={() => openVenueDetails(venue)}
-              >
-                <div className="hp-hall-img-wrap">
-                  <img
-                    src={getVenueCoverPhoto(venue, index)}
-                    alt={f(venue.name)}
-                    className="hp-hall-img"
-                    onError={(e) => { e.target.style.display = 'none' }}
-                  />
-                  <span className="hp-hall-img-badge">
-                    {f('Up to')} {venue.capacity ?? 0} {f('Guests')}
-                  </span>
-                </div>
-                <div className="hp-hall-body">
-                  <p className="hp-hall-name">{f(venue.name)}</p>
-                  <p className="hp-hall-cap">{f(venue.city || 'Amman')}</p>
-                  <p className="hp-hall-cap">
-                    {f(getVenueCategoryLabel(getVenueCategoryValue(venue)))} | {f(getPricingTypeLabel(getPricingTypeValue(venue)))}
-                  </p>
-                  <p className="hp-hall-features">{f(getVenueSummary(venue))}</p>
-                  <p className="hp-hall-price">{getVenuePriceSummary(venue, f)}</p>
-                  <div className="hp-hall-meta">
-                    <span className="hp-hall-tag">{f('Verified venue')}</span>
-                    <span className="hp-hall-hint">{f('View details')}</span>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+          {venuesLoading ? (
+            <p className="hp-hall-cap">{f('Loading venues...')}</p>
+          ) : displayedVenues.length === 0 ? (
+            <div className="hp-venue-empty">
+              <p className="hp-venue-empty-title">{f('No venues available right now.')}</p>
+              <p className="hp-venue-empty-copy">{f('Please check back later.')}</p>
+            </div>
+          ) : (
+            <div className="hp-halls-grid">
+              {displayedVenues.map((venue, index) => {
+                const venueCoverPhoto = getVenueCoverPhoto(venue)
+                const venueSummary = getVenueSummary(venue)
+                const venueCity = getVenueCity(venue)
+
+                return (
+                  <button
+                    key={venue.id ?? venue.name}
+                    type="button"
+                    className={`hp-hall-card hp-animate hp-animate-d${Math.min(index + 1, 4)}`}
+                    onClick={() => openVenueDetails(venue)}
+                  >
+                    <div className="hp-hall-img-wrap">
+                      {venueCoverPhoto ? (
+                        <img
+                          src={venueCoverPhoto}
+                          alt={f(venue.name)}
+                          className="hp-hall-img"
+                          onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                      ) : null}
+                      <span className="hp-hall-img-badge">
+                        {f('Up to')} {venue.capacity ?? 0} {f('Guests')}
+                      </span>
+                    </div>
+                    <div className="hp-hall-body">
+                      <p className="hp-hall-name">{f(venue.name)}</p>
+                      {venueCity ? <p className="hp-hall-cap">{f(venueCity)}</p> : null}
+                      <p className="hp-hall-cap">
+                        {f(getVenueCategoryLabel(getVenueCategoryValue(venue)))} | {f(getPricingTypeLabel(getPricingTypeValue(venue)))}
+                      </p>
+                      {venueSummary ? <p className="hp-hall-features">{f(venueSummary)}</p> : null}
+                      <p className="hp-hall-price">{getVenuePriceSummary(venue, f)}</p>
+                      <div className="hp-hall-meta">
+                        <span className="hp-hall-tag">{f('Verified venue')}</span>
+                        <span className="hp-hall-hint">{f('View details')}</span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* â”€â”€ VENUE MODAL â”€â”€ */}
@@ -2324,7 +2324,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                 <div>
                   <h3 className="hp-venue-panel-title">{f(selectedVenue.name || 'Venue Details')}</h3>
                   <p className="hp-venue-panel-subtitle">
-                    {f('Verified venue')} | {f(selectedVenue.city || 'Amman')}
+                    {selectedVenueCity
+                      ? `${f('Verified venue')} | ${f(selectedVenueCity)}`
+                      : f('Verified venue')}
                   </p>
                 </div>
                 <button type="button" className="hp-venue-close" onClick={closeVenueDetails} aria-label="Close">
@@ -2333,26 +2335,32 @@ function HomePage({ onNavigate, onStartBooking, session }) {
               </div>
 
               <div className="hp-venue-body">
-                <img
-                  src={selectedVenuePhotoSet.coverPhotoUrl || getVenueCoverPhoto(selectedVenue)}
-                  alt={f(selectedVenue.name || 'Venue cover')}
-                  className="hp-venue-cover"
-                />
+                {selectedVenuePhotoSet.coverPhotoUrl ? (
+                  <img
+                    src={selectedVenuePhotoSet.coverPhotoUrl}
+                    alt={f(selectedVenue.name || 'Venue cover')}
+                    className="hp-venue-cover"
+                  />
+                ) : null}
 
                 <div className="hp-venue-meta">
                   <span className="hp-venue-chip">{f('Up to')} {selectedVenue.capacity ?? 0} {f('Guests')}</span>
                   <span className="hp-venue-chip">{f(getVenueCategoryLabel(getVenueCategoryValue(selectedVenue)))}</span>
                   <span className="hp-venue-chip">{f(getPricingTypeLabel(getPricingTypeValue(selectedVenue)))}</span>
                   <span className="hp-venue-chip">{getVenuePriceSummary(selectedVenue, f)}</span>
-                  <span className="hp-venue-chip">{f(selectedVenue.city || 'Amman')}</span>
+                  {selectedVenueCity ? <span className="hp-venue-chip">{f(selectedVenueCity)}</span> : null}
                 </div>
 
-                <p className="hp-venue-description">{f(getVenueSummary(selectedVenue))}</p>
+                {selectedVenueSummary ? (
+                  <p className="hp-venue-description">{f(selectedVenueSummary)}</p>
+                ) : null}
 
                 <div className="hp-venue-detail-grid">
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Business</span>
-                    <span className="hp-venue-detail-value">{f('Verified venue')}</span>
+                    <span className="hp-venue-detail-value">
+                      {selectedVenueBusinessName ? f(selectedVenueBusinessName) : '--'}
+                    </span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Guest Capacity</span>
@@ -2360,13 +2368,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">City</span>
-                    <span className="hp-venue-detail-value">{f(selectedVenue.city || 'Amman')}</span>
+                    <span className="hp-venue-detail-value">{selectedVenueCity ? f(selectedVenueCity) : '--'}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Address</span>
-                    <span className="hp-venue-detail-value">
-                      {f(selectedVenue.address || 'Available from venue provider')}
-                    </span>
+                    <span className="hp-venue-detail-value">{selectedVenueAddress ? f(selectedVenueAddress) : '--'}</span>
                   </div>
                   <div className="hp-venue-detail">
                     <span className="hp-venue-detail-label">Starting Price</span>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { makeDashStyles } from './dashboardPageStyles'
 
@@ -95,12 +96,12 @@ function normalizeOwnerRequest(request) {
 }
 
 function CompanyRequests({ session }) {
+  const { prompt, view } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [expandedId, setExpandedId] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const loadRequests = async () => {
@@ -153,12 +154,34 @@ function CompanyRequests({ session }) {
   }, [requests, search, statusFilter])
 
   const handleDecision = async (requestId, decision) => {
+    let body
+
+    if (decision === 'reject') {
+      const reason = await prompt({
+        tone: 'danger',
+        title: 'Reject request',
+        message: 'Enter rejection reason (optional):',
+        description: 'Add a rejection reason if you want the requester to see more context.',
+        inputLabel: 'Rejection Reason',
+        placeholder: 'Type your note here...',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
+      })
+
+      if (reason === null) {
+        return
+      }
+
+      body = { reason }
+    }
+
     setBusyId(requestId)
 
     try {
       await apiRequest(`/api/admin/owner-requests/${requestId}/${decision}`, {
         method: 'POST',
         token: session?.token,
+        ...(body ? { body } : {}),
       })
 
       setFeedback({
@@ -175,6 +198,54 @@ function CompanyRequests({ session }) {
     } finally {
       setBusyId(null)
     }
+  }
+
+  const openRequestDetails = (request) => {
+    void view({
+      title: request.companyName || `Request #${request.id}`,
+      kicker: 'Business request',
+      description: 'Showing the existing registration data for this owner request.',
+      confirmLabel: 'Close',
+      size: 'wide',
+      content: (
+        <div className="or-detail" style={{ padding: 0, background: 'transparent', borderTop: 0 }}>
+          <div className="or-detail-grid">
+            <div className="or-detail-item">
+              <label>Created At</label>
+              <span>{formatDate(request.createdAt)}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Representative</label>
+              <span>{[request.firstName, request.lastName].filter(Boolean).join(' ') || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Representative Email</label>
+              <span>{request.email || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Representative Phone</label>
+              <span>{request.phoneNumber || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Business Address</label>
+              <span>{request.businessAddress || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Business Phone</label>
+              <span>{request.businessPhone || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Requested Venue</label>
+              <span>{request.venueName || '--'}</span>
+            </div>
+            <div className="or-detail-item">
+              <label>Status</label>
+              <span>{request.status || '--'}</span>
+            </div>
+          </div>
+        </div>
+      ),
+    })
   }
 
   if (session?.role !== 'Admin') {
@@ -230,7 +301,6 @@ function CompanyRequests({ session }) {
         ) : (
           filteredRequests.map((request) => {
             const status = request.status?.toLowerCase() || 'pending'
-            const isExpanded = expandedId === request.id
 
             return (
               <div key={request.id}>
@@ -275,40 +345,14 @@ function CompanyRequests({ session }) {
 
                   <div>
                     <button
+                      type="button"
                       className="or-expand"
-                      onClick={() =>
-                        setExpandedId((currentId) =>
-                          currentId === request.id ? null : request.id,
-                        )
-                      }
+                      onClick={() => openRequestDetails(request)}
                     >
-                      {isExpanded ? 'Hide' : 'View'}
+                      View
                     </button>
                   </div>
                 </div>
-
-                {isExpanded ? (
-                  <div className="or-detail">
-                    <div className="or-detail-grid">
-                      <div className="or-detail-item">
-                        <label>Created At</label>
-                        <span>{formatDate(request.createdAt)}</span>
-                      </div>
-                      <div className="or-detail-item">
-                        <label>Representative Phone</label>
-                        <span>{request.phoneNumber || '--'}</span>
-                      </div>
-                      <div className="or-detail-item">
-                        <label>Business Address</label>
-                        <span>{request.businessAddress || '--'}</span>
-                      </div>
-                      <div className="or-detail-item">
-                        <label>Business Phone</label>
-                        <span>{request.businessPhone || '--'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
               </div>
             )
           })

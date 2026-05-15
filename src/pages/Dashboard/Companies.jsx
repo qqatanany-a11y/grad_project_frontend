@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { makeDashStyles } from './dashboardPageStyles'
 
@@ -67,10 +68,10 @@ function normalizeCompany(company) {
 }
 
 function Companies({ session }) {
+  const { view } = useAppDialog()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [expandedId, setExpandedId] = useState(null)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
 
   const loadCompanies = async () => {
@@ -114,6 +115,52 @@ function Companies({ session }) {
     })
   }, [companies, search])
 
+  const openCompanyDetails = (company) => {
+    const venues = Array.isArray(company?.venues) ? company.venues : []
+
+    void view({
+      title: company?.name || 'Company detail panel',
+      kicker: 'Company detail panel',
+      description: 'Showing the same business data that is already loaded on this page.',
+      confirmLabel: 'Close',
+      size: 'wide',
+      content: (
+        <div className="cp-expand" style={{ padding: 0 }}>
+          <div className="cp-grid">
+            <div className="cp-detail">
+              <label>Location</label>
+              <span>{company?.location || '--'}</span>
+            </div>
+            <div className="cp-detail">
+              <label>Phone Number</label>
+              <span>{company?.phoneNumber || '--'}</span>
+            </div>
+            <div className="cp-detail">
+              <label>Email</label>
+              <span>{company?.email || '--'}</span>
+            </div>
+            <div className="cp-detail">
+              <label>Business ID</label>
+              <span>{company?.id ?? '--'}</span>
+            </div>
+          </div>
+
+          <div className="cp-venues">
+            {venues.length > 0 ? (
+              venues.map((venue) => (
+                <span key={venue.id} className="cp-chip">
+                  {venue.name || `Venue #${venue.id}`}
+                </span>
+              ))
+            ) : (
+              <span className="cp-chip">No venues linked</span>
+            )}
+          </div>
+        </div>
+      ),
+    })
+  }
+
   if (session?.role !== 'Admin') {
     return <div className="cp-status error">This page is available for admins only.</div>
   }
@@ -147,18 +194,13 @@ function Companies({ session }) {
       ) : (
         <div className="cp-list">
           {filteredCompanies.map((company) => {
-            const isExpanded = expandedId === company.id
             const venues = Array.isArray(company.venues) ? company.venues : []
 
             return (
               <article key={company.id} className="cp-card">
                 <div
                   className="cp-card-head"
-                  onClick={() =>
-                    setExpandedId((currentId) =>
-                      currentId === company.id ? null : company.id,
-                    )
-                  }
+                  onClick={() => openCompanyDetails(company)}
                 >
                   <div>
                     <p className="cp-card-title">{company.name || '--'}</p>
@@ -166,41 +208,6 @@ function Companies({ session }) {
                   </div>
                   <span className="cp-chip">{venues.length} venues</span>
                 </div>
-
-                {isExpanded ? (
-                  <div className="cp-expand">
-                    <div className="cp-grid">
-                      <div className="cp-detail">
-                        <label>Location</label>
-                        <span>{company.location || '--'}</span>
-                      </div>
-                      <div className="cp-detail">
-                        <label>Phone Number</label>
-                        <span>{company.phoneNumber || '--'}</span>
-                      </div>
-                      <div className="cp-detail">
-                        <label>Email</label>
-                        <span>{company.email || '--'}</span>
-                      </div>
-                      <div className="cp-detail">
-                        <label>Business ID</label>
-                        <span>{company.id}</span>
-                      </div>
-                    </div>
-
-                    <div className="cp-venues">
-                      {venues.length > 0 ? (
-                        venues.map((venue) => (
-                          <span key={venue.id} className="cp-chip">
-                            {venue.name || `Venue #${venue.id}`}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="cp-chip">No venues linked</span>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
               </article>
             )
           })}

@@ -10,6 +10,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 const AppDialogContext = createContext({
   confirm: async () => false,
   prompt: async () => null,
+  view: async () => false,
 })
 
 const dialogStyles = `
@@ -37,6 +38,9 @@ const dialogStyles = `
 
   .dlg-shell {
     width: min(100%, 500px);
+    max-height: calc(100vh - 3rem);
+    display: flex;
+    flex-direction: column;
     border-radius: 24px;
     overflow: hidden;
     background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
@@ -45,6 +49,14 @@ const dialogStyles = `
     animation: dlgPopIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
     font-family: 'Inter', sans-serif;
     color: #1e1b4b;
+  }
+
+  .dlg-shell.wide {
+    width: min(100%, 920px);
+  }
+
+  .dlg-shell.xwide {
+    width: min(100%, 1080px);
   }
 
   .dlg-shell.danger {
@@ -87,6 +99,12 @@ const dialogStyles = `
     flex: 1;
   }
 
+  .dlg-head-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
   .dlg-kicker {
     display: inline-flex;
     align-items: center;
@@ -118,6 +136,7 @@ const dialogStyles = `
 
   .dlg-body {
     padding: 1rem 1.25rem 1.25rem;
+    overflow: auto;
   }
 
   .dlg-message {
@@ -171,6 +190,10 @@ const dialogStyles = `
     background: #ffffff;
   }
 
+  .dlg-custom-content {
+    margin-top: 1rem;
+  }
+
   .dlg-actions {
     display: flex;
     align-items: center;
@@ -222,6 +245,26 @@ const dialogStyles = `
   .dlg-shell.danger .dlg-btn.primary {
     background: linear-gradient(135deg, #e11d48, #9f1239);
     box-shadow: 0 12px 24px rgba(225, 29, 72, 0.24);
+  }
+
+  .dlg-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 1.5px solid rgba(79, 70, 229, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+
+  .dlg-close:hover {
+    background: #ffffff;
+    color: #1e1b4b;
+    transform: translateY(-1px);
   }
 
   .dlg-shell[dir='rtl'] .dlg-copy-wrap,
@@ -317,6 +360,7 @@ export function AppDialogProvider({ children }) {
   const contextValue = {
     confirm: (options = {}) => openDialog('confirm', options),
     prompt: (options = {}) => openDialog('prompt', options),
+    view: (options = {}) => openDialog('custom', options),
   }
 
   useEffect(() => {
@@ -384,7 +428,12 @@ export function AppDialogProvider({ children }) {
 
   const translatedTitle = resolveText(
     f,
-    dialog?.title ?? (dialog?.type === 'prompt' ? 'Action required' : 'Confirm action'),
+    dialog?.title ??
+      (dialog?.type === 'prompt'
+        ? 'Action required'
+        : dialog?.type === 'custom'
+          ? 'Details'
+          : 'Confirm action'),
     dialog?.titleValues,
   )
   const translatedKicker = resolveText(
@@ -414,7 +463,7 @@ export function AppDialogProvider({ children }) {
   )
   const translatedConfirmLabel = resolveText(
     f,
-    dialog?.confirmLabel ?? 'Confirm',
+    dialog?.confirmLabel ?? (dialog?.type === 'custom' ? 'Close' : 'Confirm'),
     dialog?.confirmLabelValues,
   )
   const translatedCancelLabel = resolveText(
@@ -422,6 +471,20 @@ export function AppDialogProvider({ children }) {
     dialog?.cancelLabel ?? 'Cancel',
     dialog?.cancelLabelValues,
   )
+  const dialogSizeClass =
+    dialog?.size === 'xwide'
+      ? ' xwide'
+      : dialog?.size === 'wide'
+        ? ' wide'
+        : ''
+  const isCustomDialog = dialog?.type === 'custom'
+  const dialogDescriptionId = translatedMessage
+    ? 'app-dialog-message'
+    : translatedDescription
+      ? 'app-dialog-description'
+      : isCustomDialog && dialog?.content
+        ? 'app-dialog-content'
+        : undefined
 
   return (
     <AppDialogContext.Provider value={contextValue}>
@@ -439,12 +502,12 @@ export function AppDialogProvider({ children }) {
             }}
           >
             <section
-              className={`dlg-shell${dialog.tone === 'danger' ? ' danger' : ''}`}
+              className={`dlg-shell${dialog.tone === 'danger' ? ' danger' : ''}${dialogSizeClass}`}
               dir={direction}
               role="dialog"
               aria-modal="true"
               aria-labelledby="app-dialog-title"
-              aria-describedby="app-dialog-message"
+              aria-describedby={dialogDescriptionId}
             >
               <div className="dlg-head">
                 <div className="dlg-icon" aria-hidden="true">
@@ -454,6 +517,11 @@ export function AppDialogProvider({ children }) {
                         <path d="M3.75 14.25h10.5" strokeLinecap="round" />
                         <path d="M9 3.5c-2.14 0-3.75 1.34-3.75 3.17 0 1.3.76 2.14 1.85 2.83.58.36.9.77.9 1.5v.25" strokeLinecap="round" strokeLinejoin="round" />
                         <circle cx="9" cy="13" r=".8" fill="currentColor" stroke="none" />
+                      </>
+                    ) : dialog.type === 'custom' ? (
+                      <>
+                        <path d="M2.5 9c1.9-3 4.03-4.5 6.5-4.5S13.6 6 15.5 9c-1.9 3-4.03 4.5-6.5 4.5S4.4 12 2.5 9z" strokeLinejoin="round" />
+                        <circle cx="9" cy="9" r="2.1" />
                       </>
                     ) : (
                       <>
@@ -470,6 +538,21 @@ export function AppDialogProvider({ children }) {
                     {translatedTitle}
                   </h2>
                 </div>
+
+                {isCustomDialog ? (
+                  <div className="dlg-head-actions">
+                    <button
+                      type="button"
+                      className="dlg-close"
+                      onClick={() => closeCurrentDialog(getCancelResult(dialog))}
+                      aria-label={f('Close')}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7">
+                        <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="dlg-body">
@@ -480,7 +563,9 @@ export function AppDialogProvider({ children }) {
                 ) : null}
 
                 {translatedDescription ? (
-                  <p className="dlg-description">{translatedDescription}</p>
+                  <p id="app-dialog-description" className="dlg-description">
+                    {translatedDescription}
+                  </p>
                 ) : null}
 
                 {dialog.type === 'prompt' ? (
@@ -502,27 +587,46 @@ export function AppDialogProvider({ children }) {
                   </div>
                 ) : null}
 
-                <div className="dlg-actions">
-                  <button
-                    type="button"
-                    className="dlg-btn secondary"
-                    onClick={() => closeCurrentDialog(getCancelResult(dialog))}
-                  >
-                    {translatedCancelLabel}
-                  </button>
-                  <button
-                    ref={confirmButtonRef}
-                    type="button"
-                    className="dlg-btn primary"
-                    onClick={() =>
-                      closeCurrentDialog(
-                        dialog.type === 'prompt' ? inputValue.trim() : true,
-                      )
-                    }
-                  >
-                    {translatedConfirmLabel}
-                  </button>
-                </div>
+                {isCustomDialog && dialog.content ? (
+                  <div id="app-dialog-content" className="dlg-custom-content">
+                    {dialog.content}
+                  </div>
+                ) : null}
+
+                {isCustomDialog ? (
+                  <div className="dlg-actions">
+                    <button
+                      ref={confirmButtonRef}
+                      type="button"
+                      className="dlg-btn secondary"
+                      onClick={() => closeCurrentDialog(true)}
+                    >
+                      {translatedConfirmLabel}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="dlg-actions">
+                    <button
+                      type="button"
+                      className="dlg-btn secondary"
+                      onClick={() => closeCurrentDialog(getCancelResult(dialog))}
+                    >
+                      {translatedCancelLabel}
+                    </button>
+                    <button
+                      ref={confirmButtonRef}
+                      type="button"
+                      className="dlg-btn primary"
+                      onClick={() =>
+                        closeCurrentDialog(
+                          dialog.type === 'prompt' ? inputValue.trim() : true,
+                        )
+                      }
+                    >
+                      {translatedConfirmLabel}
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
           </div>
