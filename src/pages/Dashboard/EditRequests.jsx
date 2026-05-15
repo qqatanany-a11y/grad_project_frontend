@@ -524,10 +524,10 @@ function EditRequests({ session }) {
         title: 'Reject request',
         message: 'Enter rejection reason (optional):',
         description: 'Add a rejection reason if you want the requester to see more context.',
-        inputLabel: 'Rejection reason (optional)',
+        inputLabel: 'Rejection Reason',
         placeholder: 'Type your note here...',
-        confirmLabel: 'Submit rejection',
-        cancelLabel: 'Maybe later',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
       })
 
       if (reason === null) {

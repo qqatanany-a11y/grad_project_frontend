@@ -96,7 +96,7 @@ function normalizeOwnerRequest(request) {
 }
 
 function CompanyRequests({ session }) {
-  const { view } = useAppDialog()
+  const { prompt, view } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
@@ -154,12 +154,34 @@ function CompanyRequests({ session }) {
   }, [requests, search, statusFilter])
 
   const handleDecision = async (requestId, decision) => {
+    let body
+
+    if (decision === 'reject') {
+      const reason = await prompt({
+        tone: 'danger',
+        title: 'Reject request',
+        message: 'Enter rejection reason (optional):',
+        description: 'Add a rejection reason if you want the requester to see more context.',
+        inputLabel: 'Rejection Reason',
+        placeholder: 'Type your note here...',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
+      })
+
+      if (reason === null) {
+        return
+      }
+
+      body = { reason }
+    }
+
     setBusyId(requestId)
 
     try {
       await apiRequest(`/api/admin/owner-requests/${requestId}/${decision}`, {
         method: 'POST',
         token: session?.token,
+        ...(body ? { body } : {}),
       })
 
       setFeedback({

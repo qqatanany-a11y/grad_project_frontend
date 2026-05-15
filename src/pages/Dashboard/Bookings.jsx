@@ -562,7 +562,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const [modalError, setModalError] = useState('')
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
   const appliedDraftIdRef = useRef(null)
-  const { confirm } = useAppDialog()
+  const { confirm, prompt } = useAppDialog()
 
   const isOwner = session?.role === 'Owner'
   const isUser = session?.role === 'User'
@@ -1126,12 +1126,34 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }
 
   const decideBooking = async (bookingId, decision) => {
+    let body
+
+    if (decision === 'reject') {
+      const reason = await prompt({
+        tone: 'danger',
+        title: 'Reject request',
+        message: 'Enter rejection reason (optional):',
+        description: 'Add a rejection reason if you want the requester to see more context.',
+        inputLabel: 'Rejection Reason',
+        placeholder: 'Type your note here...',
+        confirmLabel: 'Reject',
+        cancelLabel: 'Cancel',
+      })
+
+      if (reason === null) {
+        return
+      }
+
+      body = { reason }
+    }
+
     setBusyId(bookingId)
 
     try {
       await apiRequest(`/api/owner/bookings/${bookingId}/${decision}`, {
         method: 'POST',
         token: session?.token,
+        ...(body ? { body } : {}),
       })
 
       updateBookingStatus(bookingId, decision === 'approve' ? 'Confirmed' : 'Rejected')
