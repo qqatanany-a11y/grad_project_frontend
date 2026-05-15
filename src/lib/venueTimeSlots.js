@@ -58,6 +58,24 @@ export function formatTimeLabel(value) {
   return normalizeTimeValue(value) || '--'
 }
 
+export function formatVenueDateLabel(value, locale = 'en-GB') {
+  if (!value) {
+    return '--'
+  }
+
+  const parsedDate = new Date(`${String(value).slice(0, 10)}T00:00:00`)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return String(value).slice(0, 10)
+  }
+
+  return parsedDate.toLocaleDateString(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 export function formatVenueTimeSlot(slot) {
   return `${formatTimeLabel(slot?.startTime)} - ${formatTimeLabel(slot?.endTime)}`
 }
@@ -93,6 +111,17 @@ export function normalizeVenueAvailabilitySlot(slot) {
 }
 
 function sortVenueTimeSlots(leftSlot, rightSlot) {
+  const leftDate = String(leftSlot?.date ?? '').slice(0, 10)
+  const rightDate = String(rightSlot?.date ?? '').slice(0, 10)
+
+  if (leftDate || rightDate) {
+    if (!leftDate) return -1
+    if (!rightDate) return 1
+    if (leftDate !== rightDate) {
+      return leftDate.localeCompare(rightDate)
+    }
+  }
+
   const leftStart = parseTimeToMinutes(leftSlot.startTime) ?? 0
   const rightStart = parseTimeToMinutes(rightSlot.startTime) ?? 0
 

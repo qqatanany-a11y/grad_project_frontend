@@ -3,10 +3,9 @@ import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest, getVenueAvailableSlots } from '../../lib/apiClient'
 import { useI18n } from '../../i18n/I18nProvider'
 import {
+  formatVenueDateLabel,
   formatVenueTimeSlot,
   getVenueAvailabilitySlots,
-  getVenueTimeSlots,
-  parseTimeToMinutes,
 } from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
 
@@ -46,16 +45,89 @@ const styles =
       display: flex;
       justify-content: space-between;
       gap: 1rem;
-      align-items: center;
-      padding: 0.9rem 1rem;
+      align-items: stretch;
+      padding: 1rem 1.05rem;
       border: 1.5px solid #e2e8f0;
-      background: #fafbff;
-      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafbff 100%);
+      border-radius: 16px;
       cursor: pointer;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.04);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .bk-slot-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(79,70,229,0.22);
+      box-shadow: 0 18px 36px rgba(79,70,229,0.1);
     }
     .bk-slot-card.selected {
-      border-color: rgba(79,70,229,0.28);
-      background: rgba(79,70,229,0.05);
+      border-color: rgba(79,70,229,0.32);
+      background: linear-gradient(180deg, rgba(79,70,229,0.08) 0%, rgba(79,70,229,0.04) 100%);
+      box-shadow: 0 20px 40px rgba(79,70,229,0.14);
+    }
+    .bk-slot-main {
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      min-width: 0;
+      flex: 1;
+    }
+    .bk-slot-main input {
+      margin-top: 0.35rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+    }
+    .bk-slot-content {
+      min-width: 0;
+      display: grid;
+      gap: 0.55rem;
+    }
+    .bk-slot-badges {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .bk-slot-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.28rem 0.62rem;
+      border-radius: 999px;
+      border: 1px solid rgba(79,70,229,0.14);
+      background: rgba(79,70,229,0.07);
+      color: #4338ca;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .bk-slot-meta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .bk-slot-meta-item {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .bk-slot-price {
+      min-width: 110px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.25rem;
+      text-align: right;
+    }
+    .bk-slot-price-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .bk-slot-price-value {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #4f46e5;
     }
     .bk-option-main {
       display: flex;
@@ -500,28 +572,15 @@ function getVenueCategoryLabel(value) {
 }
 
 function getPricingTypeValue(venue) {
-  const rawValue = venue?.pricingType ?? venue?.PricingType ?? 'Hourly'
-
-  if (rawValue === 2 || rawValue === 'FixedSlots') {
-    return 'FixedSlots'
-  }
-
-  return 'Hourly'
+  return 'FixedSlots'
 }
 
 function getPricingTypeLabel(value) {
-  if (value === 'FixedSlots' || value === 2) {
-    return 'Fixed slots'
-  }
-
-  return 'Hourly'
+  return 'Fixed slots'
 }
 
 function getVenuePricePerHour(venue) {
-  const rawValue = venue?.pricePerHour ?? venue?.PricePerHour
-  const amount = Number(rawValue)
-
-  return Number.isFinite(amount) ? amount : null
+  return null
 }
 
 function readFileAsDataUrl(file) {
@@ -657,58 +716,28 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }, [venueTypeFilter, venues])
 
   const selectedVenue = useMemo(() => {
-    const venue = venues.find((item) => String(item.id) === String(formValues.venueId))
-
-    if (!venue) {
-      return null
-    }
-
-    return {
-      ...venue,
-      pricePerHour: getVenuePricePerHour(venue),
-    }
+    return venues.find((item) => String(item.id) === String(formValues.venueId)) ?? null
   }, [formValues.venueId, venues])
 
   const usesVenueAvailability = useMemo(() => {
     return selectedVenue ? getPricingTypeValue(selectedVenue) === 'FixedSlots' : false
   }, [selectedVenue])
 
-  const ownerDefinedTimeSlots = useMemo(() => {
-    return selectedVenue ? getVenueTimeSlots(selectedVenue, { activeOnly: true }) : []
-  }, [selectedVenue])
-
   const availableTimeSlots = useMemo(() => {
-    if (!selectedVenue) {
+    if (!selectedVenue || !formValues.date) {
       return []
     }
 
-    if (usesVenueAvailability) {
-      return formValues.date ? venueAvailabilitySlots : []
-    }
-
-    return ownerDefinedTimeSlots
-  }, [
-    formValues.date,
-    ownerDefinedTimeSlots,
-    selectedVenue,
-    usesVenueAvailability,
-    venueAvailabilitySlots,
-  ])
+    return venueAvailabilitySlots
+  }, [formValues.date, selectedVenue, venueAvailabilitySlots])
 
   const selectedTimeSlot = useMemo(() => {
-    const selectedSlotId = usesVenueAvailability
-      ? formValues.venueAvailabilityId
-      : formValues.timeSlotId
-
     return (
-      availableTimeSlots.find((slot) => String(slot.id) === String(selectedSlotId)) ?? null
+      availableTimeSlots.find(
+        (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
+      ) ?? null
     )
-  }, [
-    availableTimeSlots,
-    formValues.timeSlotId,
-    formValues.venueAvailabilityId,
-    usesVenueAvailability,
-  ])
+  }, [availableTimeSlots, formValues.venueAvailabilityId])
 
   useEffect(() => {
     if (!formValues.venueId) {
@@ -724,7 +753,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       setFormValues((currentValues) => ({
         ...currentValues,
         venueId: '',
-        timeSlotId: '',
         venueAvailabilityId: '',
         venueServiceOptionIds: [],
       }))
@@ -776,15 +804,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }, [formValues.date, selectedVenue?.id, usesVenueAvailability])
 
   useEffect(() => {
-    const selectedSlotId = usesVenueAvailability
-      ? formValues.venueAvailabilityId
-      : formValues.timeSlotId
-
     if (!availableTimeSlots.length) {
-      if (selectedSlotId) {
+      if (formValues.venueAvailabilityId) {
         setFormValues((currentValues) => ({
           ...currentValues,
-          ...(usesVenueAvailability ? { venueAvailabilityId: '' } : { timeSlotId: '' }),
+          venueAvailabilityId: '',
         }))
       }
 
@@ -792,21 +816,16 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     const selectedStillAvailable = availableTimeSlots.some(
-      (slot) => String(slot.id) === String(selectedSlotId),
+      (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
     )
 
     if (!selectedStillAvailable) {
       setFormValues((currentValues) => ({
         ...currentValues,
-        ...(usesVenueAvailability ? { venueAvailabilityId: '' } : { timeSlotId: '' }),
+        venueAvailabilityId: '',
       }))
     }
-  }, [
-    availableTimeSlots,
-    formValues.timeSlotId,
-    formValues.venueAvailabilityId,
-    usesVenueAvailability,
-  ])
+  }, [availableTimeSlots, formValues.venueAvailabilityId])
 
   useEffect(() => {
     if (!isUser || !formValues.venueId) {
@@ -872,29 +891,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }, [formValues.venueServiceOptionIds, serviceOptions])
 
   const estimatedBasePrice = useMemo(() => {
-    if (!selectedVenue) return null
-
-    if (availableTimeSlots.length > 0) {
-      return selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
-    }
-
-    const pricingType = getPricingTypeValue(selectedVenue)
-    const pricePerHour = getVenuePricePerHour(selectedVenue)
-
-    if (pricingType !== 'Hourly' || pricePerHour === null || pricePerHour <= 0) {
-      return null
-    }
-
-    const startMinutes = parseTimeToMinutes(formValues.startTime)
-    const endMinutes = parseTimeToMinutes(formValues.endTime)
-
-    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-      return null
-    }
-
-    const durationHours = (endMinutes - startMinutes) / 60
-    return durationHours * pricePerHour
-  }, [availableTimeSlots.length, formValues.endTime, formValues.startTime, selectedTimeSlot, selectedVenue])
+    return selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
+  }, [selectedTimeSlot])
 
   const estimatedTotal =
     estimatedBasePrice === null ? null : estimatedBasePrice + servicesTotal
@@ -905,11 +903,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     if (!formValues.date) {
-      return 'Choose a booking date to check whether this venue is available.'
+      return 'Choose a booking date to load the scheduled fixed slots for this venue.'
     }
 
     if (loadingAvailability) {
-      return 'Checking venue availability for the selected date...'
+      return 'Loading the scheduled fixed slots for the selected date...'
     }
 
     if (availabilityError) {
@@ -917,10 +915,10 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     if (availableTimeSlots.length === 0) {
-      return 'This venue is not available for booking on the selected date.'
+      return `No fixed slots are available on ${formatVenueDateLabel(formValues.date)}.`
     }
 
-    return `This venue has ${availableTimeSlots.length} available slot${availableTimeSlots.length === 1 ? '' : 's'} on the selected date.`
+    return `${availableTimeSlots.length} fixed slot${availableTimeSlots.length === 1 ? '' : 's'} available on ${formatVenueDateLabel(formValues.date)}.`
   }, [
     availabilityError,
     availableTimeSlots.length,
@@ -933,51 +931,33 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const selectVenueSlot = (slotId) => {
     setFormValues((currentValues) => ({
       ...currentValues,
-      timeSlotId: usesVenueAvailability ? '' : String(slotId),
-      venueAvailabilityId: usesVenueAvailability ? String(slotId) : '',
+      venueAvailabilityId: String(slotId),
     }))
   }
 
   const getBookingTimingValidationMessage = () => {
-    if (usesVenueAvailability) {
-      if (!formValues.date) {
-        return 'Choose a booking date before submitting.'
-      }
-
-      if (loadingAvailability) {
-        return 'Checking venue availability for the selected date...'
-      }
-
-      if (availabilityError) {
-        return availabilityError
-      }
-
-      if (availableTimeSlots.length === 0) {
-        return 'This venue is not available for booking on the selected date.'
-      }
-
-      if (!selectedTimeSlot) {
-        return 'Choose one of the available venue time slots before submitting.'
-      }
-
-      return null
+    if (!selectedVenue?.id) {
+      return 'Choose a venue before submitting.'
     }
 
-    if (availableTimeSlots.length > 0 && !selectedTimeSlot) {
-      return 'Choose one of the available venue time slots before submitting.'
+    if (!formValues.date) {
+      return 'Choose a booking date before submitting.'
+    }
+
+    if (loadingAvailability) {
+      return 'Loading the scheduled fixed slots for the selected date...'
+    }
+
+    if (availabilityError) {
+      return availabilityError
     }
 
     if (availableTimeSlots.length === 0) {
-      const startMinutes = parseTimeToMinutes(formValues.startTime)
-      const endMinutes = parseTimeToMinutes(formValues.endTime)
+      return 'This venue does not have any bookable fixed slots on the selected date.'
+    }
 
-      if (startMinutes === null || endMinutes === null) {
-        return 'Enter both start and end times before submitting.'
-      }
-
-      if (endMinutes <= startMinutes) {
-        return 'End time must be later than start time.'
-      }
+    if (!selectedTimeSlot) {
+      return 'Choose one of the available fixed slots before submitting.'
     }
 
     return null
@@ -989,7 +969,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       [name]: value,
       ...(name === 'venueId' || name === 'date'
         ? {
-            timeSlotId: '',
             venueAvailabilityId: '',
           }
         : {}),
@@ -1097,14 +1076,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           venueId: Number(formValues.venueId),
           date: `${formValues.date}T00:00:00Z`,
           guestsCount: Number(formValues.guestsCount),
-          ...(selectedTimeSlot
-            ? usesVenueAvailability
-              ? { venueAvailabilityId: Number(selectedTimeSlot.id) }
-              : { timeSlotId: Number(selectedTimeSlot.id) }
-            : {
-                startTime: formValues.startTime,
-                endTime: formValues.endTime,
-              }),
+          venueAvailabilityId: Number(selectedTimeSlot.id),
           venueServiceOptionIds: formValues.venueServiceOptionIds,
           brideIdDocumentDataUrl: formValues.brideIdDocumentDataUrl,
           bridegroomIdDocumentDataUrl: formValues.bridegroomIdDocumentDataUrl,
@@ -1422,34 +1394,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
               />
             </div>
 
-            {!usesVenueAvailability && availableTimeSlots.length === 0 ? (
-              <>
-                <div className="bk-field">
-                  <label className="bk-label">Start Time</label>
-                  <input
-                    className="bk-input"
-                    type="time"
-                    name="startTime"
-                    value={formValues.startTime}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="bk-field">
-                  <label className="bk-label">End Time</label>
-                  <input
-                    className="bk-input"
-                    type="time"
-                    name="endTime"
-                    value={formValues.endTime}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </>
-            ) : null}
-
             <div className="bk-field">
               <label className="bk-label">Bride ID Document</label>
               <label className="bk-file-control">
@@ -1505,34 +1449,40 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
               {availableTimeSlots.length > 0 ? (
                 <div style={{ marginTop: '1rem' }}>
-                  <label className="bk-label">
-                    {usesVenueAvailability ? 'Available Slots For Selected Date' : 'Available Time Slots'}
-                  </label>
+                  <label className="bk-label">Available Fixed Slots</label>
                   <div className="bk-slot-list">
                     {availableTimeSlots.map((slot) => {
-                      const selected = usesVenueAvailability
-                        ? String(formValues.venueAvailabilityId) === String(slot.id)
-                        : String(formValues.timeSlotId) === String(slot.id)
+                      const selected = String(formValues.venueAvailabilityId) === String(slot.id)
+                      const slotDateLabel = formatVenueDateLabel(slot.date || formValues.date)
 
                       return (
                         <label key={slot.id} className={`bk-slot-card${selected ? ' selected' : ''}`}>
-                          <div className="bk-option-main">
+                          <div className="bk-slot-main">
                             <input
                               type="radio"
-                              name={usesVenueAvailability ? 'venueAvailabilityId' : 'timeSlotId'}
+                              name="venueAvailabilityId"
                               checked={selected}
                               onChange={() => selectVenueSlot(slot.id)}
                             />
-                            <div>
+                            <div className="bk-slot-content">
+                              <div className="bk-slot-badges">
+                                <span className="bk-slot-badge">{slotDateLabel}</span>
+                                <span className="bk-slot-badge">Scheduled slot</span>
+                              </div>
                               <p className="bk-option-title">{formatVenueTimeSlot(slot)}</p>
+                              <div className="bk-slot-meta">
+                                <span className="bk-slot-meta-item">Start: {slot.startTime}</span>
+                                <span className="bk-slot-meta-item">End: {slot.endTime}</span>
+                              </div>
                               <p className="bk-option-copy">
-                                {usesVenueAvailability
-                                  ? 'Available venue slot for the selected booking date.'
-                                  : 'Only active owner-defined time slots can be booked.'}
+                                Fixed booking slot prepared by the venue owner for this exact date.
                               </p>
                             </div>
                           </div>
-                          <span className="bk-option-price">{formatCurrency(slot.price)}</span>
+                          <div className="bk-slot-price">
+                            <span className="bk-slot-price-label">Slot price</span>
+                            <span className="bk-slot-price-value">{formatCurrency(slot.price)}</span>
+                          </div>
                         </label>
                       )
                     })}
@@ -1583,7 +1533,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Base Estimate</span>
                   <span className="bk-summary-value">
-                    {estimatedBasePrice === null ? 'Depends on slot' : formatCurrency(estimatedBasePrice)}
+                    {estimatedBasePrice === null ? 'Choose a slot' : formatCurrency(estimatedBasePrice)}
                   </span>
                 </div>
                 <div className="bk-summary-card">
@@ -1593,7 +1543,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Estimated Total</span>
                   <span className="bk-summary-value">
-                    {estimatedTotal === null ? 'Calculated after submit' : formatCurrency(estimatedTotal)}
+                    {estimatedTotal === null ? 'Calculated after slot selection' : formatCurrency(estimatedTotal)}
                   </span>
                 </div>
               </div>
