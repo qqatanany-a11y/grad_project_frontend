@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 
 function AdminCompaniesPage({ session }) {
+  const { view } = useAppDialog()
   const [companies, setCompanies] = useState([])
   const [selectedCompanyId, setSelectedCompanyId] = useState(null)
   const [companyDetails, setCompanyDetails] = useState(null)
@@ -10,6 +12,71 @@ function AdminCompaniesPage({ session }) {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
+
+  const openCompanyDetailsDialog = (details, venues) => {
+    void view({
+      title: details?.name || 'Company detail panel',
+      kicker: 'Company detail panel',
+      description: 'Showing the loaded company record and its linked venues inside the shared system dialog.',
+      confirmLabel: 'Close',
+      size: 'xwide',
+      content: (
+        <>
+          <div className="admin-split-metrics">
+            <div className="admin-summary-item">
+              <div>
+                <strong>{details?.name || '--'}</strong>
+                <span>Company ID #{details?.id ?? '--'}</span>
+              </div>
+              <span className="admin-badge success">
+                {venues.length} venues loaded
+              </span>
+            </div>
+
+            <div className="admin-summary-item">
+              <div>
+                <strong>{details?.location || 'No location'}</strong>
+                <span>{details?.phoneNumber || 'No phone number'}</span>
+              </div>
+              <span className="admin-badge">{details?.email || '--'}</span>
+            </div>
+          </div>
+
+          <div className="admin-card-note" style={{ marginTop: '1rem' }}>
+            Venue cards below are sourced from the dedicated company venues endpoint.
+          </div>
+
+          {venues.length > 0 ? (
+            <div className="admin-venue-grid" style={{ marginTop: '1rem' }}>
+              {venues.map((venue) => (
+                <article key={venue.id} className="admin-venue-card">
+                  <h3>{venue.name}</h3>
+                  <p>
+                    {venue.city || 'No city'} | {venue.address || 'No address'}
+                  </p>
+                  <p>
+                    Capacity: {venue.capacity ?? 0} | Minimum price:{' '}
+                    {venue.minimalPrice ?? 0}
+                  </p>
+                  <span
+                    className={`admin-badge${
+                      venue.isActive ? ' success' : ' warning'
+                    }`}
+                  >
+                    {venue.isActive ? 'Active venue' : 'Inactive venue'}
+                  </span>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty-state" style={{ marginTop: '1rem' }}>
+              No venues were returned for this company.
+            </div>
+          )}
+        </>
+      ),
+    })
+  }
 
   const loadCompanyDetails = async (companyId) => {
     if (!companyId) {
@@ -28,10 +95,13 @@ function AdminCompaniesPage({ session }) {
         }),
       ])
 
+      const normalizedVenues = Array.isArray(venues) ? venues : []
+
       setCompanyDetails(details)
-      setCompanyVenues(Array.isArray(venues) ? venues : [])
+      setCompanyVenues(normalizedVenues)
       setSelectedCompanyId(companyId)
       setFeedback({ tone: 'idle', message: '' })
+      openCompanyDetailsDialog(details, normalizedVenues)
     } catch (requestError) {
       setFeedback({
         tone: 'error',
@@ -59,15 +129,15 @@ function AdminCompaniesPage({ session }) {
       setCompanies(nextCompanies)
       setFeedback({ tone: 'idle', message: '' })
 
-      const nextCompanyId =
-        preferredCompanyId ?? selectedCompanyId ?? nextCompanies[0]?.id ?? null
+      const preferredId = preferredCompanyId ?? selectedCompanyId
+      const hasSelectedCompany = nextCompanies.some((company) => company.id === preferredId)
 
-      if (nextCompanyId) {
-        await loadCompanyDetails(nextCompanyId)
-      } else {
+      if (!hasSelectedCompany) {
         setCompanyDetails(null)
         setCompanyVenues([])
         setSelectedCompanyId(null)
+      } else {
+        setSelectedCompanyId(preferredId)
       }
     } catch (requestError) {
       setFeedback({
@@ -183,7 +253,7 @@ function AdminCompaniesPage({ session }) {
             <div>
               <h2 className="admin-card-title">Company list</h2>
               <p className="admin-card-copy">
-                Click any company row to open the detail panel.
+                Click any company row to open the details dialog.
               </p>
             </div>
           </div>
@@ -231,10 +301,10 @@ function AdminCompaniesPage({ session }) {
         <article className="admin-card">
           <div className="admin-card-header">
             <div>
-              <h2 className="admin-card-title">Company detail panel</h2>
+              <h2 className="admin-card-title">Company detail lookup</h2>
               <p className="admin-card-copy">
-                Detail and venue requests are kept separate so both admin
-                endpoints are exercised.
+                Selecting a company now opens the shared details dialog while
+                keeping the same backend endpoints.
               </p>
             </div>
           </div>
@@ -285,38 +355,19 @@ function AdminCompaniesPage({ session }) {
               <div className="admin-card-note">
                 {isLoadingDetails
                   ? 'Refreshing company details...'
-                  : 'Venue cards below are sourced from the dedicated company venues endpoint.'}
+                  : 'The full company record now opens inside a dialog using the same loaded data.'}
               </div>
 
-              {companyVenues.length > 0 ? (
-                <div className="admin-venue-grid">
-                  {companyVenues.map((venue) => (
-                    <article key={venue.id} className="admin-venue-card">
-                      <h3>{venue.name}</h3>
-                      <p>
-                        {venue.city || 'No city'} | {venue.address || 'No address'}
-                      </p>
-                      <p>
-                        Capacity: {venue.capacity ?? 0} | Minimum price:{' '}
-                        {venue.minimalPrice ?? 0}
-                      </p>
-                      <span
-                        className={`admin-badge${
-                          venue.isActive ? ' success' : ' warning'
-                        }`}
-                      >
-                        {venue.isActive ? 'Active venue' : 'Inactive venue'}
-                      </span>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="admin-empty-state">
-                  {isLoadingDetails
-                    ? 'Loading venue data...'
-                    : 'No venues were returned for this company.'}
-                </div>
-              )}
+              <div className="admin-page-actions">
+                <button
+                  type="button"
+                  className="admin-button secondary"
+                  onClick={() => openCompanyDetailsDialog(companyDetails, companyVenues)}
+                  disabled={isLoadingDetails}
+                >
+                  Open details dialog
+                </button>
+              </div>
             </>
           ) : (
             <div className="admin-empty-state">

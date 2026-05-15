@@ -459,13 +459,10 @@ function renderVenueTimeSlots(title, slots, { comparison = false, changed = fals
 }
 
 function EditRequests({ session }) {
-  const { prompt } = useAppDialog()
+  const { prompt, view } = useAppDialog()
   const [requests, setRequests] = useState([])
   const [search, setSearch] = useState('')
-  const [expandedId, setExpandedId] = useState(null)
   const [venueSnapshots, setVenueSnapshots] = useState({})
-  const [loadingSnapshotIds, setLoadingSnapshotIds] = useState({})
-  const [snapshotErrors, setSnapshotErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
@@ -570,25 +567,13 @@ function EditRequests({ session }) {
   }
 
   const loadVenueSnapshot = async (request) => {
-    if (
-      !isVenueEditRequest(request) ||
-      !request?.targetId ||
-      venueSnapshots[request.id] ||
-      loadingSnapshotIds[request.id]
-    ) {
-      return
+    if (!isVenueEditRequest(request) || !request?.targetId) {
+      return { venue: null, error: '' }
     }
 
-    setLoadingSnapshotIds((currentState) => ({
-      ...currentState,
-      [request.id]: true,
-    }))
-
-    setSnapshotErrors((currentState) => {
-      const nextState = { ...currentState }
-      delete nextState[request.id]
-      return nextState
-    })
+    if (venueSnapshots[request.id]) {
+      return { venue: venueSnapshots[request.id], error: '' }
+    }
 
     try {
       const data = await apiRequest(`/api/Venues/venues/${request.targetId}`, {
@@ -602,34 +587,16 @@ function EditRequests({ session }) {
           [request.id]: normalizedVenue,
         }))
       }
+
+      return { venue: normalizedVenue, error: '' }
     } catch (error) {
-      setSnapshotErrors((currentState) => ({
-        ...currentState,
-        [request.id]:
+      return {
+        venue: null,
+        error:
           error instanceof Error
             ? error.message
             : 'Unable to load current venue details for comparison.',
-      }))
-    } finally {
-      setLoadingSnapshotIds((currentState) => {
-        const nextState = { ...currentState }
-        delete nextState[request.id]
-        return nextState
-      })
-    }
-  }
-
-  const toggleExpanded = (request) => {
-    const willExpand = expandedId !== request.id
-    setExpandedId(willExpand ? request.id : null)
-
-    if (!willExpand) {
-      return
-    }
-
-    const parsedRequest = parseRequestData(request)
-    if (isVenueEditRequest(request) && !parsedRequest.current) {
-      void loadVenueSnapshot(request)
+      }
     }
   }
 
@@ -655,13 +622,14 @@ function EditRequests({ session }) {
     )
   }
 
-  const renderRequestDetails = (request) => {
+  const renderRequestDetails = (
+    request,
+    { snapshotVenue = null, snapshotError = '' } = {},
+  ) => {
     const parsedRequest = parseRequestData(request)
 
     if (parsedRequest.kind === 'venue') {
-      const currentVenue = parsedRequest.current ?? venueSnapshots[request.id] ?? null
-      const snapshotError = snapshotErrors[request.id]
-      const snapshotLoading = Boolean(loadingSnapshotIds[request.id])
+      const currentVenue = parsedRequest.current ?? snapshotVenue ?? null
       const slotsChanged = currentVenue
         ? !areVenueTimeSlotsEqual(currentVenue.timeSlots, parsedRequest.requested?.timeSlots)
         : false
@@ -745,13 +713,7 @@ function EditRequests({ session }) {
             ) : null}
           </div>
 
-          {snapshotLoading ? (
-            <div className="er-note">
-              Loading the current venue data so the edited fields can be highlighted.
-            </div>
-          ) : null}
-
-          {!parsedRequest.current && !currentVenue && !snapshotLoading ? (
+          {!parsedRequest.current && !currentVenue ? (
             <div className="er-note">
               This older request does not include a saved before-state. Showing the requested values only.
             </div>
@@ -788,6 +750,31 @@ function EditRequests({ session }) {
     }
 
     return <pre className="er-json">{request.requestedDataJson || '--'}</pre>
+  }
+
+  const openRequestDetails = async (request) => {
+    const parsedRequest = parseRequestData(request)
+    let snapshotVenue = venueSnapshots[request.id] ?? null
+    let snapshotError = ''
+
+    if (isVenueEditRequest(request) && !parsedRequest.current && !snapshotVenue) {
+      const snapshotResult = await loadVenueSnapshot(request)
+      snapshotVenue = snapshotResult.venue
+      snapshotError = snapshotResult.error
+    }
+
+    void view({
+      title: `Request #${request.id}`,
+      kicker: 'Edit request details',
+      description: 'Showing the existing request payload inside the shared system dialog.',
+      confirmLabel: 'Close',
+      size: parsedRequest.kind === 'venue' || parsedRequest.kind === 'venue-create' ? 'xwide' : 'wide',
+      content: (
+        <div className="er-detail" style={{ padding: 0, background: 'transparent', borderTop: 0 }}>
+          {renderRequestDetails(request, { snapshotVenue, snapshotError })}
+        </div>
+      ),
+    })
   }
 
   if (!isAdmin && !isOwner) {
@@ -830,14 +817,15 @@ function EditRequests({ session }) {
         ) : (
           filteredRequests.map((request) => {
             const status = request.status?.toLowerCase() || 'pending'
-            const isExpanded = expandedId === request.id
 
             return (
               <div key={request.id}>
                 <div
                   className="er-row"
                   style={{ cursor: 'pointer' }}
-                  onClick={() => toggleExpanded(request)}
+                  onClick={() => {
+                    void openRequestDetails(request)
+                  }}
                 >
                   <div>
                     <p className="er-main">#{request.id}</p>
@@ -871,12 +859,6 @@ function EditRequests({ session }) {
                     )}
                   </div>
                 </div>
-
-                {isExpanded ? (
-                  <div className="er-detail">
-                    {renderRequestDetails(request)}
-                  </div>
-                ) : null}
               </div>
             )
           })
