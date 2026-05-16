@@ -1144,6 +1144,7 @@ function Venues({ session }) {
     }
 
     if (hasPhotoSelection) {
+      body.imageUrls = photoUrls
       body.coverPhotoDataUrl = photoUrls[formValues.coverPhotoIndex]
       body.galleryPhotoDataUrls = photoUrls.filter(
         (_, index) => index !== formValues.coverPhotoIndex,
