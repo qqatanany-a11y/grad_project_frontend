@@ -486,7 +486,7 @@ const defaultServiceForm = {
 }
 
 const emptyAvailabilityForm = {
-  date: '',
+  dayOfWeek: '',
   startTime: '',
   endTime: '',
   price: '',
@@ -495,6 +495,7 @@ const emptyAvailabilityForm = {
 const MAX_VENUE_IMAGE_WIDTH = 1600
 const MAX_VENUE_IMAGE_HEIGHT = 1200
 const VENUE_IMAGE_QUALITY = 0.82
+const RECURRING_SLOT_MONTHS = 12
 
 function readValue(source, ...keys) {
   for (const key of keys) {
@@ -514,8 +515,46 @@ function formatCurrency(value) {
   return `${amount.toFixed(2)} JOD`
 }
 
-function getTodayDateValue() {
-  return new Date().toISOString().slice(0, 10)
+function getCurrentDayOfWeekValue() {
+  return String(new Date().getDay())
+}
+
+function formatDateInputValue(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function buildRecurringDatesForDayOfWeek(dayOfWeek) {
+  const normalizedDayOfWeek = Number(dayOfWeek)
+
+  if (!Number.isInteger(normalizedDayOfWeek) || normalizedDayOfWeek < 0 || normalizedDayOfWeek > 6) {
+    return []
+  }
+
+  const startDate = new Date()
+  startDate.setHours(12, 0, 0, 0)
+
+  const firstDate = new Date(startDate)
+  const offset = (normalizedDayOfWeek - firstDate.getDay() + 7) % 7
+  firstDate.setDate(firstDate.getDate() + offset)
+
+  const endDate = new Date(startDate)
+  endDate.setMonth(endDate.getMonth() + RECURRING_SLOT_MONTHS)
+
+  const recurringDates = []
+
+  for (
+    const currentDate = new Date(firstDate);
+    currentDate <= endDate;
+    currentDate.setDate(currentDate.getDate() + 7)
+  ) {
+    recurringDates.push(formatDateInputValue(currentDate))
+  }
+
+  return recurringDates
 }
 
 function sortAvailabilitySlots(leftSlot, rightSlot) {
@@ -662,7 +701,7 @@ function normalizeVenueServiceOption(option) {
 
 function Venues({ session }) {
   const { confirm } = useAppDialog()
-  const { direction, f } = useI18n()
+  const { direction, f, language } = useI18n()
   const [venues, setVenues] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -685,7 +724,7 @@ function Venues({ session }) {
   const [savingAvailabilityVenueId, setSavingAvailabilityVenueId] = useState(null)
   const [availabilityFormValues, setAvailabilityFormValues] = useState({
     ...emptyAvailabilityForm,
-    date: getTodayDateValue(),
+    dayOfWeek: getCurrentDayOfWeekValue(),
   })
   const [availabilityError, setAvailabilityError] = useState('')
 
@@ -797,10 +836,10 @@ function Venues({ session }) {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [savingAvailabilityVenueId, slotManagerVenue])
 
-  const resetAvailabilityForm = (date = getTodayDateValue()) => {
+  const resetAvailabilityForm = (dayOfWeek = getCurrentDayOfWeekValue()) => {
     setAvailabilityFormValues({
       ...emptyAvailabilityForm,
-      date,
+      dayOfWeek,
     })
   }
 
@@ -827,7 +866,7 @@ function Venues({ session }) {
   const openSlotManager = async (venue) => {
     setSlotManagerVenue(venue)
     setAvailabilityError('')
-    resetAvailabilityForm(getTodayDateValue())
+    resetAvailabilityForm(getCurrentDayOfWeekValue())
 
     try {
       await loadVenueAvailability(venue.id)
@@ -845,6 +884,17 @@ function Venues({ session }) {
 
     return venueAvailabilityByVenue[slotManagerVenue.id] ?? []
   }, [slotManagerVenue, venueAvailabilityByVenue])
+
+  const weekdayOptions = useMemo(() => {
+    const locale = language === 'ar' ? 'ar-JO' : 'en-GB'
+
+    return Array.from({ length: 7 }, (_, dayOfWeek) => ({
+      value: String(dayOfWeek),
+      label: new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(
+        new Date(Date.UTC(2024, 0, 7 + dayOfWeek)),
+      ),
+    }))
+  }, [language])
 
   const filteredVenues = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -912,13 +962,14 @@ function Venues({ session }) {
       return
     }
 
-    const nextDate = String(availabilityFormValues.date ?? '').trim()
+    const nextDayOfWeek = String(availabilityFormValues.dayOfWeek ?? '').trim()
     const nextStartTime = normalizeTimeValue(String(availabilityFormValues.startTime ?? ''))
     const nextEndTime = normalizeTimeValue(String(availabilityFormValues.endTime ?? ''))
     const nextPrice = Number(availabilityFormValues.price)
+    const recurringDates = buildRecurringDatesForDayOfWeek(nextDayOfWeek)
 
-    if (!nextDate) {
-      setAvailabilityError(f('Choose the slot date first.'))
+    if (!nextDayOfWeek || recurringDates.length === 0) {
+      setAvailabilityError(f('Choose the slot day first.'))
       return
     }
 
@@ -937,48 +988,74 @@ function Venues({ session }) {
       return
     }
 
-    const duplicateSlot = activeVenueAvailabilitySlots.some(
-      (slot) =>
-        slot.date === nextDate &&
-        slot.startTime === nextStartTime &&
-        slot.endTime === nextEndTime,
+    const existingSlotKeys = new Set(
+      activeVenueAvailabilitySlots.map(
+        (slot) => `${slot.date}|${slot.startTime}|${slot.endTime}`,
+      ),
+    )
+    const datesToCreate = recurringDates.filter(
+      (date) => !existingSlotKeys.has(`${date}|${nextStartTime}|${nextEndTime}`),
     )
 
-    if (duplicateSlot) {
-      setAvailabilityError(f('This exact slot already exists for the selected date.'))
+    if (datesToCreate.length === 0) {
+      setAvailabilityError(
+        f('This recurring slot already exists for all upcoming dates of the selected day.'),
+      )
       return
     }
 
     setSavingAvailabilityVenueId(slotManagerVenue.id)
 
     try {
-      const result = await apiRequest('/api/venue-availabilities', {
-        method: 'POST',
-        token: session?.token,
-        body: {
-          venueId: Number(slotManagerVenue.id),
-          date: nextDate,
-          startTime: `${nextStartTime}:00`,
-          endTime: `${nextEndTime}:00`,
-          price: nextPrice,
-        },
-      })
+      const results = await Promise.allSettled(
+        datesToCreate.map((date) =>
+          apiRequest('/api/venue-availabilities', {
+            method: 'POST',
+            token: session?.token,
+            body: {
+              venueId: Number(slotManagerVenue.id),
+              date,
+              startTime: `${nextStartTime}:00`,
+              endTime: `${nextEndTime}:00`,
+              price: nextPrice,
+            },
+          }),
+        ),
+      )
 
-      const normalizedResult = normalizeVenueAvailabilitySlot(result)
+      const createdSlots = results
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => normalizeVenueAvailabilitySlot(result.value))
+        .filter((slot) => slot.id && slot.date && slot.startTime && slot.endTime)
+      const failedCount = results.length - createdSlots.length
+
+      if (createdSlots.length === 0) {
+        const firstRejectedResult = results.find((result) => result.status === 'rejected')
+        throw firstRejectedResult?.reason ?? new Error(f('Unable to add the fixed slot.'))
+      }
+
       const nextSlots = normalizeAvailabilitySlotList([
         ...activeVenueAvailabilitySlots,
-        normalizedResult,
+        ...createdSlots,
       ])
 
       setVenueAvailabilityByVenue((currentMap) => ({
         ...currentMap,
         [slotManagerVenue.id]: nextSlots,
       }))
-      resetAvailabilityForm(nextDate)
+      resetAvailabilityForm(nextDayOfWeek)
       setAvailabilityError('')
       setFeedback({
-        tone: 'idle',
-        message: f('Fixed slot added successfully.'),
+        tone: failedCount > 0 ? 'error' : 'idle',
+        message:
+          failedCount > 0
+            ? f('Added recurring fixed slots for {count} dates, but {failed} could not be saved.', {
+                count: createdSlots.length,
+                failed: failedCount,
+              })
+            : f('Recurring fixed slots added successfully for {count} dates.', {
+                count: createdSlots.length,
+              }),
       })
     } catch (error) {
       setAvailabilityError(
@@ -1721,7 +1798,7 @@ function Venues({ session }) {
               <div>
                 <p className="vp-slot-modal-title">Manage Fixed Slots</p>
                 <p className="vp-slot-modal-copy">
-                  {f('Add dated booking slots for {venue} using the system date and time pickers.', {
+                  {f('Add recurring booking slots for {venue} by day and time. Matching dates for the next 12 months will be created automatically.', {
                     venue: slotManagerVenue.name || f('this venue'),
                   })}
                 </p>
@@ -1745,20 +1822,26 @@ function Venues({ session }) {
                 <div>
                   <label className="vp-label">Fixed Slots</label>
                   <p className="vp-slot-form-copy">
-                    {f('Duplicate slots with the same date and time are blocked before saving, and the backend still validates exact duplicates and overlaps.')}
+                    {f('Choose a day once, and the same slot will be created weekly for the next 12 months. Existing exact duplicates are skipped automatically.')}
                   </p>
                 </div>
 
                 <div className="vp-slot-grid">
                   <div className="vp-field">
-                    <label className="vp-label">Date</label>
-                    <input
-                      className="vp-input"
-                      type="date"
-                      name="date"
-                      value={availabilityFormValues.date}
+                    <label className="vp-label">{f('Day')}</label>
+                    <select
+                      className="vp-select"
+                      name="dayOfWeek"
+                      value={availabilityFormValues.dayOfWeek}
                       onChange={handleAvailabilityChange}
-                    />
+                    >
+                      <option value="">{f('Select day')}</option>
+                      {weekdayOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="vp-field">
