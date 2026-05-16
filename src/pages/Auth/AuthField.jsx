@@ -1,3 +1,5 @@
+import { useI18n } from '../../i18n/I18nProvider'
+
 function AuthField({
   id,
   label,
@@ -12,9 +14,11 @@ function AuthField({
   inputMode,
   maxLength,
 }) {
+  const { f } = useI18n()
+
   return (
     <div className="ma-field">
-      <label htmlFor={id} className="ma-label">{label}</label>
+      <label htmlFor={id} className="ma-label">{f(label)}</label>
       <input
         id={id}
         name={name}
@@ -30,7 +34,7 @@ function AuthField({
         onChange={onChange}
         onBlur={onBlur}
       />
-      {error ? <p id={`${id}-error`} className="ma-error">{error}</p> : null}
+      {error ? <p id={`${id}-error`} className="ma-error">{f(error)}</p> : null}
     </div>
   )
 }

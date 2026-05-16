@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../../i18n/I18nProvider'
 import { apiRequest } from '../../lib/apiClient'
 import {
   sanitizeNameInput,
@@ -20,18 +21,28 @@ const signupInitialValues = {
   password: '',
 }
 
+const signupFieldLabels = {
+  firstName: 'First Name',
+  lastName: 'Last Name',
+  phoneNumber: 'Phone',
+  additionalPhoneNumber: 'Additional Phone',
+  email: 'Email Address',
+  password: 'Password',
+}
+
 function SignupPage({ onSignIn, onBack, onSwitchToLogin }) {
+  const { f } = useI18n()
   const [values, setValues] = useState(signupInitialValues)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   const getError = (name, value) => {
-    if (name === 'firstName') return validateName(value, 'First Name')
-    if (name === 'lastName') return validateName(value, 'Last Name')
-    if (name === 'phoneNumber') return validatePhone(value, 'Phone Number')
+    if (name === 'firstName') return validateName(value, signupFieldLabels.firstName)
+    if (name === 'lastName') return validateName(value, signupFieldLabels.lastName)
+    if (name === 'phoneNumber') return validatePhone(value, signupFieldLabels.phoneNumber)
     if (name === 'additionalPhoneNumber') {
-      return value.trim() ? validatePhone(value, 'Additional Phone') : ''
+      return value.trim() ? validatePhone(value, signupFieldLabels.additionalPhoneNumber) : ''
     }
     if (name === 'email') return validateEmail(value)
     if (name === 'password') return validatePassword(value)
@@ -78,7 +89,7 @@ function SignupPage({ onSignIn, onBack, onSwitchToLogin }) {
     const requiredFields = ['firstName', 'lastName', 'phoneNumber', 'email', 'password']
     requiredFields.forEach((fieldName) => {
       if (!values[fieldName]?.trim()) {
-        nextErrors[fieldName] = `${fieldName.replace(/([A-Z])/g, ' $1').trim()} is required.`
+        nextErrors[fieldName] = `${signupFieldLabels[fieldName]} is required.`
       }
     })
 
@@ -210,10 +221,10 @@ function SignupPage({ onSignIn, onBack, onSwitchToLogin }) {
           maxLength={64}
         />
 
-        {submitError ? <p className="ma-error">{submitError}</p> : null}
+        {submitError ? <p className="ma-error">{f(submitError)}</p> : null}
 
         <button type="submit" className="ma-submit" disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create Account'}
+          {submitting ? f('Creating...') : f('Create Account')}
         </button>
       </form>
     </AuthLayout>
