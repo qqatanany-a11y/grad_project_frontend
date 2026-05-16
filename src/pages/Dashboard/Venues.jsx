@@ -3,7 +3,6 @@ import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
-  formatVenueDateLabel,
   formatVenueTimeSlot,
   normalizeTimeValue,
   normalizeVenueAvailabilitySlot,
@@ -165,6 +164,33 @@ const styles =
       font-size: 0.82rem;
       color: #64748b;
       line-height: 1.6;
+    }
+    .vp-day-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 0.65rem;
+    }
+    .vp-day-chip {
+      min-height: 2.8rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 12px;
+      border: 1.5px solid #dbe3f1;
+      background: #fff;
+      color: #475569;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+    .vp-day-chip:hover {
+      transform: translateY(-1px);
+      border-color: rgba(79,70,229,0.28);
+    }
+    .vp-day-chip.selected {
+      border-color: rgba(79,70,229,0.45);
+      background: rgba(79,70,229,0.08);
+      color: #4338ca;
+      box-shadow: inset 0 0 0 1px rgba(79,70,229,0.08);
     }
     .vp-slot-summary {
       margin-top: 0.75rem;
@@ -486,7 +512,7 @@ const defaultServiceForm = {
 }
 
 const emptyAvailabilityForm = {
-  dayOfWeek: '',
+  dayOfWeekValues: [],
   startTime: '',
   endTime: '',
   price: '',
@@ -513,10 +539,6 @@ function formatCurrency(value) {
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '--'
   return `${amount.toFixed(2)} JOD`
-}
-
-function getCurrentDayOfWeekValue() {
-  return String(new Date().getDay())
 }
 
 function formatDateInputValue(date) {
@@ -555,6 +577,35 @@ function buildRecurringDatesForDayOfWeek(dayOfWeek) {
   }
 
   return recurringDates
+}
+
+function getDayOfWeekValueFromDate(value) {
+  if (!value) {
+    return null
+  }
+
+  const parsedDate = new Date(`${String(value).slice(0, 10)}T00:00:00`)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null
+  }
+
+  return parsedDate.getDay()
+}
+
+function buildAvailabilityPatternKey(slot) {
+  const dayOfWeekValue = getDayOfWeekValueFromDate(slot?.date)
+
+  if (dayOfWeekValue === null) {
+    return ''
+  }
+
+  return [
+    dayOfWeekValue,
+    normalizeTimeValue(String(slot?.startTime ?? '')),
+    normalizeTimeValue(String(slot?.endTime ?? '')),
+    Number(slot?.price ?? 0).toFixed(2),
+  ].join('|')
 }
 
 function sortAvailabilitySlots(leftSlot, rightSlot) {
@@ -722,10 +773,7 @@ function Venues({ session }) {
   const [venueAvailabilityByVenue, setVenueAvailabilityByVenue] = useState({})
   const [loadingAvailabilityVenueId, setLoadingAvailabilityVenueId] = useState(null)
   const [savingAvailabilityVenueId, setSavingAvailabilityVenueId] = useState(null)
-  const [availabilityFormValues, setAvailabilityFormValues] = useState({
-    ...emptyAvailabilityForm,
-    dayOfWeek: getCurrentDayOfWeekValue(),
-  })
+  const [availabilityFormValues, setAvailabilityFormValues] = useState(emptyAvailabilityForm)
   const [availabilityError, setAvailabilityError] = useState('')
 
   const isOwner = session?.role === 'Owner'
@@ -836,10 +884,10 @@ function Venues({ session }) {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [savingAvailabilityVenueId, slotManagerVenue])
 
-  const resetAvailabilityForm = (dayOfWeek = getCurrentDayOfWeekValue()) => {
+  const resetAvailabilityForm = (dayOfWeekValues = []) => {
     setAvailabilityFormValues({
       ...emptyAvailabilityForm,
-      dayOfWeek,
+      dayOfWeekValues,
     })
   }
 
@@ -866,7 +914,7 @@ function Venues({ session }) {
   const openSlotManager = async (venue) => {
     setSlotManagerVenue(venue)
     setAvailabilityError('')
-    resetAvailabilityForm(getCurrentDayOfWeekValue())
+    resetAvailabilityForm()
 
     try {
       await loadVenueAvailability(venue.id)
@@ -895,6 +943,50 @@ function Venues({ session }) {
       ),
     }))
   }, [language])
+
+  const activeVenueAvailabilityPatterns = useMemo(() => {
+    const weekdayLabelByValue = new Map(weekdayOptions.map((option) => [option.value, option.label]))
+    const patternMap = new Map()
+
+    activeVenueAvailabilitySlots.forEach((slot) => {
+      if (slot.isBooked) {
+        return
+      }
+
+      const dayOfWeekValue = getDayOfWeekValueFromDate(slot.date)
+      const patternKey = buildAvailabilityPatternKey(slot)
+
+      if (dayOfWeekValue === null || !patternKey) {
+        return
+      }
+
+      if (!patternMap.has(patternKey)) {
+        patternMap.set(patternKey, {
+          key: patternKey,
+          dayOfWeekValue,
+          dayLabel: weekdayLabelByValue.get(String(dayOfWeekValue)) ?? '--',
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          price: slot.price,
+          slotIds: [],
+        })
+      }
+
+      patternMap.get(patternKey).slotIds.push(slot.id)
+    })
+
+    return Array.from(patternMap.values()).sort((leftPattern, rightPattern) => {
+      if (leftPattern.dayOfWeekValue !== rightPattern.dayOfWeekValue) {
+        return leftPattern.dayOfWeekValue - rightPattern.dayOfWeekValue
+      }
+
+      if (leftPattern.startTime !== rightPattern.startTime) {
+        return leftPattern.startTime.localeCompare(rightPattern.startTime)
+      }
+
+      return leftPattern.endTime.localeCompare(rightPattern.endTime)
+    })
+  }, [activeVenueAvailabilitySlots, weekdayOptions])
 
   const filteredVenues = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -957,19 +1049,40 @@ function Venues({ session }) {
     }))
   }
 
+  const handleAvailabilityDayToggle = (dayOfWeekValue) => {
+    setAvailabilityError('')
+    setAvailabilityFormValues((currentValues) => {
+      const currentDayValues = Array.isArray(currentValues.dayOfWeekValues)
+        ? currentValues.dayOfWeekValues
+        : []
+      const selected = currentDayValues.includes(dayOfWeekValue)
+
+      return {
+        ...currentValues,
+        dayOfWeekValues: selected
+          ? currentDayValues.filter((value) => value !== dayOfWeekValue)
+          : [...currentDayValues, dayOfWeekValue],
+      }
+    })
+  }
+
   const addVenueAvailability = async () => {
     if (!slotManagerVenue?.id) {
       return
     }
 
-    const nextDayOfWeek = String(availabilityFormValues.dayOfWeek ?? '').trim()
+    const nextDayOfWeekValues = Array.isArray(availabilityFormValues.dayOfWeekValues)
+      ? availabilityFormValues.dayOfWeekValues.map((value) => String(value).trim()).filter(Boolean)
+      : []
     const nextStartTime = normalizeTimeValue(String(availabilityFormValues.startTime ?? ''))
     const nextEndTime = normalizeTimeValue(String(availabilityFormValues.endTime ?? ''))
     const nextPrice = Number(availabilityFormValues.price)
-    const recurringDates = buildRecurringDatesForDayOfWeek(nextDayOfWeek)
+    const recurringDates = Array.from(
+      new Set(nextDayOfWeekValues.flatMap((dayOfWeek) => buildRecurringDatesForDayOfWeek(dayOfWeek))),
+    )
 
-    if (!nextDayOfWeek || recurringDates.length === 0) {
-      setAvailabilityError(f('Choose the slot day first.'))
+    if (nextDayOfWeekValues.length === 0 || recurringDates.length === 0) {
+      setAvailabilityError(f('Choose at least one slot day first.'))
       return
     }
 
@@ -999,7 +1112,7 @@ function Venues({ session }) {
 
     if (datesToCreate.length === 0) {
       setAvailabilityError(
-        f('This recurring slot already exists for all upcoming dates of the selected day.'),
+        f('This fixed slot already exists.'),
       )
       return
     }
@@ -1027,7 +1140,6 @@ function Venues({ session }) {
         .filter((result) => result.status === 'fulfilled')
         .map((result) => normalizeVenueAvailabilitySlot(result.value))
         .filter((slot) => slot.id && slot.date && slot.startTime && slot.endTime)
-      const failedCount = results.length - createdSlots.length
 
       if (createdSlots.length === 0) {
         const firstRejectedResult = results.find((result) => result.status === 'rejected')
@@ -1043,19 +1155,11 @@ function Venues({ session }) {
         ...currentMap,
         [slotManagerVenue.id]: nextSlots,
       }))
-      resetAvailabilityForm(nextDayOfWeek)
+      resetAvailabilityForm(nextDayOfWeekValues)
       setAvailabilityError('')
       setFeedback({
-        tone: failedCount > 0 ? 'error' : 'idle',
-        message:
-          failedCount > 0
-            ? f('Added recurring fixed slots for {count} dates, but {failed} could not be saved.', {
-                count: createdSlots.length,
-                failed: failedCount,
-              })
-            : f('Recurring fixed slots added successfully for {count} dates.', {
-                count: createdSlots.length,
-              }),
+        tone: 'idle',
+        message: f('Fixed slot added successfully.'),
       })
     } catch (error) {
       setAvailabilityError(
@@ -1066,18 +1170,18 @@ function Venues({ session }) {
     }
   }
 
-  const deleteVenueAvailability = async (slot) => {
+  const deleteVenueAvailabilityPattern = async (pattern) => {
     if (!slotManagerVenue?.id) {
       return
     }
 
     const isConfirmed = await confirm({
       title: f('Delete fixed slot'),
-      message: f('Remove the slot on {date} from {time}?', {
-        date: formatVenueDateLabel(slot.date),
-        time: formatVenueTimeSlot(slot),
+      message: f('Remove the {day} slot from {time}?', {
+        day: pattern.dayLabel,
+        time: formatVenueTimeSlot(pattern),
       }),
-      description: f('This action deletes the slot from booking availability for users.'),
+      description: f('This action deletes the slot from future booking availability for users.'),
       confirmLabel: f('Delete'),
       cancelLabel: f('Cancel'),
       tone: 'danger',
@@ -1090,15 +1194,27 @@ function Venues({ session }) {
     setSavingAvailabilityVenueId(slotManagerVenue.id)
 
     try {
-      await apiRequest(`/api/venue-availabilities/${slot.id}`, {
-        method: 'DELETE',
-        token: session?.token,
-      })
+      const results = await Promise.allSettled(
+        pattern.slotIds.map((slotId) =>
+          apiRequest(`/api/venue-availabilities/${slotId}`, {
+            method: 'DELETE',
+            token: session?.token,
+          }),
+        ),
+      )
+      const deletedSlotIds = results
+        .map((result, index) => (result.status === 'fulfilled' ? pattern.slotIds[index] : null))
+        .filter((slotId) => slotId !== null)
+
+      if (deletedSlotIds.length === 0) {
+        const firstRejectedResult = results.find((result) => result.status === 'rejected')
+        throw firstRejectedResult?.reason ?? new Error(f('Unable to delete the fixed slot.'))
+      }
 
       setVenueAvailabilityByVenue((currentMap) => ({
         ...currentMap,
         [slotManagerVenue.id]: (currentMap[slotManagerVenue.id] ?? []).filter(
-          (currentSlot) => String(currentSlot.id) !== String(slot.id),
+          (currentSlot) => !deletedSlotIds.includes(currentSlot.id),
         ),
       }))
       setAvailabilityError('')
@@ -1798,7 +1914,7 @@ function Venues({ session }) {
               <div>
                 <p className="vp-slot-modal-title">Manage Fixed Slots</p>
                 <p className="vp-slot-modal-copy">
-                  {f('Add recurring booking slots for {venue} by day and time. Matching dates for the next 12 months will be created automatically.', {
+                  {f('Add fixed booking slots for {venue} using the day and time.', {
                     venue: slotManagerVenue.name || f('this venue'),
                   })}
                 </p>
@@ -1822,26 +1938,29 @@ function Venues({ session }) {
                 <div>
                   <label className="vp-label">Fixed Slots</label>
                   <p className="vp-slot-form-copy">
-                    {f('Choose a day once, and the same slot will be created weekly for the next 12 months. Existing exact duplicates are skipped automatically.')}
+                    {f('Choose the days, then set the same time and price for each one.')}
                   </p>
                 </div>
 
                 <div className="vp-slot-grid">
-                  <div className="vp-field">
-                    <label className="vp-label">{f('Day')}</label>
-                    <select
-                      className="vp-select"
-                      name="dayOfWeek"
-                      value={availabilityFormValues.dayOfWeek}
-                      onChange={handleAvailabilityChange}
-                    >
-                      <option value="">{f('Select day')}</option>
-                      {weekdayOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="vp-field" style={{ gridColumn: '1 / -1' }}>
+                    <label className="vp-label">{f('Days')}</label>
+                    <div className="vp-day-picker">
+                      {weekdayOptions.map((option) => {
+                        const selected = availabilityFormValues.dayOfWeekValues.includes(option.value)
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`vp-day-chip${selected ? ' selected' : ''}`}
+                            onClick={() => handleAvailabilityDayToggle(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   <div className="vp-field">
@@ -1903,7 +2022,7 @@ function Venues({ session }) {
                   <label className="vp-label">{f('Configured Fixed Slots')}</label>
                   <div className="vp-slot-summary">
                     {f('Configured fixed slots for this venue: {count}', {
-                      count: activeVenueAvailabilitySlots.length,
+                      count: activeVenueAvailabilityPatterns.length,
                     })}
                   </div>
                 </div>
@@ -1919,33 +2038,26 @@ function Venues({ session }) {
 
               {loadingAvailabilityVenueId === slotManagerVenue.id ? (
                 <div className="vp-note">{f('Loading fixed slots...')}</div>
-              ) : activeVenueAvailabilitySlots.length > 0 ? (
+              ) : activeVenueAvailabilityPatterns.length > 0 ? (
                 <div className="vp-slot-list">
-                  {activeVenueAvailabilitySlots.map((slot) => (
-                    <div key={slot.id} className="vp-slot-card">
+                  {activeVenueAvailabilityPatterns.map((pattern) => (
+                    <div key={pattern.key} className="vp-slot-card">
                       <div className="vp-slot-card-top">
                         <div className="vp-slot-main">
-                          <p className="vp-slot-time">{formatVenueTimeSlot(slot)}</p>
-                          <p className="vp-slot-copy">{formatVenueDateLabel(slot.date)}</p>
+                          <p className="vp-slot-time">{formatVenueTimeSlot(pattern)}</p>
+                          <p className="vp-slot-copy">{pattern.dayLabel}</p>
                         </div>
-                        <span className="vp-slot-price">{formatCurrency(slot.price)}</span>
-                      </div>
-
-                      <div className="vp-slot-meta">
-                        <span className={`vp-slot-badge${slot.isBooked ? ' booked' : ''}`}>
-                          {slot.isBooked ? f('Booked') : f('Available')}
-                        </span>
-                        <span className="vp-slot-badge">{f('Fixed Slot')}</span>
+                        <span className="vp-slot-price">{formatCurrency(pattern.price)}</span>
                       </div>
 
                       <div className="vp-slot-actions">
                         <button
                           type="button"
                           className="vp-slot-remove"
-                          onClick={() => deleteVenueAvailability(slot)}
-                          disabled={slot.isBooked || savingAvailabilityVenueId === slotManagerVenue.id}
+                          onClick={() => deleteVenueAvailabilityPattern(pattern)}
+                          disabled={savingAvailabilityVenueId === slotManagerVenue.id}
                         >
-                          {slot.isBooked ? f('Booked Slot') : f('Remove')}
+                          {f('Remove')}
                         </button>
                       </div>
                     </div>
