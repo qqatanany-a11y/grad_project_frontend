@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppDialog } from '../../components/ui/AppDialogProvider'
 import { apiRequest, resolveApiAssetUrl } from '../../lib/apiClient'
 import {
@@ -1945,16 +1946,17 @@ function Venues({ session }) {
         </div>
       )}
 
-      {slotManagerVenue ? (
-        <div
-          className="vp-slot-modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !savingAvailabilityVenueId) {
-              setSlotManagerVenue(null)
-              setAvailabilityError('')
-            }
-          }}
-        >
+      {slotManagerVenue && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="vp-slot-modal-backdrop"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !savingAvailabilityVenueId) {
+                  setSlotManagerVenue(null)
+                  setAvailabilityError('')
+                }
+              }}
+            >
           <div className="vp-slot-modal" dir={direction}>
             <div className="vp-slot-modal-head">
               <div>
@@ -2116,8 +2118,10 @@ function Venues({ session }) {
               )}
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body
+          )
+        : null}
     </>
   )
 }
