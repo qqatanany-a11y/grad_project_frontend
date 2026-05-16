@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppDialog } from '../../components/ui/AppDialogProvider'
-import { apiRequest } from '../../lib/apiClient'
+import { apiRequest, resolveApiAssetUrl } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import { formatVenueTimeSlot, getVenueTimeSlots } from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
@@ -406,7 +406,7 @@ function VenueRequests({ session }) {
             <div className="vr-media">
               {request.details.coverPhotoUrl ? (
                 <img
-                  src={request.details.coverPhotoUrl}
+                  src={resolveApiAssetUrl(request.details.coverPhotoUrl)}
                   alt={`${request.details.name || 'Venue'} cover`}
                   className="vr-media-cover"
                 />
@@ -417,7 +417,7 @@ function VenueRequests({ session }) {
                   {request.details.galleryPhotoUrls.map((photoUrl, index) => (
                     <img
                       key={`${request.id}-photo-${index}`}
-                      src={photoUrl}
+                      src={resolveApiAssetUrl(photoUrl)}
                       alt={`${request.details.name || 'Venue'} photo ${index + 2}`}
                       className="vr-media-item"
                     />

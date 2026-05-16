@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppDialog } from '../../components/ui/AppDialogProvider'
-import { apiRequest } from '../../lib/apiClient'
+import { apiRequest, resolveApiAssetUrl } from '../../lib/apiClient'
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_MULTI_IMAGE_COUNT,
+  revokeObjectUrl,
+  validateSafeImageFile,
+} from '../../lib/imageUpload'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
   formatVenueTimeSlot,
@@ -518,9 +525,6 @@ const emptyAvailabilityForm = {
   price: '',
 }
 
-const MAX_VENUE_IMAGE_WIDTH = 1600
-const MAX_VENUE_IMAGE_HEIGHT = 1200
-const VENUE_IMAGE_QUALITY = 0.82
 const RECURRING_SLOT_MONTHS = 12
 
 function readValue(source, ...keys) {
@@ -640,40 +644,6 @@ function normalizeAvailabilitySlotList(slots) {
     .sort(sortAvailabilitySlots)
 }
 
-function readImageFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-
-    reader.onload = () => {
-      const image = new Image()
-
-      image.onload = () => {
-        const widthRatio = MAX_VENUE_IMAGE_WIDTH / image.width
-        const heightRatio = MAX_VENUE_IMAGE_HEIGHT / image.height
-        const resizeRatio = Math.min(1, widthRatio, heightRatio)
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.max(1, Math.round(image.width * resizeRatio))
-        canvas.height = Math.max(1, Math.round(image.height * resizeRatio))
-
-        const context = canvas.getContext('2d')
-        if (!context) {
-          resolve(String(reader.result ?? ''))
-          return
-        }
-
-        context.drawImage(image, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', VENUE_IMAGE_QUALITY))
-      }
-
-      image.onerror = () => reject(new Error('Unable to process the selected venue image.'))
-      image.src = String(reader.result ?? '')
-    }
-
-    reader.onerror = () => reject(new Error('Unable to read the selected venue image.'))
-    reader.readAsDataURL(file)
-  })
-}
-
 function getVenueCategoryValue(venue) {
   const rawValue = readValue(venue, 'category', 'Category')
 
@@ -726,6 +696,14 @@ function normalizeVenue(venue) {
     galleryPhotoUrls,
     photoUrls,
   }
+}
+
+function revokePhotoItems(photoItems) {
+  if (!Array.isArray(photoItems)) {
+    return
+  }
+
+  photoItems.forEach((photoItem) => revokeObjectUrl(photoItem?.previewUrl))
 }
 
 function normalizeService(service) {
@@ -1004,6 +982,7 @@ function Venues({ session }) {
   }, [search, venues])
 
   const resetForm = () => {
+    revokePhotoItems(formValues.photoItems)
     setFormValues(emptyForm)
     setEditId(null)
     setShowForm(false)
@@ -1017,14 +996,20 @@ function Venues({ session }) {
   }
 
   const startEdit = (venue) => {
+    revokePhotoItems(formValues.photoItems)
     const photoItems = Array.isArray(venue.photoUrls)
       ? venue.photoUrls.map((photoUrl, index) => ({
           id: `existing-${venue.id ?? 'venue'}-${index}`,
           name: `Venue photo ${index + 1}`,
-          dataUrl: photoUrl,
+          previewUrl: resolveApiAssetUrl(photoUrl),
+          existingUrl: photoUrl,
+          file: null,
         }))
       : []
-    const coverPhotoIndex = Math.max(0, photoItems.findIndex((item) => item.dataUrl === venue.coverPhotoUrl))
+    const coverPhotoIndex = Math.max(
+      0,
+      photoItems.findIndex((item) => item.existingUrl === venue.coverPhotoUrl),
+    )
 
     setEditId(venue.id)
     setFormValues({
@@ -1239,16 +1224,36 @@ function Venues({ session }) {
       return
     }
 
+    const nextTotalCount = formValues.photoItems.length + files.length
+    if (nextTotalCount > MAX_MULTI_IMAGE_COUNT) {
+      setFeedback({
+        tone: 'error',
+        message: `A maximum of ${MAX_MULTI_IMAGE_COUNT} venue photos is allowed.`,
+      })
+      return
+    }
+
+    for (const file of files) {
+      const validationMessage = validateSafeImageFile(file, 'Each venue photo')
+      if (validationMessage) {
+        setFeedback({
+          tone: 'error',
+          message: validationMessage,
+        })
+        return
+      }
+    }
+
     setProcessingPhotos(true)
 
     try {
-      const nextPhotoItems = await Promise.all(
-        files.map(async (file, index) => ({
+      const nextPhotoItems = files.map((file, index) => ({
           id: `${Date.now()}-${index}-${file.name}`,
           name: file.name,
-          dataUrl: await readImageFileAsDataUrl(file),
-        })),
-      )
+          previewUrl: URL.createObjectURL(file),
+          existingUrl: '',
+          file,
+        }))
 
       setFormValues((currentValues) => ({
         ...currentValues,
@@ -1267,6 +1272,7 @@ function Venues({ session }) {
 
   const removePhotoItem = (photoIndex) => {
     setFormValues((currentValues) => {
+      revokeObjectUrl(currentValues.photoItems[photoIndex]?.previewUrl)
       const nextPhotoItems = currentValues.photoItems.filter((_, index) => index !== photoIndex)
       let nextCoverPhotoIndex = currentValues.coverPhotoIndex
 
@@ -1303,12 +1309,18 @@ function Venues({ session }) {
       return
     }
 
-    const photoUrls = formValues.photoItems
-      .map((photoItem) => photoItem?.dataUrl)
-      .filter(Boolean)
-    const hasPhotoSelection = photoUrls.length > 0
+    const photoItems = formValues.photoItems.filter(Boolean)
+    const hasPhotoSelection = photoItems.length > 0
 
-    if (!editId && photoUrls.length < 10) {
+    if (photoItems.length > MAX_MULTI_IMAGE_COUNT) {
+      setFeedback({
+        tone: 'error',
+        message: `A maximum of ${MAX_MULTI_IMAGE_COUNT} venue photos is allowed.`,
+      })
+      return
+    }
+
+    if (!editId && photoItems.length < 10) {
       setFeedback({
         tone: 'error',
         message: 'Add at least 10 venue photos before submitting a new venue request.',
@@ -1316,7 +1328,7 @@ function Venues({ session }) {
       return
     }
 
-    if (hasPhotoSelection && !photoUrls[formValues.coverPhotoIndex]) {
+    if (hasPhotoSelection && !photoItems[formValues.coverPhotoIndex]) {
       setFeedback({
         tone: 'error',
         message: 'Choose a valid cover photo for the venue before submitting.',
@@ -1336,13 +1348,36 @@ function Venues({ session }) {
       timeSlots: [],
     }
 
+    let submissionBody = body
+    let submissionPayload = body
+
     if (hasPhotoSelection) {
-      body.imageUrls = photoUrls
-      body.coverPhotoDataUrl = photoUrls[formValues.coverPhotoIndex]
-      body.galleryPhotoDataUrls = photoUrls.filter(
-        (_, index) => index !== formValues.coverPhotoIndex,
-      )
-      body.photoDataUrls = photoUrls
+      const photoFiles = []
+      const photoTokens = []
+      let uploadIndex = 0
+      const orderedPhotoReferences = photoItems.map((photoItem) => {
+        if (!photoItem?.file) {
+          return photoItem?.existingUrl ?? ''
+        }
+
+        const uploadToken = `__upload__:${uploadIndex}`
+        uploadIndex += 1
+        photoTokens.push(uploadToken)
+        photoFiles.push(photoItem.file)
+        return uploadToken
+      })
+
+      submissionBody = {
+        ...body,
+        imageUrls: orderedPhotoReferences,
+        coverPhotoDataUrl: orderedPhotoReferences[formValues.coverPhotoIndex],
+      }
+
+      const formData = new FormData()
+      formData.append('data', JSON.stringify(submissionBody))
+      photoTokens.forEach((token) => formData.append('photoTokens', token))
+      photoFiles.forEach((file) => formData.append('photoFiles', file))
+      submissionPayload = formData
     }
 
     try {
@@ -1350,16 +1385,27 @@ function Venues({ session }) {
         await apiRequest(`/api/owner/edit-requests/venue/${editId}`, {
           method: 'POST',
           token: session?.token,
-          body: {
-            ...body,
-            isActive: String(formValues.isActive) === 'true',
-          },
+          body:
+            submissionPayload instanceof FormData
+              ? (() => {
+                  const formData = submissionPayload
+                  const nextBody = {
+                    ...submissionBody,
+                    isActive: String(formValues.isActive) === 'true',
+                  }
+                  formData.set('data', JSON.stringify(nextBody))
+                  return formData
+                })()
+              : {
+                  ...submissionBody,
+                  isActive: String(formValues.isActive) === 'true',
+                },
         })
       } else {
         await apiRequest('/api/owner/edit-requests/venue-create', {
           method: 'POST',
           token: session?.token,
-          body,
+          body: submissionPayload,
         })
       }
 
@@ -1551,6 +1597,7 @@ function Venues({ session }) {
                 return
               }
 
+              revokePhotoItems(formValues.photoItems)
               setEditId(null)
               setFormValues(emptyForm)
               setShowForm(true)
@@ -1654,7 +1701,7 @@ function Venues({ session }) {
                 <input
                   className="vp-photo-file-input"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   multiple
                   onChange={handlePhotoSelection}
                   disabled={processingPhotos}
@@ -1681,7 +1728,7 @@ function Venues({ session }) {
                   return (
                     <div key={photoItem.id} className={`vp-photo-card${isCover ? ' cover' : ''}`}>
                       <img
-                        src={photoItem.dataUrl}
+                        src={photoItem.previewUrl}
                         alt={photoItem.name || `Venue photo ${index + 1}`}
                         className="vp-photo-preview"
                       />
@@ -1760,7 +1807,7 @@ function Venues({ session }) {
               <article key={venue.id} className="vp-card">
                 {venue.coverPhotoUrl ? (
                   <div className="vp-card-media">
-                    <img src={venue.coverPhotoUrl} alt={venue.name || 'Venue cover'} />
+                    <img src={resolveApiAssetUrl(venue.coverPhotoUrl)} alt={venue.name || 'Venue cover'} />
                   </div>
                 ) : null}
                 <p className="vp-card-title">{venue.name}</p>
@@ -1899,16 +1946,17 @@ function Venues({ session }) {
         </div>
       )}
 
-      {slotManagerVenue ? (
-        <div
-          className="vp-slot-modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !savingAvailabilityVenueId) {
-              setSlotManagerVenue(null)
-              setAvailabilityError('')
-            }
-          }}
-        >
+      {slotManagerVenue && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="vp-slot-modal-backdrop"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !savingAvailabilityVenueId) {
+                  setSlotManagerVenue(null)
+                  setAvailabilityError('')
+                }
+              }}
+            >
           <div className="vp-slot-modal" dir={direction}>
             <div className="vp-slot-modal-head">
               <div>
@@ -2070,8 +2118,10 @@ function Venues({ session }) {
               )}
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body
+          )
+        : null}
     </>
   )
 }

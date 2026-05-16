@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppDialog } from '../../components/ui/AppDialogProvider'
-import { apiRequest } from '../../lib/apiClient'
+import { apiRequest, resolveApiAssetUrl } from '../../lib/apiClient'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
   areVenueTimeSlotsEqual,
@@ -405,7 +405,7 @@ function renderVenueMedia(title, venueData, keyPrefix) {
       <div className="er-media">
         {venueData.coverPhotoUrl ? (
           <img
-            src={venueData.coverPhotoUrl}
+            src={resolveApiAssetUrl(venueData.coverPhotoUrl)}
             alt={`${venueData.name || 'Venue'} cover`}
             className="er-media-cover"
           />
@@ -416,7 +416,7 @@ function renderVenueMedia(title, venueData, keyPrefix) {
             {venueData.galleryPhotoUrls.map((photoUrl, index) => (
               <img
                 key={`${keyPrefix}-photo-${index}`}
-                src={photoUrl}
+                src={resolveApiAssetUrl(photoUrl)}
                 alt={`${venueData.name || 'Venue'} photo ${index + 2}`}
                 className="er-media-item"
               />

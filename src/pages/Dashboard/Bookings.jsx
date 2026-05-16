@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppDialog } from '../../components/ui/AppDialogProvider'
-import { apiRequest, getVenueAvailableSlots } from '../../lib/apiClient'
+import {
+  apiRequest,
+  getVenueAvailableSlots,
+  resolveApiAssetUrl,
+} from '../../lib/apiClient'
+import {
+  revokeObjectUrl,
+  validateSafeImageFile,
+} from '../../lib/imageUpload'
 import { useI18n } from '../../i18n/I18nProvider'
 import {
   formatVenueDateLabel,
@@ -583,15 +591,6 @@ function getVenuePricePerHour(venue) {
   return null
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.onerror = () => reject(new Error('Unable to read the selected file.'))
-    reader.readAsDataURL(file)
-  })
-}
-
 function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }) {
   const { f, direction } = useI18n()
   const [bookings, setBookings] = useState([])
@@ -602,6 +601,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const [statusFilter, setStatusFilter] = useState('All')
   const [venueTypeFilter, setVenueTypeFilter] = useState('All')
   const [serviceOptions, setServiceOptions] = useState([])
+  const [documentFiles, setDocumentFiles] = useState({ bride: null, bridegroom: null })
   const [documentNames, setDocumentNames] = useState({ bride: '', bridegroom: '' })
   const [loading, setLoading] = useState(true)
   const [loadingOptions, setLoadingOptions] = useState(false)
@@ -613,7 +613,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const [paymentDraft, setPaymentDraft] = useState({
     bookingId: null,
     paymentMethod: PAYMENT_METHOD_CASH,
-    cliqTransferImageDataUrl: '',
+    cliqTransferImagePreviewUrl: '',
+    cliqTransferImageFile: null,
     cliqTransferImageName: '',
   })
   const [paymentSubmittingId, setPaymentSubmittingId] = useState(null)
@@ -671,6 +672,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setShowForm(true)
     setVenueTypeFilter(initialBookingDraft.venueCategory ?? 'All')
     setServiceOptions([])
+    setDocumentFiles({ bride: null, bridegroom: null })
     setDocumentNames({ bride: '', bridegroom: '' })
     setFeedback({ tone: 'idle', message: '' })
     setFormValues({
@@ -998,44 +1000,30 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     const file = event.target.files?.[0]
 
     if (!file) {
+      setDocumentFiles((currentFiles) => ({ ...currentFiles, [kind]: null }))
       setDocumentNames((currentNames) => ({ ...currentNames, [kind]: '' }))
-      setFormValues((currentValues) => ({
-        ...currentValues,
-        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']: '',
-      }))
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    const validationMessage = validateSafeImageFile(file, 'Each document')
+    if (validationMessage) {
       setFeedback({
         tone: 'error',
-        message: 'Each document must be 5 MB or smaller.',
+        message: validationMessage,
       })
       event.target.value = ''
       return
     }
 
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-
-      setDocumentNames((currentNames) => ({ ...currentNames, [kind]: file.name }))
-      setFormValues((currentValues) => ({
-        ...currentValues,
-        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']:
-          dataUrl,
-      }))
-    } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to read the document.',
-      })
-    }
+    setDocumentFiles((currentFiles) => ({ ...currentFiles, [kind]: file }))
+    setDocumentNames((currentNames) => ({ ...currentNames, [kind]: file.name }))
   }
 
   const resetBookingForm = () => {
     setFormValues(emptyForm)
     setVenueTypeFilter('All')
     setServiceOptions([])
+    setDocumentFiles({ bride: null, bridegroom: null })
     setDocumentNames({ bride: '', bridegroom: '' })
     setVenueAvailabilitySlots([])
     setAvailabilityError('')
@@ -1043,10 +1031,12 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   }
 
   const resetPaymentDraft = () => {
+    revokeObjectUrl(paymentDraft.cliqTransferImagePreviewUrl)
     setPaymentDraft({
       bookingId: null,
       paymentMethod: PAYMENT_METHOD_CASH,
-      cliqTransferImageDataUrl: '',
+      cliqTransferImagePreviewUrl: '',
+      cliqTransferImageFile: null,
       cliqTransferImageName: '',
     })
   }
@@ -1064,7 +1054,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       return
     }
 
-    if (!formValues.brideIdDocumentDataUrl || !formValues.bridegroomIdDocumentDataUrl) {
+    if (!documentFiles.bride || !documentFiles.bridegroom) {
       setFeedback({
         tone: 'error',
         message: 'Upload both the bride and bridegroom ID documents before submitting.',
@@ -1075,18 +1065,24 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setSubmitting(true)
 
     try {
-      await apiRequest('/api/bookings', {
-        method: 'POST',
-        token: session?.token,
-        body: {
+      const formData = new FormData()
+      formData.append(
+        'data',
+        JSON.stringify({
           venueId: Number(formValues.venueId),
           date: `${formValues.date}T00:00:00Z`,
           guestsCount: Number(formValues.guestsCount),
           venueAvailabilityId: Number(selectedTimeSlot.id),
           venueServiceOptionIds: formValues.venueServiceOptionIds,
-          brideIdDocumentDataUrl: formValues.brideIdDocumentDataUrl,
-          bridegroomIdDocumentDataUrl: formValues.bridegroomIdDocumentDataUrl,
-        },
+        }),
+      )
+      formData.append('brideIdDocumentFile', documentFiles.bride)
+      formData.append('bridegroomIdDocumentFile', documentFiles.bridegroom)
+
+      await apiRequest('/api/bookings', {
+        method: 'POST',
+        token: session?.token,
+        body: formData,
       })
 
       setFeedback({ tone: 'idle', message: 'Booking created successfully.' })
@@ -1193,37 +1189,33 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     const file = event.target.files?.[0]
 
     if (!file) {
+      revokeObjectUrl(paymentDraft.cliqTransferImagePreviewUrl)
       setPaymentDraft((currentDraft) => ({
         ...currentDraft,
-        cliqTransferImageDataUrl: '',
+        cliqTransferImagePreviewUrl: '',
+        cliqTransferImageFile: null,
         cliqTransferImageName: '',
       }))
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    const validationMessage = validateSafeImageFile(file, 'CliQ transfer image')
+    if (validationMessage) {
       setFeedback({
         tone: 'error',
-        message: 'CliQ transfer image must be 5 MB or smaller.',
+        message: validationMessage,
       })
       event.target.value = ''
       return
     }
 
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-
-      setPaymentDraft((currentDraft) => ({
-        ...currentDraft,
-        cliqTransferImageDataUrl: dataUrl,
-        cliqTransferImageName: file.name,
-      }))
-    } catch (error) {
-      setFeedback({
-        tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to read the selected file.',
-      })
-    }
+    revokeObjectUrl(paymentDraft.cliqTransferImagePreviewUrl)
+    setPaymentDraft((currentDraft) => ({
+      ...currentDraft,
+      cliqTransferImagePreviewUrl: URL.createObjectURL(file),
+      cliqTransferImageFile: file,
+      cliqTransferImageName: file.name,
+    }))
   }
 
   const submitPayment = async (booking) => {
@@ -1233,7 +1225,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
     if (
       paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ &&
-      !paymentDraft.cliqTransferImageDataUrl
+      !paymentDraft.cliqTransferImageFile
     ) {
       setModalError('Upload a CliQ transfer image before submitting the payment.')
       return
@@ -1242,16 +1234,23 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setPaymentSubmittingId(booking.id)
 
     try {
+      const formData = new FormData()
+      formData.append(
+        'data',
+        JSON.stringify({
+          bookingId: booking.id,
+          paymentMethod: paymentDraft.paymentMethod,
+        }),
+      )
+
+      if (paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ && paymentDraft.cliqTransferImageFile) {
+        formData.append('cliqTransferImageFile', paymentDraft.cliqTransferImageFile)
+      }
+
       const response = await apiRequest('/api/payments/pay', {
         method: 'POST',
         token: session?.token,
-        body: {
-          bookingId: booking.id,
-          paymentMethod: paymentDraft.paymentMethod,
-          ...(paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ
-            ? { cliqTransferImageDataUrl: paymentDraft.cliqTransferImageDataUrl }
-            : {}),
-        },
+        body: formData,
       })
 
       // CliQ => Paid, Cash => Pending Payment
@@ -1283,11 +1282,13 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
   const openPaymentModal = (booking) => {
     setModalError('')
+    revokeObjectUrl(paymentDraft.cliqTransferImagePreviewUrl)
     setPaymentModalBooking(booking)
     setPaymentDraft({
       bookingId: booking.id,
       paymentMethod: PAYMENT_METHOD_CASH,
-      cliqTransferImageDataUrl: '',
+      cliqTransferImagePreviewUrl: '',
+      cliqTransferImageFile: null,
       cliqTransferImageName: '',
     })
   }
@@ -1406,7 +1407,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <input
                   className="bk-file-input"
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => handleDocumentChange('bride', event)}
                 />
                 <span className="bk-file-button">{f('Choose bride ID document')}</span>
@@ -1422,7 +1423,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <input
                   className="bk-file-input"
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => handleDocumentChange('bridegroom', event)}
                 />
                 <span className="bk-file-button">{f('Choose bridegroom ID document')}</span>
@@ -1615,7 +1616,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                       {booking.brideIdDocumentDataUrl ? (
                         <a
                           className="bk-link"
-                          href={booking.brideIdDocumentDataUrl}
+                          href={resolveApiAssetUrl(booking.brideIdDocumentDataUrl)}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -1625,7 +1626,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                       {booking.bridegroomIdDocumentDataUrl ? (
                         <a
                           className="bk-link"
-                          href={booking.bridegroomIdDocumentDataUrl}
+                          href={resolveApiAssetUrl(booking.bridegroomIdDocumentDataUrl)}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -1720,7 +1721,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                             <div className="bk-doc-links">
                               <a
                                 className="bk-link"
-                                href={payment.cliqTransferImageDataUrl}
+                                href={resolveApiAssetUrl(payment.cliqTransferImageDataUrl)}
                                 target="_blank"
                                 rel="noreferrer"
                               >
@@ -1786,7 +1787,16 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <button
                   type="button"
                   className={`bk-modal-choice${paymentDraft.paymentMethod === PAYMENT_METHOD_CASH ? ' selected' : ''}`}
-                  onClick={() => setPaymentDraft((d) => ({ ...d, paymentMethod: PAYMENT_METHOD_CASH, cliqTransferImageDataUrl: '', cliqTransferImageName: '' }))}
+                  onClick={() => {
+                    revokeObjectUrl(paymentDraft.cliqTransferImagePreviewUrl)
+                    setPaymentDraft((d) => ({
+                      ...d,
+                      paymentMethod: PAYMENT_METHOD_CASH,
+                      cliqTransferImagePreviewUrl: '',
+                      cliqTransferImageFile: null,
+                      cliqTransferImageName: '',
+                    }))
+                  }}
                 >
                   <p className="bk-modal-choice-title">Cash</p>
                   <p className="bk-modal-choice-copy">Pay in person at the venue. Status will be set to pending payment.</p>
@@ -1808,12 +1818,22 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
               {paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ ? (
                 <div className="bk-modal-upload">
                   <label className="bk-label">CliQ Transfer Image</label>
-                  <input className="bk-input" type="file" accept="image/*" onChange={handlePaymentProofChange} required />
+                  <input
+                    className="bk-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handlePaymentProofChange}
+                    required
+                  />
                   {paymentDraft.cliqTransferImageName ? (
                     <span className="bk-file-meta">{paymentDraft.cliqTransferImageName}</span>
                   ) : null}
-                  {paymentDraft.cliqTransferImageDataUrl ? (
-                    <img className="bk-modal-proof" src={paymentDraft.cliqTransferImageDataUrl} alt="CliQ proof preview" />
+                  {paymentDraft.cliqTransferImagePreviewUrl ? (
+                    <img
+                      className="bk-modal-proof"
+                      src={paymentDraft.cliqTransferImagePreviewUrl}
+                      alt="CliQ proof preview"
+                    />
                   ) : null}
                 </div>
               ) : null}
