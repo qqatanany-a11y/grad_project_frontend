@@ -37,18 +37,48 @@ export function getResponseMessage(payload, fallbackMessage) {
   return payload?.message ?? payload?.title ?? fallbackMessage
 }
 
+export function resolveApiAssetUrl(value) {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmedValue = value.trim()
+  if (!trimmedValue) {
+    return ''
+  }
+
+  if (
+    /^https?:\/\//i.test(trimmedValue) ||
+    /^data:/i.test(trimmedValue) ||
+    /^blob:/i.test(trimmedValue)
+  ) {
+    return trimmedValue
+  }
+
+  if (trimmedValue.startsWith('/')) {
+    return `${API_BASE_URL}${trimmedValue}`
+  }
+
+  return `${API_BASE_URL}/${trimmedValue.replace(/^\/+/, '')}`
+}
+
 export async function apiRequest(
   path,
   { method = 'GET', token, body, headers = {} } = {},
 ) {
+  const isFormData = body instanceof FormData
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    ...(body
+      ? {
+          body: isFormData ? body : JSON.stringify(body),
+        }
+      : {}),
   })
 
   const payload = await parseResponseBody(response)

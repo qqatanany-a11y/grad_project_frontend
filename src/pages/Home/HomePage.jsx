@@ -1,5 +1,10 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
-import { apiRequest, getVenueAvailableSlots } from '../../lib/apiClient'
+import {
+  apiRequest,
+  getVenueAvailableSlots,
+  resolveApiAssetUrl,
+} from '../../lib/apiClient'
+import { validateSafeImageFile } from '../../lib/imageUpload'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
   formatVenueDateLabel,
@@ -1297,15 +1302,6 @@ function formatBookingDate(value) {
   })
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result ?? ''))
-    reader.onerror = () => reject(new Error('Unable to read the selected file.'))
-    reader.readAsDataURL(file)
-  })
-}
-
 function getVenueCategoryValue(venue) {
   const rawValue = venue?.category ?? venue?.Category ?? 'WeddingHall'
 
@@ -1350,7 +1346,7 @@ function getVenueAddress(venue) {
 
 function getVenueCoverPhoto(venue) {
   const { coverPhotoUrl } = getVenuePhotoSet(venue)
-  return coverPhotoUrl || ''
+  return resolveApiAssetUrl(coverPhotoUrl) || ''
 }
 
 function useScrollAnimation(watchValue) {
@@ -1410,6 +1406,10 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   const [bookingAvailabilitySlots, setBookingAvailabilitySlots] = useState([])
   const [bookingAvailabilityError, setBookingAvailabilityError] = useState('')
   const [bookingServiceOptions, setBookingServiceOptions] = useState([])
+  const [bookingDocumentFiles, setBookingDocumentFiles] = useState({
+    bride: null,
+    bridegroom: null,
+  })
   const [bookingDocumentNames, setBookingDocumentNames] = useState({
     bride: '',
     bridegroom: '',
@@ -1461,6 +1461,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     setBookingAvailabilitySlots([])
     setBookingAvailabilityError('')
     setBookingServiceOptions([])
+    setBookingDocumentFiles({ bride: null, bridegroom: null })
     setBookingDocumentNames({ bride: '', bridegroom: '' })
     setBookingFeedback({ tone: 'idle', message: '' })
   }
@@ -1486,6 +1487,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       setBookingAvailabilitySlots([])
       setBookingAvailabilityError('')
       setBookingServiceOptions([])
+      setBookingDocumentFiles({ bride: null, bridegroom: null })
       setBookingDocumentNames({ bride: '', bridegroom: '' })
       setBookingFeedback({ tone: 'idle', message: '' })
     }
@@ -1750,39 +1752,24 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
     if (!file) {
       clearBookingFeedback()
+      setBookingDocumentFiles((currentFiles) => ({ ...currentFiles, [kind]: null }))
       setBookingDocumentNames((currentNames) => ({ ...currentNames, [kind]: '' }))
-      setBookingForm((currentForm) => ({
-        ...currentForm,
-        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']: '',
-      }))
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    const validationMessage = validateSafeImageFile(file, 'Each document')
+    if (validationMessage) {
       setBookingFeedback({
         tone: 'error',
-        message: 'Each document must be 5 MB or smaller.',
+        message: validationMessage,
       })
       event.target.value = ''
       return
     }
 
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-
-      clearBookingFeedback()
-      setBookingDocumentNames((currentNames) => ({ ...currentNames, [kind]: file.name }))
-      setBookingForm((currentForm) => ({
-        ...currentForm,
-        [kind === 'bride' ? 'brideIdDocumentDataUrl' : 'bridegroomIdDocumentDataUrl']:
-          dataUrl,
-      }))
-    } catch (error) {
-      setBookingFeedback({
-        tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to read the document.',
-      })
-    }
+    clearBookingFeedback()
+    setBookingDocumentFiles((currentFiles) => ({ ...currentFiles, [kind]: file }))
+    setBookingDocumentNames((currentNames) => ({ ...currentNames, [kind]: file.name }))
   }
 
   const validateBookingDetailsStep = () => {
@@ -1887,7 +1874,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       return
     }
 
-    if (!bookingForm.brideIdDocumentDataUrl || !bookingForm.bridegroomIdDocumentDataUrl) {
+    if (!bookingDocumentFiles.bride || !bookingDocumentFiles.bridegroom) {
       setBookingFeedback({
         tone: 'error',
         message: 'Upload both the bride and bridegroom ID documents before submitting.',
@@ -1898,18 +1885,24 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     setBookingSubmitting(true)
 
     try {
-      await apiRequest('/api/bookings', {
-        method: 'POST',
-        token: session?.token,
-        body: {
+      const formData = new FormData()
+      formData.append(
+        'data',
+        JSON.stringify({
           venueId: Number(selectedVenue.id),
           date: `${bookingForm.date}T00:00:00Z`,
           guestsCount: Number(bookingForm.guestsCount),
           venueAvailabilityId: Number(selectedBookingSlot.id),
           venueServiceOptionIds: bookingForm.venueServiceOptionIds,
-          brideIdDocumentDataUrl: bookingForm.brideIdDocumentDataUrl,
-          bridegroomIdDocumentDataUrl: bookingForm.bridegroomIdDocumentDataUrl,
-        },
+        }),
+      )
+      formData.append('brideIdDocumentFile', bookingDocumentFiles.bride)
+      formData.append('bridegroomIdDocumentFile', bookingDocumentFiles.bridegroom)
+
+      await apiRequest('/api/bookings', {
+        method: 'POST',
+        token: session?.token,
+        body: formData,
       })
 
       setBookingFeedback({
@@ -2278,7 +2271,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
               <div className="hp-venue-body">
                 {selectedVenuePhotoSet.coverPhotoUrl ? (
                   <img
-                    src={selectedVenuePhotoSet.coverPhotoUrl}
+                    src={resolveApiAssetUrl(selectedVenuePhotoSet.coverPhotoUrl)}
                     alt={f(selectedVenue.name || 'Venue cover')}
                     className="hp-venue-cover"
                   />
@@ -2539,7 +2532,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                               <input
                                 className="hp-booking-input file"
                                 type="file"
-                                accept="image/*,application/pdf"
+                                accept="image/jpeg,image/png,image/webp"
                                 onChange={(event) => handleBookingDocumentChange('bride', event)}
                               />
                               {bookingDocumentNames.bride ? (
@@ -2552,7 +2545,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                               <input
                                 className="hp-booking-input file"
                                 type="file"
-                                accept="image/*,application/pdf"
+                                accept="image/jpeg,image/png,image/webp"
                                 onChange={(event) => handleBookingDocumentChange('bridegroom', event)}
                               />
                               {bookingDocumentNames.bridegroom ? (
@@ -2826,7 +2819,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                       {selectedVenuePhotoSet.galleryPhotoUrls.map((photoUrl, index) => (
                         <img
                           key={`${selectedVenue.id ?? selectedVenue.name ?? 'venue'}-${index}`}
-                          src={photoUrl}
+                          src={resolveApiAssetUrl(photoUrl)}
                           alt={`${selectedVenue.name || 'Venue'} photo ${index + 2}`}
                           className="hp-venue-gallery-item"
                         />
