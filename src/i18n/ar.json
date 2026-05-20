@@ -581,5 +581,19 @@
     "Your booking for {venue} on {date} was created successfully. Open My Bookings to track the status.":  "تم إنشاء حجزك لـ {venue} بتاريخ {date} بنجاح. افتح حجوزاتي لمتابعة الحالة.",
     "Continue to Add-ons":  "انتقل إلى الإضافات",
     "Continue to Review":  "انتقل إلى المراجعة",
-    "Open My Bookings":  "افتح حجوزاتي"
+    "Open My Bookings":  "افتح حجوزاتي",
+    "Payment Status":  "حالة الدفع",
+    "Pending Payment":  "بانتظار الدفع",
+    "Deposit Paid":  "تم دفع العربون",
+    "Paid in Full":  "تم الدفع كامل",
+    "Payment method":  "طريقة الدفع",
+    "Deposit amount":  "قيمة العربون",
+    "Submitted at":  "تم الإرسال بتاريخ",
+    "View CliQ proof":  "عرض إثبات CliQ",
+    "Cash":  "كاش",
+    "Cash payment option saved successfully.":  "تم حفظ خيار الدفع النقدي بنجاح.",
+    "Payment completed successfully.":  "تم إتمام الدفع بنجاح.",
+    "Booking payment status updated successfully.":  "تم تحديث حالة دفع الحجز بنجاح.",
+    "Cash payment selected for booking #{id}. Please complete the payment within 24 hours.":  "تم اختيار الدفع النقدي للحجز رقم #{id}. يرجى إكمال الدفع خلال 24 ساعة.",
+    "CliQ payment submitted for booking #{id}.":  "تم إرسال دفعة CliQ للحجز رقم #{id}."
 }
