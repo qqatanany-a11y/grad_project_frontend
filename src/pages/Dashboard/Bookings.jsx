@@ -241,6 +241,13 @@ const styles =
       padding: 0 0.95rem;
       font-size: 0.8rem;
     }
+    .bk-status-select {
+      min-width: 180px;
+      height: 2.2rem;
+      padding-top: 0;
+      padding-bottom: 0;
+      font-size: 0.8rem;
+    }
     .bk-row {
       grid-template-columns: 1.4fr 1fr 1fr 1fr minmax(230px, 1.15fr);
     }
@@ -297,6 +304,21 @@ const styles =
       background: rgba(14, 165, 233, 0.1);
       color: #0f766e;
       border-color: rgba(14, 165, 233, 0.24);
+    }
+    .bk-badge.under-review-payment {
+      background: rgba(245, 158, 11, 0.1);
+      color: #b45309;
+      border-color: rgba(245, 158, 11, 0.22);
+    }
+    .bk-badge.rejected-payment {
+      background: rgba(244, 63, 94, 0.08);
+      color: #be123c;
+      border-color: rgba(244, 63, 94, 0.2);
+    }
+    .bk-badge.cancelled-payment {
+      background: rgba(148, 163, 184, 0.12);
+      color: #475569;
+      border-color: rgba(148, 163, 184, 0.3);
     }
     .bk-badge.fully-paid {
       background: rgba(22, 163, 74, 0.12);
@@ -524,9 +546,12 @@ const emptyForm = {
 
 const PAYMENT_METHOD_CASH = 1
 const PAYMENT_METHOD_CLIQ = 2
+const BOOKING_PAYMENT_STATUS_UNDER_REVIEW = 'UnderReviewPayment'
 const BOOKING_PAYMENT_STATUS_PENDING = 'PendingPayment'
 const BOOKING_PAYMENT_STATUS_DEPOSIT = 'DepositPaid'
 const BOOKING_PAYMENT_STATUS_FULL = 'FullyPaid'
+const BOOKING_PAYMENT_STATUS_REJECTED = 'RejectedPayment'
+const BOOKING_PAYMENT_STATUS_CANCELLED = 'CancelledPayment'
 const BOOKING_PAYMENT_STATUS_OPTIONS = [
   BOOKING_PAYMENT_STATUS_PENDING,
   BOOKING_PAYMENT_STATUS_DEPOSIT,
@@ -583,25 +608,113 @@ function toStatusClassName(value) {
     .toLowerCase()
 }
 
-function getBookingPaymentStatusValue(booking) {
-  const rawStatus = typeof booking?.paymentStatus === 'string' ? booking.paymentStatus.trim() : ''
+function normalizeBookingPaymentStatus(value) {
+  const rawStatus = typeof value === 'string' ? value.trim() : ''
 
   return (
-    BOOKING_PAYMENT_STATUS_OPTIONS.find(
-      (statusValue) => statusValue.toLowerCase() === rawStatus.toLowerCase(),
-    ) ?? BOOKING_PAYMENT_STATUS_PENDING
+    [
+      BOOKING_PAYMENT_STATUS_UNDER_REVIEW,
+      ...BOOKING_PAYMENT_STATUS_OPTIONS,
+      BOOKING_PAYMENT_STATUS_REJECTED,
+      BOOKING_PAYMENT_STATUS_CANCELLED,
+    ].find((statusValue) => statusValue.toLowerCase() === rawStatus.toLowerCase()) ?? null
   )
 }
 
-function getBookingPaymentStatusLabel(value, f) {
-  switch (getBookingPaymentStatusValue({ paymentStatus: value })) {
+function getBookingPaymentStatusValue(booking) {
+  const explicitPaymentStatus = normalizeBookingPaymentStatus(booking?.paymentStatus)
+  const bookingStatus = getBookingStatusValue(booking)
+
+  if (explicitPaymentStatus === BOOKING_PAYMENT_STATUS_DEPOSIT) {
+    return BOOKING_PAYMENT_STATUS_DEPOSIT
+  }
+
+  if (explicitPaymentStatus === BOOKING_PAYMENT_STATUS_FULL) {
+    return BOOKING_PAYMENT_STATUS_FULL
+  }
+
+  if (bookingStatus === 'pending') {
+    return BOOKING_PAYMENT_STATUS_UNDER_REVIEW
+  }
+
+  if (bookingStatus === 'rejected') {
+    return BOOKING_PAYMENT_STATUS_REJECTED
+  }
+
+  if (bookingStatus === 'cancelled') {
+    return BOOKING_PAYMENT_STATUS_CANCELLED
+  }
+
+  if (bookingStatus === 'confirmed') {
+    return BOOKING_PAYMENT_STATUS_PENDING
+  }
+
+  return explicitPaymentStatus ?? BOOKING_PAYMENT_STATUS_PENDING
+}
+
+function getBookingPaymentStatusLabel(source, f) {
+  const resolvedStatus =
+    typeof source === 'string'
+      ? normalizeBookingPaymentStatus(source) ?? BOOKING_PAYMENT_STATUS_PENDING
+      : getBookingPaymentStatusValue(source)
+
+  switch (resolvedStatus) {
+    case BOOKING_PAYMENT_STATUS_UNDER_REVIEW:
+      return f('Under Review Payment')
     case BOOKING_PAYMENT_STATUS_DEPOSIT:
       return f('Deposit Paid')
     case BOOKING_PAYMENT_STATUS_FULL:
       return f('Paid in Full')
+    case BOOKING_PAYMENT_STATUS_REJECTED:
+      return f('Rejected')
+    case BOOKING_PAYMENT_STATUS_CANCELLED:
+      return f('Cancelled')
     default:
       return f('Pending Payment')
   }
+}
+
+function isBookingPaymentStatusEditable(booking) {
+  return getBookingStatusValue(booking) === 'confirmed'
+}
+
+function getBookingDisplayStatusValue(booking) {
+  const bookingStatus = getBookingStatusValue(booking)
+
+  if (bookingStatus === 'confirmed') {
+    return getBookingPaymentStatusValue(booking)
+  }
+
+  if (bookingStatus === 'rejected') {
+    return 'Rejected'
+  }
+
+  if (bookingStatus === 'cancelled') {
+    return 'Cancelled'
+  }
+
+  return 'Pending'
+}
+
+function getBookingDisplayStatusLabel(booking, f) {
+  const displayStatus = getBookingDisplayStatusValue(booking)
+
+  if (
+    displayStatus === BOOKING_PAYMENT_STATUS_PENDING ||
+    displayStatus === BOOKING_PAYMENT_STATUS_DEPOSIT ||
+    displayStatus === BOOKING_PAYMENT_STATUS_FULL ||
+    displayStatus === BOOKING_PAYMENT_STATUS_UNDER_REVIEW ||
+    displayStatus === BOOKING_PAYMENT_STATUS_REJECTED ||
+    displayStatus === BOOKING_PAYMENT_STATUS_CANCELLED
+  ) {
+    if (displayStatus === BOOKING_PAYMENT_STATUS_UNDER_REVIEW) {
+      return f('Pending')
+    }
+
+    return getBookingPaymentStatusLabel(displayStatus, f)
+  }
+
+  return f(displayStatus)
 }
 
 function getPaymentMethodLabel(value, f) {
@@ -763,15 +876,20 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
     return bookings.filter((booking) => {
       const bookingStatusLabel = f(booking.status || '').toLowerCase()
-      const bookingPaymentStatusLabel = getBookingPaymentStatusLabel(booking.paymentStatus, f).toLowerCase()
+      const bookingPaymentStatus = getBookingPaymentStatusValue(booking).toLowerCase()
+      const bookingPaymentStatusLabel = getBookingPaymentStatusLabel(booking, f).toLowerCase()
+      const bookingDisplayStatus = String(getBookingDisplayStatusValue(booking)).toLowerCase()
+      const bookingDisplayStatusLabel = getBookingDisplayStatusLabel(booking, f).toLowerCase()
       const paymentMethodLabel = getPaymentMethodLabel(booking.payment?.paymentMethod, f).toLowerCase()
       const matchesSearch =
         !query ||
         booking.venueName?.toLowerCase().includes(query) ||
         booking.status?.toLowerCase().includes(query) ||
         bookingStatusLabel.includes(query) ||
-        booking.paymentStatus?.toLowerCase().includes(query) ||
+        bookingPaymentStatus.includes(query) ||
         bookingPaymentStatusLabel.includes(query) ||
+        bookingDisplayStatus.includes(query) ||
+        bookingDisplayStatusLabel.includes(query) ||
         booking.time?.toLowerCase().includes(query) ||
         paymentMethodLabel.includes(query)
 
@@ -900,7 +1018,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     if (!selectedStillAvailable) {
       setFormValues((currentValues) => ({
         ...currentValues,
-        venueAvailabilityId: '',
+        venueAvailabilityId: String(availableTimeSlots[0].id),
       }))
     }
   }, [availableTimeSlots, formValues.venueAvailabilityId])
@@ -960,10 +1078,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           : booking,
       ),
     )
-  }
-
-  const updateBookingStatus = (bookingId, nextStatus) => {
-    updateBookingRecord(bookingId, { status: nextStatus })
   }
 
   const updateBookingPaymentStatus = (bookingId, nextPaymentStatus) => {
@@ -1214,7 +1328,13 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         ...(body ? { body } : {}),
       })
 
-      updateBookingStatus(bookingId, decision === 'approve' ? 'Confirmed' : 'Rejected')
+      updateBookingRecord(bookingId, {
+        status: decision === 'approve' ? 'Confirmed' : 'Rejected',
+        paymentStatus:
+          decision === 'approve'
+            ? BOOKING_PAYMENT_STATUS_PENDING
+            : BOOKING_PAYMENT_STATUS_REJECTED,
+      })
       setFeedback({
         tone: 'idle',
         message: `Booking #${bookingId} ${decision === 'approve' ? 'approved' : 'rejected'}.`,
@@ -1251,7 +1371,10 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         token: session?.token,
       })
 
-      updateBookingStatus(bookingId, 'Cancelled')
+      updateBookingRecord(bookingId, {
+        status: 'Cancelled',
+        paymentStatus: BOOKING_PAYMENT_STATUS_CANCELLED,
+      })
       setFeedback({
         tone: 'idle',
         message:
@@ -1721,6 +1844,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
             const showCancelAction = isUser && canCancelBooking(booking)
             const payment = booking.payment
             const bookingPaymentStatus = getBookingPaymentStatusValue(booking)
+            const bookingDisplayStatus = getBookingDisplayStatusValue(booking)
+            const bookingDisplayStatusLabel = getBookingDisplayStatusLabel(booking, f)
             const depositAmount = Number(booking.depositAmount)
             const hasDeposit = Number.isFinite(depositAmount) && depositAmount > 0
             // Show Pay Now for confirmed bookings that haven't been paid yet
@@ -1780,7 +1905,24 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 <div>
                   <div className="bk-status-stack">
                     <div className="bk-status-actions">
-                      <span className={`bk-badge ${toStatusClassName(status)}`}>{booking.status}</span>
+                      {isOwner && isBookingPaymentStatusEditable(booking) ? (
+                        <select
+                          className="bk-select bk-status-select"
+                          value={bookingPaymentStatus}
+                          onChange={(event) => changeBookingPaymentStatus(booking.id, event.target.value)}
+                          disabled={paymentStatusUpdatingId === booking.id}
+                        >
+                          {BOOKING_PAYMENT_STATUS_OPTIONS.map((statusValue) => (
+                            <option key={statusValue} value={statusValue}>
+                              {getBookingPaymentStatusLabel(statusValue, f)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`bk-badge ${toStatusClassName(bookingDisplayStatus)}`}>
+                          {bookingDisplayStatusLabel}
+                        </span>
+                      )}
                       {isOwner && status === 'pending' ? (
                         <>
                           <button
@@ -1817,28 +1959,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                           {busyId === booking.id ? 'Cancelling...' : 'Cancel booking'}
                         </button>
                       ) : null}
-                    </div>
-
-                    <div className="bk-payment-status-card">
-                      <span className="bk-payment-status-label">{f('Payment Status')}</span>
-                      {isOwner ? (
-                        <select
-                          className="bk-select bk-payment-status-select"
-                          value={bookingPaymentStatus}
-                          onChange={(event) => changeBookingPaymentStatus(booking.id, event.target.value)}
-                          disabled={paymentStatusUpdatingId === booking.id}
-                        >
-                          {BOOKING_PAYMENT_STATUS_OPTIONS.map((statusValue) => (
-                            <option key={statusValue} value={statusValue}>
-                              {getBookingPaymentStatusLabel(statusValue, f)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className={`bk-badge ${toStatusClassName(bookingPaymentStatus)}`}>
-                          {getBookingPaymentStatusLabel(bookingPaymentStatus, f)}
-                        </span>
-                      )}
                     </div>
 
                     {payment ? (
