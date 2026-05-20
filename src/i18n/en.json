@@ -580,5 +580,19 @@
     "Your booking for {venue} on {date} was created successfully. Open My Bookings to track the status.":  "Your booking for {venue} on {date} was created successfully. Open My Bookings to track the status.",
     "Continue to Add-ons":  "Continue to Add-ons",
     "Continue to Review":  "Continue to Review",
-    "Open My Bookings":  "Open My Bookings"
+    "Open My Bookings":  "Open My Bookings",
+    "Payment Status":  "Payment Status",
+    "Pending Payment":  "Pending Payment",
+    "Deposit Paid":  "Deposit Paid",
+    "Paid in Full":  "Paid in Full",
+    "Payment method":  "Payment method",
+    "Deposit amount":  "Deposit amount",
+    "Submitted at":  "Submitted at",
+    "View CliQ proof":  "View CliQ proof",
+    "Cash":  "Cash",
+    "Cash payment option saved successfully.":  "Cash payment option saved successfully.",
+    "Payment completed successfully.":  "Payment completed successfully.",
+    "Booking payment status updated successfully.":  "Booking payment status updated successfully.",
+    "Cash payment selected for booking #{id}. Please complete the payment within 24 hours.":  "Cash payment selected for booking #{id}. Please complete the payment within 24 hours.",
+    "CliQ payment submitted for booking #{id}.":  "CliQ payment submitted for booking #{id}."
 }

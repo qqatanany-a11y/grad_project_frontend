@@ -241,9 +241,30 @@ const styles =
       padding: 0 0.95rem;
       font-size: 0.8rem;
     }
+    .bk-row {
+      grid-template-columns: 1.4fr 1fr 1fr 1fr minmax(230px, 1.15fr);
+    }
     .bk-status-stack {
       display: grid;
       gap: 0.65rem;
+    }
+    .bk-payment-status-card {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .bk-payment-status-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .bk-payment-status-select {
+      width: 100%;
+      min-width: 0;
+    }
+    .bk-payment-status-card .bk-badge {
+      width: fit-content;
     }
     .bk-payment-panel {
       margin-top: 0.15rem;
@@ -271,6 +292,16 @@ const styles =
     .bk-payment-line strong {
       color: #1e1b4b;
       font-size: 0.82rem;
+    }
+    .bk-badge.deposit-paid {
+      background: rgba(14, 165, 233, 0.1);
+      color: #0f766e;
+      border-color: rgba(14, 165, 233, 0.24);
+    }
+    .bk-badge.fully-paid {
+      background: rgba(22, 163, 74, 0.12);
+      color: #166534;
+      border-color: rgba(22, 163, 74, 0.25);
     }
     .bk-payment-choices {
       display: grid;
@@ -493,6 +524,14 @@ const emptyForm = {
 
 const PAYMENT_METHOD_CASH = 1
 const PAYMENT_METHOD_CLIQ = 2
+const BOOKING_PAYMENT_STATUS_PENDING = 'PendingPayment'
+const BOOKING_PAYMENT_STATUS_DEPOSIT = 'DepositPaid'
+const BOOKING_PAYMENT_STATUS_FULL = 'FullyPaid'
+const BOOKING_PAYMENT_STATUS_OPTIONS = [
+  BOOKING_PAYMENT_STATUS_PENDING,
+  BOOKING_PAYMENT_STATUS_DEPOSIT,
+  BOOKING_PAYMENT_STATUS_FULL,
+]
 
 function formatDate(value) {
   if (!value) return '--'
@@ -537,8 +576,37 @@ function getBookingStatusValue(booking) {
   return typeof rawStatus === 'string' ? rawStatus.toLowerCase() : 'pending'
 }
 
-function getPaymentMethodLabel(value) {
-  return typeof value === 'string' && value.toLowerCase() === 'cliq' ? 'CliQ' : 'Cash'
+function toStatusClassName(value) {
+  return String(value ?? '')
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+}
+
+function getBookingPaymentStatusValue(booking) {
+  const rawStatus = typeof booking?.paymentStatus === 'string' ? booking.paymentStatus.trim() : ''
+
+  return (
+    BOOKING_PAYMENT_STATUS_OPTIONS.find(
+      (statusValue) => statusValue.toLowerCase() === rawStatus.toLowerCase(),
+    ) ?? BOOKING_PAYMENT_STATUS_PENDING
+  )
+}
+
+function getBookingPaymentStatusLabel(value, f) {
+  switch (getBookingPaymentStatusValue({ paymentStatus: value })) {
+    case BOOKING_PAYMENT_STATUS_DEPOSIT:
+      return f('Deposit Paid')
+    case BOOKING_PAYMENT_STATUS_FULL:
+      return f('Paid in Full')
+    default:
+      return f('Pending Payment')
+  }
+}
+
+function getPaymentMethodLabel(value, f) {
+  if (typeof value !== 'string') return '--'
+  return value.toLowerCase() === 'cliq' ? 'CliQ' : f('Cash')
 }
 
 function isBookingAtLeastTwoWeeksAway(value) {
@@ -618,6 +686,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     cliqTransferImageName: '',
   })
   const [paymentSubmittingId, setPaymentSubmittingId] = useState(null)
+  const [paymentStatusUpdatingId, setPaymentStatusUpdatingId] = useState(null)
   const [paymentModalBooking, setPaymentModalBooking] = useState(null)
   const [modalError, setModalError] = useState('')
   const [feedback, setFeedback] = useState({ tone: 'idle', message: '' })
@@ -693,11 +762,18 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     const query = search.trim().toLowerCase()
 
     return bookings.filter((booking) => {
+      const bookingStatusLabel = f(booking.status || '').toLowerCase()
+      const bookingPaymentStatusLabel = getBookingPaymentStatusLabel(booking.paymentStatus, f).toLowerCase()
+      const paymentMethodLabel = getPaymentMethodLabel(booking.payment?.paymentMethod, f).toLowerCase()
       const matchesSearch =
         !query ||
         booking.venueName?.toLowerCase().includes(query) ||
         booking.status?.toLowerCase().includes(query) ||
-        booking.time?.toLowerCase().includes(query)
+        bookingStatusLabel.includes(query) ||
+        booking.paymentStatus?.toLowerCase().includes(query) ||
+        bookingPaymentStatusLabel.includes(query) ||
+        booking.time?.toLowerCase().includes(query) ||
+        paymentMethodLabel.includes(query)
 
       const matchesStatus =
         statusFilter === 'All' ||
@@ -705,7 +781,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
       return matchesSearch && matchesStatus
     })
-  }, [bookings, search, statusFilter])
+  }, [bookings, f, search, statusFilter])
 
   const filteredVenues = useMemo(() => {
     return venues.filter((venue) => {
@@ -873,17 +949,25 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
   }, [formValues.venueId, isUser, session?.token])
 
-  const updateBookingStatus = (bookingId, nextStatus) => {
+  const updateBookingRecord = (bookingId, updates) => {
     setBookings((currentBookings) =>
       currentBookings.map((booking) =>
         booking.id === bookingId
           ? {
               ...booking,
-              status: nextStatus,
+              ...updates,
             }
           : booking,
       ),
     )
+  }
+
+  const updateBookingStatus = (bookingId, nextStatus) => {
+    updateBookingRecord(bookingId, { status: nextStatus })
+  }
+
+  const updateBookingPaymentStatus = (bookingId, nextPaymentStatus) => {
+    updateBookingRecord(bookingId, { paymentStatus: nextPaymentStatus })
   }
 
   const servicesTotal = useMemo(() => {
@@ -1254,8 +1338,10 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       })
 
       // CliQ => Paid, Cash => Pending Payment
-      const nextStatus =
-        paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ ? 'Paid' : 'Pending Payment'
+      const nextPaymentStatus =
+        paymentDraft.paymentMethod === PAYMENT_METHOD_CLIQ
+          ? BOOKING_PAYMENT_STATUS_DEPOSIT
+          : BOOKING_PAYMENT_STATUS_PENDING
 
       setFeedback({
         tone: 'idle',
@@ -1263,10 +1349,12 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           typeof response === 'string' && response
             ? response
             : paymentDraft.paymentMethod === PAYMENT_METHOD_CASH
-              ? `Cash payment selected for booking #${booking.id}. Please complete the payment within 24 hours.`
-              : `CliQ payment submitted for booking #${booking.id}.`,
+              ? f('Cash payment selected for booking #{id}. Please complete the payment within 24 hours.', {
+                  id: booking.id,
+                })
+              : f('CliQ payment submitted for booking #{id}.', { id: booking.id }),
       })
-      updateBookingStatus(booking.id, nextStatus)
+      updateBookingPaymentStatus(booking.id, nextPaymentStatus)
       setPaymentModalBooking(null)
       setModalError('')
       resetPaymentDraft()
@@ -1297,6 +1385,43 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setModalError('')
     setPaymentModalBooking(null)
     resetPaymentDraft()
+  }
+
+  const changeBookingPaymentStatus = async (bookingId, nextPaymentStatus) => {
+    const currentBooking = bookings.find((booking) => booking.id === bookingId)
+    if (!currentBooking) return
+
+    if (getBookingPaymentStatusValue(currentBooking) === nextPaymentStatus) {
+      return
+    }
+
+    setPaymentStatusUpdatingId(bookingId)
+
+    try {
+      const result = await apiRequest(`/api/owner/bookings/${bookingId}/payment-status`, {
+        method: 'PUT',
+        token: session?.token,
+        body: {
+          paymentStatus: nextPaymentStatus,
+        },
+      })
+
+      updateBookingPaymentStatus(bookingId, nextPaymentStatus)
+      setFeedback({
+        tone: 'idle',
+        message:
+          typeof result === 'string' && result
+            ? result
+            : f('Booking payment status updated successfully.'),
+      })
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to update booking.',
+      })
+    } finally {
+      setPaymentStatusUpdatingId(null)
+    }
   }
 
   if (!isOwner && !isUser) {
@@ -1595,7 +1720,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
             const status = getBookingStatusValue(booking)
             const showCancelAction = isUser && canCancelBooking(booking)
             const payment = booking.payment
-            const paymentFormOpen = paymentDraft.bookingId === booking.id
+            const bookingPaymentStatus = getBookingPaymentStatusValue(booking)
             const depositAmount = Number(booking.depositAmount)
             const hasDeposit = Number.isFinite(depositAmount) && depositAmount > 0
             // Show Pay Now for confirmed bookings that haven't been paid yet
@@ -1653,87 +1778,103 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                   ) : null}
                 </div>
                 <div>
-                  {isOwner && status === 'pending' ? (
-                    <div className="bk-inline-actions">
-                      <button
-                        className="bk-button secondary"
-                        onClick={() => decideBooking(booking.id, 'approve')}
-                        disabled={busyId === booking.id}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="bk-button secondary"
-                        onClick={() => decideBooking(booking.id, 'reject')}
-                        disabled={busyId === booking.id}
-                      >
-                        Reject
-                      </button>
+                  <div className="bk-status-stack">
+                    <div className="bk-status-actions">
+                      <span className={`bk-badge ${toStatusClassName(status)}`}>{booking.status}</span>
+                      {isOwner && status === 'pending' ? (
+                        <>
+                          <button
+                            className="bk-button secondary"
+                            onClick={() => decideBooking(booking.id, 'approve')}
+                            disabled={busyId === booking.id}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="bk-button secondary"
+                            onClick={() => decideBooking(booking.id, 'reject')}
+                            disabled={busyId === booking.id}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : null}
+                      {showPayButton ? (
+                        <button
+                          className="bk-button secondary bk-inline-button"
+                          onClick={() => openPaymentModal(booking)}
+                          disabled={paymentSubmittingId === booking.id}
+                        >
+                          Pay now
+                        </button>
+                      ) : null}
+                      {showCancelAction ? (
+                        <button
+                          className="bk-button danger bk-inline-button"
+                          onClick={() => cancelBooking(booking.id)}
+                          disabled={busyId === booking.id || paymentSubmittingId === booking.id}
+                        >
+                          {busyId === booking.id ? 'Cancelling...' : 'Cancel booking'}
+                        </button>
+                      ) : null}
                     </div>
-                  ) : (
-                    <div className="bk-status-stack">
-                      <div className="bk-status-actions">
-                        <span className={`bk-badge ${status.replace(/\s+/g, '-')}`}>{booking.status}</span>
-                        {showPayButton ? (
-                          <button
-                            className="bk-button secondary bk-inline-button"
-                            onClick={() => openPaymentModal(booking)}
-                            disabled={paymentSubmittingId === booking.id}
-                          >
-                            Pay now
-                          </button>
-                        ) : null}
-                        {showCancelAction ? (
-                          <button
-                            className="bk-button danger bk-inline-button"
-                            onClick={() => cancelBooking(booking.id)}
-                            disabled={busyId === booking.id || paymentSubmittingId === booking.id}
-                          >
-                            {busyId === booking.id ? 'Cancelling...' : 'Cancel booking'}
-                          </button>
-                        ) : null}
-                      </div>
 
-                      {payment ? (
-                        <div className="bk-payment-panel">
-                          <div className="bk-payment-meta">
-                            <div className="bk-payment-line">
-                              <span>Payment method</span>
-                              <strong>{getPaymentMethodLabel(payment.paymentMethod)}</strong>
-                            </div>
-                            <div className="bk-payment-line">
-                              <span>Payment status</span>
-                              <strong>{payment.status || '--'}</strong>
-                            </div>
-                            <div className="bk-payment-line">
-                              <span>Deposit amount</span>
-                              <strong>{formatCurrency(payment.amount)}</strong>
-                            </div>
-                            {payment.paidAt ? (
-                              <div className="bk-payment-line">
-                                <span>Submitted at</span>
-                                <strong>{formatDateTime(payment.paidAt)}</strong>
-                              </div>
-                            ) : null}
+                    <div className="bk-payment-status-card">
+                      <span className="bk-payment-status-label">{f('Payment Status')}</span>
+                      {isOwner ? (
+                        <select
+                          className="bk-select bk-payment-status-select"
+                          value={bookingPaymentStatus}
+                          onChange={(event) => changeBookingPaymentStatus(booking.id, event.target.value)}
+                          disabled={paymentStatusUpdatingId === booking.id}
+                        >
+                          {BOOKING_PAYMENT_STATUS_OPTIONS.map((statusValue) => (
+                            <option key={statusValue} value={statusValue}>
+                              {getBookingPaymentStatusLabel(statusValue, f)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`bk-badge ${toStatusClassName(bookingPaymentStatus)}`}>
+                          {getBookingPaymentStatusLabel(bookingPaymentStatus, f)}
+                        </span>
+                      )}
+                    </div>
+
+                    {payment ? (
+                      <div className="bk-payment-panel">
+                        <div className="bk-payment-meta">
+                          <div className="bk-payment-line">
+                            <span>{f('Payment method')}</span>
+                            <strong>{getPaymentMethodLabel(payment.paymentMethod, f)}</strong>
                           </div>
-
-                          {payment.cliqTransferImageDataUrl ? (
-                            <div className="bk-doc-links">
-                              <a
-                                className="bk-link"
-                                href={resolveApiAssetUrl(payment.cliqTransferImageDataUrl)}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                View CliQ proof
-                              </a>
+                          <div className="bk-payment-line">
+                            <span>{f('Deposit amount')}</span>
+                            <strong>{formatCurrency(payment.amount)}</strong>
+                          </div>
+                          {payment.paidAt ? (
+                            <div className="bk-payment-line">
+                              <span>{f('Submitted at')}</span>
+                              <strong>{formatDateTime(payment.paidAt)}</strong>
                             </div>
                           ) : null}
                         </div>
-                      ) : null}
 
-                    </div>
-                  )}
+                        {payment.cliqTransferImageDataUrl ? (
+                          <div className="bk-doc-links">
+                            <a
+                              className="bk-link"
+                              href={resolveApiAssetUrl(payment.cliqTransferImageDataUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {f('View CliQ proof')}
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             )
