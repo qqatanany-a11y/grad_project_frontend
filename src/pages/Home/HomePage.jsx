@@ -4,6 +4,7 @@ import {
   getVenueAvailableSlots,
   resolveApiAssetUrl,
 } from '../../lib/apiClient'
+import ceremoniqLogo from '../../assets/ceremoniq-logo.png'
 import { validateSafeImageFile } from '../../lib/imageUpload'
 import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
@@ -157,13 +158,43 @@ const styles = `
     box-shadow: 0 4px 32px rgba(79,70,229,0.09);
   }
 
+  .hp-brand-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #24184f;
+    border: 1px solid rgba(79,70,229,0.15);
+    box-shadow: 0 10px 24px rgba(79,70,229,0.18);
+  }
+
+  .hp-brand-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
   .hp-nav-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    padding: 0;
+    transition: transform 0.2s;
+  }
+  .hp-nav-logo-text {
     font-size: 1.6rem; font-weight: 900; letter-spacing: -0.04em;
     background: linear-gradient(135deg, #4f46e5, #f43f5e);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text; cursor: pointer; border: none;
-    background-color: transparent; font-family: inherit; padding: 0;
-    transition: transform 0.2s;
+    background-clip: text;
   }
   .hp-nav-logo:hover { transform: scale(1.05); }
 
@@ -1194,8 +1225,19 @@ const styles = `
   }
 
   .hp-footer-brand {
-    font-size: 1.75rem; font-weight: 900; color: #fff; letter-spacing: -0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
     position: relative; z-index: 1;
+  }
+  .hp-footer-brand .hp-brand-badge {
+    width: 48px;
+    height: 48px;
+    border-color: rgba(255,255,255,0.18);
+    box-shadow: 0 12px 28px rgba(12,10,31,0.28);
+  }
+  .hp-footer-brand-text {
+    font-size: 1.75rem; font-weight: 900; color: #fff; letter-spacing: -0.03em;
   }
 
   .hp-footer-links { display: flex; gap: 1.5rem; position: relative; z-index: 1; }
@@ -1212,6 +1254,9 @@ const styles = `
   /* â”€â”€ RESPONSIVE â”€â”€ */
   @media (max-width: 900px) {
     .hp-nav { padding: 0 1.5rem; }
+    .hp-brand-badge { width: 38px; height: 38px; }
+    .hp-nav-logo { gap: 0.6rem; }
+    .hp-nav-logo-text { font-size: 1.35rem; }
     .hp-hero { grid-template-columns: 1fr; min-height: auto; }
     .hp-hero-left { padding: 3rem 1.5rem; }
     .hp-hero-right { min-height: 320px; }
@@ -1927,7 +1972,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
         {/* â”€â”€ NAV â”€â”€ */}
         <nav className={`hp-nav${scrolled ? ' scrolled' : ''}`}>
-          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>Ceremoniq</button>
+          <button className="hp-nav-logo" onClick={() => scrollTo('hero')}>
+            <span className="hp-brand-badge" aria-hidden="true">
+              <img src={ceremoniqLogo} alt="" />
+            </span>
+            <span className="hp-nav-logo-text">Ceremoniq</span>
+          </button>
 
           <div className="hp-nav-links">
             {navLinks.map((link) => (
@@ -3000,7 +3050,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
         </section>
 
         <footer className="hp-footer">
-          <span className="hp-footer-brand">Ceremoniq</span>
+          <span className="hp-footer-brand">
+            <span className="hp-brand-badge" aria-hidden="true">
+              <img src={ceremoniqLogo} alt="" />
+            </span>
+            <span className="hp-footer-brand-text">Ceremoniq</span>
+          </span>
           <div className="hp-footer-links">
             {navLinks.map((link) => (
               <button key={link.id} className="hp-footer-link" onClick={() => scrollTo(link.id)}>
