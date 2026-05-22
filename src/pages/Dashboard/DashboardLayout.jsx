@@ -1,6 +1,5 @@
 import LanguageToggle from '../../i18n/LanguageToggle'
 import { useI18n } from '../../i18n/I18nProvider'
-import ceremoniqLogo from '../../assets/ceremoniq-logo.png'
 
 const layoutStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -49,28 +48,6 @@ const layoutStyles = `
   .db-brand-head {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-  }
-
-  .db-brand-badge {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #24184f;
-    border: 1px solid rgba(79,70,229,0.14);
-    box-shadow: 0 12px 28px rgba(79,70,229,0.16);
-  }
-
-  .db-brand-badge img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
   }
 
   .db-brand-copy {
@@ -469,9 +446,6 @@ function DashboardLayout({
         <aside className="db-sidebar">
           <div className="db-brand">
             <div className="db-brand-head">
-              <span className="db-brand-badge" aria-hidden="true">
-                <img src={ceremoniqLogo} alt="" />
-              </span>
               <div className="db-brand-copy">
                 <p className="db-brand-name">Ceremoniq</p>
                 <p className="db-brand-sub">{dashboardLabel}</p>

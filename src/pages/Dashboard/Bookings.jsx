@@ -13,9 +13,7 @@ import { useI18n } from '../../i18n/I18nProvider'
 import {
   formatVenueDateLabel,
   formatVenueTimeSlot,
-  getVenueAvailabilitySlots,
-  normalizeTimeValue,
-  parseTimeToMinutes,
+  getVenueAvailabilitySlots
 } from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
 
@@ -200,178 +198,6 @@ const styles =
       font-size: 0.85rem;
       line-height: 1.6;
     }
-    .bk-venue-card {
-      display: grid;
-      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-      gap: 1rem;
-      margin-top: 1rem;
-      padding: 1rem;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 20px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
-      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
-    }
-    .bk-venue-media {
-      min-height: 220px;
-    }
-    .bk-venue-image,
-    .bk-venue-image-fallback {
-      width: 100%;
-      height: 100%;
-      min-height: 220px;
-      border-radius: 18px;
-    }
-    .bk-venue-image {
-      display: block;
-      object-fit: cover;
-      border: 1px solid rgba(226,232,240,0.9);
-      background: #fff;
-    }
-    .bk-venue-image-fallback {
-      display: grid;
-      place-items: center;
-      padding: 1rem;
-      background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(129,140,248,0.08));
-      border: 1px dashed rgba(79,70,229,0.2);
-      color: #4338ca;
-      text-align: center;
-    }
-    .bk-venue-image-fallback span {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 4rem;
-      height: 4rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.72);
-      font-size: 1.4rem;
-      font-weight: 900;
-      letter-spacing: 0.04em;
-      box-shadow: 0 10px 24px rgba(79,70,229,0.14);
-    }
-    .bk-venue-content {
-      min-width: 0;
-      display: grid;
-      gap: 1rem;
-    }
-    .bk-venue-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-    .bk-venue-eyebrow {
-      margin: 0 0 0.35rem;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-    .bk-venue-title {
-      margin: 0;
-      font-size: 1.2rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      color: #1e1b4b;
-    }
-    .bk-venue-subtitle {
-      margin: 0.35rem 0 0;
-      font-size: 0.85rem;
-      color: #64748b;
-      line-height: 1.6;
-    }
-    .bk-venue-badges {
-      display: flex;
-      gap: 0.45rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .bk-venue-description {
-      margin: 0;
-      font-size: 0.85rem;
-      color: #475569;
-      line-height: 1.75;
-    }
-    .bk-venue-facts {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-    .bk-venue-fact {
-      min-width: 0;
-      padding: 0.85rem 0.9rem;
-      border-radius: 14px;
-      border: 1px solid #e2e8f0;
-      background: #fff;
-    }
-    .bk-venue-fact-label {
-      display: block;
-      margin-bottom: 0.3rem;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-    .bk-venue-fact-value {
-      display: block;
-      color: #1e1b4b;
-      font-size: 0.9rem;
-      font-weight: 800;
-      line-height: 1.55;
-      overflow-wrap: anywhere;
-    }
-    .bk-venue-fact-value.muted {
-      color: #64748b;
-      font-weight: 700;
-    }
-    .bk-venue-section {
-      display: grid;
-      gap: 0.7rem;
-    }
-    .bk-venue-section-title {
-      margin: 0;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-    .bk-venue-schedule-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 0.65rem;
-    }
-    .bk-venue-schedule-card {
-      padding: 0.8rem 0.9rem;
-      border-radius: 14px;
-      border: 1px solid #e2e8f0;
-      background: #fff;
-      display: grid;
-      gap: 0.3rem;
-    }
-    .bk-venue-schedule-day {
-      color: #4338ca;
-      font-size: 0.74rem;
-      font-weight: 800;
-    }
-    .bk-venue-schedule-time {
-      color: #1e1b4b;
-      font-size: 0.84rem;
-      font-weight: 800;
-    }
-    .bk-venue-schedule-price {
-      color: #64748b;
-      font-size: 0.76rem;
-      font-weight: 700;
-    }
-    .bk-venue-links {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
     .bk-doc-links {
       display: flex;
       gap: 0.5rem;
@@ -550,26 +376,8 @@ const styles =
       object-fit: cover;
     }
     @media (max-width: 760px) {
-      .bk-grid-wide, .bk-summary-grid, .bk-payment-choices, .bk-venue-facts {
+      .bk-grid-wide, .bk-summary-grid, .bk-payment-choices {
         grid-template-columns: 1fr;
-      }
-    }
-    @media (max-width: 960px) {
-      .bk-venue-card {
-        grid-template-columns: 1fr;
-      }
-      .bk-venue-media,
-      .bk-venue-image,
-      .bk-venue-image-fallback {
-        min-height: 200px;
-      }
-      .bk-venue-badges {
-        justify-content: flex-start;
-      }
-    }
-    @media (max-width: 1040px) {
-      .bk-venue-facts {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -952,173 +760,20 @@ function getVenueCategoryLabel(value) {
   return 'Wedding Hall'
 }
 
-function getPricingTypeValue() {
+function getPricingTypeValue(venue) {
   return 'FixedSlots'
 }
 
-function getPricingTypeLabel() {
+function getPricingTypeLabel(value) {
   return 'Fixed slots'
 }
 
-function getVenuePricePerHour() {
+function getVenuePricePerHour(venue) {
   return null
-}
-
-function readVenueValue(source, ...keys) {
-  for (const key of keys) {
-    const value = source?.[key]
-
-    if (value !== undefined && value !== null && value !== '') {
-      return value
-    }
-  }
-
-  return null
-}
-
-const venueWeekdayBaseDateUtc = Date.UTC(2024, 0, 7)
-
-function normalizeDayOfWeekValue(value) {
-  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 6) {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const trimmedValue = value.trim()
-
-    if (!trimmedValue) {
-      return null
-    }
-
-    const numericValue = Number(trimmedValue)
-    if (Number.isInteger(numericValue) && numericValue >= 0 && numericValue <= 6) {
-      return numericValue
-    }
-
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const matchedIndex = dayNames.findIndex(
-      (dayName) => dayName.toLowerCase() === trimmedValue.toLowerCase(),
-    )
-
-    return matchedIndex >= 0 ? matchedIndex : null
-  }
-
-  return null
-}
-
-function formatWeekdayLabel(dayValue, locale = 'en-GB') {
-  const normalizedValue = normalizeDayOfWeekValue(dayValue)
-
-  if (normalizedValue === null) {
-    return '--'
-  }
-
-  return new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(
-    new Date(venueWeekdayBaseDateUtc + normalizedValue * 24 * 60 * 60 * 1000),
-  )
-}
-
-function getVenueSchedulePatterns(venue, locale = 'en-GB') {
-  const rawTimeSlots = readVenueValue(venue, 'timeSlots', 'TimeSlots')
-
-  if (!Array.isArray(rawTimeSlots)) {
-    return []
-  }
-
-  return rawTimeSlots
-    .map((slot, index) => {
-      const rawDayValue = readVenueValue(slot, 'day', 'Day')
-      const startTime = normalizeTimeValue(
-        String(readVenueValue(slot, 'startTime', 'StartTime') ?? ''),
-      )
-      const endTime = normalizeTimeValue(
-        String(readVenueValue(slot, 'endTime', 'EndTime') ?? ''),
-      )
-      const priceValue = Number(readVenueValue(slot, 'price', 'Price'))
-      const isActive = readVenueValue(slot, 'isActive', 'IsActive') !== false
-
-      return {
-        key: `${rawDayValue ?? 'na'}-${startTime}-${endTime}-${index}`,
-        dayValue: normalizeDayOfWeekValue(rawDayValue),
-        dayLabel: formatWeekdayLabel(rawDayValue, locale),
-        startTime,
-        endTime,
-        price: Number.isFinite(priceValue) ? priceValue : 0,
-        isActive,
-      }
-    })
-    .filter((slot) => slot.isActive && slot.startTime && slot.endTime)
-    .sort((leftSlot, rightSlot) => {
-      const leftDay = leftSlot.dayValue ?? 99
-      const rightDay = rightSlot.dayValue ?? 99
-
-      if (leftDay !== rightDay) {
-        return leftDay - rightDay
-      }
-
-      const leftStart = parseTimeToMinutes(leftSlot.startTime) ?? 0
-      const rightStart = parseTimeToMinutes(rightSlot.startTime) ?? 0
-
-      if (leftStart !== rightStart) {
-        return leftStart - rightStart
-      }
-
-      const leftEnd = parseTimeToMinutes(leftSlot.endTime) ?? 0
-      const rightEnd = parseTimeToMinutes(rightSlot.endTime) ?? 0
-
-      return leftEnd - rightEnd
-    })
-}
-
-function getVenueCoverPhotoPath(venue) {
-  const coverPhotoPath = readVenueValue(venue, 'coverPhotoUrl', 'CoverPhotoUrl')
-  if (coverPhotoPath) {
-    return String(coverPhotoPath)
-  }
-
-  const imageUrls = readVenueValue(venue, 'imageUrls', 'ImageUrls')
-  if (!Array.isArray(imageUrls) || !imageUrls.length) {
-    return ''
-  }
-
-  return String(imageUrls[0] ?? '')
-}
-
-function normalizeExternalUrl(value) {
-  if (typeof value !== 'string') {
-    return ''
-  }
-
-  const trimmedValue = value.trim()
-  if (!trimmedValue) {
-    return ''
-  }
-
-  return /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`
-}
-
-function getVenueExternalLinks(venue) {
-  return [
-    {
-      key: 'website',
-      label: 'Website',
-      url: normalizeExternalUrl(readVenueValue(venue, 'websiteUrl', 'WebsiteUrl')),
-    },
-    {
-      key: 'instagram',
-      label: 'Instagram',
-      url: normalizeExternalUrl(readVenueValue(venue, 'instagramUrl', 'InstagramUrl')),
-    },
-    {
-      key: 'facebook',
-      label: 'Facebook',
-      url: normalizeExternalUrl(readVenueValue(venue, 'facebookUrl', 'FacebookUrl')),
-    },
-  ].filter((item) => item.url)
 }
 
 function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }) {
-  const { f, direction, language } = useI18n()
+  const { f, direction } = useI18n()
   const [bookings, setBookings] = useState([])
   const [venues, setVenues] = useState([])
   const [formValues, setFormValues] = useState(emptyForm)
@@ -1263,18 +918,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const usesVenueAvailability = useMemo(() => {
     return selectedVenue ? getPricingTypeValue(selectedVenue) === 'FixedSlots' : false
   }, [selectedVenue])
-
-  const selectedVenueCoverPhotoUrl = useMemo(() => {
-    const coverPhotoPath = getVenueCoverPhotoPath(selectedVenue)
-    return coverPhotoPath ? resolveApiAssetUrl(coverPhotoPath) : ''
-  }, [selectedVenue])
-
-  const selectedVenueSchedule = useMemo(() => {
-    const locale = language === 'ar' ? 'ar-JO' : 'en-GB'
-    return getVenueSchedulePatterns(selectedVenue, locale)
-  }, [language, selectedVenue])
-
-  const selectedVenueLinks = useMemo(() => getVenueExternalLinks(selectedVenue), [selectedVenue])
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedVenue || !formValues.date) {
@@ -1975,6 +1618,9 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                   <option key={venue.id} value={venue.id}>
                     {venue.name} {venue.city ? `(${venue.city})` : ''} -{' '}
                     {getVenueCategoryLabel(getVenueCategoryValue(venue))}
+                    {Number.isFinite(Number(venue.capacity))
+                      ? ` | ${f('Capacity')}: ${venue.capacity}`
+                      : ''}
                   </option>
                 ))}
               </select>
@@ -2040,7 +1686,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
           {selectedVenue ? (
             <>
-              <div className="bk-note" style={{ display: 'none' }}>
+              <div className="bk-note">
                 Selected venue type: <strong>{getVenueCategoryLabel(getVenueCategoryValue(selectedVenue))}</strong>
                 {' Â· '}
                 Pricing model: <strong>{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</strong>
@@ -2055,142 +1701,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                   </>
                 ) : null}
               </div>
-
-              <div className="bk-venue-card">
-                <div className="bk-venue-media">
-                  {selectedVenueCoverPhotoUrl ? (
-                    <img
-                      className="bk-venue-image"
-                      src={selectedVenueCoverPhotoUrl}
-                      alt={selectedVenue.name || f('Venue cover')}
-                    />
-                  ) : (
-                    <div className="bk-venue-image-fallback" aria-hidden="true">
-                      <span>{String(selectedVenue.name || 'V').slice(0, 1).toUpperCase()}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bk-venue-content">
-                  <div className="bk-venue-head">
-                    <div>
-                      <p className="bk-venue-eyebrow">{f('Selected venue details')}</p>
-                      <h3 className="bk-venue-title">{selectedVenue.name || '--'}</h3>
-                      <p className="bk-venue-subtitle">
-                        {[selectedVenue.city, selectedVenue.address].filter(Boolean).join(' · ') || '--'}
-                      </p>
-                    </div>
-
-                    <div className="bk-venue-badges">
-                      <span className="bk-slot-badge">
-                        {f('Venue Type')}: {f(getVenueCategoryLabel(getVenueCategoryValue(selectedVenue)))}
-                      </span>
-                      <span className="bk-slot-badge">
-                        {f('Pricing Model')}: {f(getPricingTypeLabel(getPricingTypeValue(selectedVenue)))}
-                      </span>
-                      {selectedTimeSlot ? (
-                        <span className="bk-slot-badge">
-                          {f('Scheduled slot')}: {formatVenueTimeSlot(selectedTimeSlot)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <p className="bk-venue-description">
-                    {selectedVenue.description || f('No description provided.')}
-                  </p>
-
-                  <div className="bk-venue-facts">
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('Capacity')}</span>
-                      <span className="bk-venue-fact-value">
-                        {Number.isFinite(Number(selectedVenue.capacity))
-                          ? `${selectedVenue.capacity} ${f('Guests')}`
-                          : '--'}
-                      </span>
-                    </div>
-
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('Deposit percentage')}</span>
-                      <span className="bk-venue-fact-value">
-                        {formatPercentage(selectedVenue.depositPercentage)}
-                      </span>
-                    </div>
-
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('Business:')}</span>
-                      <span className="bk-venue-fact-value">
-                        {selectedVenue.companyName || '--'}
-                      </span>
-                    </div>
-
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('City')}</span>
-                      <span className="bk-venue-fact-value">
-                        {selectedVenue.city || '--'}
-                      </span>
-                    </div>
-
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('Address')}</span>
-                      <span className="bk-venue-fact-value">
-                        {selectedVenue.address || '--'}
-                      </span>
-                    </div>
-
-                    <div className="bk-venue-fact">
-                      <span className="bk-venue-fact-label">{f('Base Estimate')}</span>
-                      <span className={`bk-venue-fact-value${estimatedBasePrice === null ? ' muted' : ''}`}>
-                        {estimatedBasePrice === null
-                          ? formValues.date
-                            ? f('Choose a slot')
-                            : f('Choose a date first')
-                          : formatCurrency(estimatedBasePrice)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bk-venue-section">
-                    <p className="bk-venue-section-title">{f('Time Slots')}</p>
-                    {selectedVenueSchedule.length > 0 ? (
-                      <div className="bk-venue-schedule-list">
-                        {selectedVenueSchedule.map((slot) => (
-                          <div key={slot.key} className="bk-venue-schedule-card">
-                            <span className="bk-venue-schedule-day">{slot.dayLabel}</span>
-                            <span className="bk-venue-schedule-time">
-                              {slot.startTime} - {slot.endTime}
-                            </span>
-                            <span className="bk-venue-schedule-price">
-                              {formatCurrency(slot.price)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bk-note" style={{ marginTop: 0 }}>
-                        {f('No time slots defined.')}
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedVenueLinks.length > 0 ? (
-                    <div className="bk-venue-links">
-                      {selectedVenueLinks.map((link) => (
-                        <a
-                          key={link.key}
-                          className="bk-link"
-                          href={link.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {f(link.label)}
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
               {availabilitySummary ? <div className="bk-note">{availabilitySummary}</div> : null}
 
               {availableTimeSlots.length > 0 ? (
