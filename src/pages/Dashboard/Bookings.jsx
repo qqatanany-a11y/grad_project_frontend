@@ -1800,16 +1800,6 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 )}
               </div>
 
-              <div className="bk-summary-grid">
-                <div className="bk-summary-card wide">
-                  <span className="bk-summary-label">{f('Estimated Total')}</span>
-                  <span className="bk-summary-value">
-                    {hasSelectedSlot
-                      ? formatCurrency(estimatedTotal)
-                      : f('Calculated after slot selection')}
-                  </span>
-                </div>
-              </div>
             </>
           ) : null}
 
