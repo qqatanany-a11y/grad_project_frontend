@@ -177,6 +177,9 @@ const styles =
       border: 1.5px solid #e2e8f0;
       background: #fafbff;
     }
+    .bk-summary-card.wide {
+      grid-column: 1 / -1;
+    }
     .bk-summary-label {
       display: block;
       margin-bottom: 0.25rem;
@@ -1798,22 +1801,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
               </div>
 
               <div className="bk-summary-grid">
-                <div className="bk-summary-card">
-                  <span className="bk-summary-label">Base Estimate</span>
-                  <span className="bk-summary-value">
-                    {estimatedBasePrice === null ? f('Choose a slot') : formatCurrency(estimatedBasePrice)}
-                  </span>
-                </div>
-                <div className="bk-summary-card">
-                  <span className="bk-summary-label">Add-ons</span>
-                  <span className="bk-summary-value">
-                    {hasSelectedSlot
-                      ? formatCurrency(servicesTotal)
-                      : f('Calculated after slot selection')}
-                  </span>
-                </div>
-                <div className="bk-summary-card">
-                  <span className="bk-summary-label">Estimated Total</span>
+                <div className="bk-summary-card wide">
+                  <span className="bk-summary-label">{f('Estimated Total')}</span>
                   <span className="bk-summary-value">
                     {hasSelectedSlot
                       ? formatCurrency(estimatedTotal)
