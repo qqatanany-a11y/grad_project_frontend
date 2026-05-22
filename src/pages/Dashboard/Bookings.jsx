@@ -1094,7 +1094,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     return selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
   }, [selectedTimeSlot])
 
-  const estimatedTotal = (estimatedBasePrice ?? 0) + servicesTotal
+  const hasSelectedSlot = estimatedBasePrice !== null
+  const estimatedTotal = hasSelectedSlot ? estimatedBasePrice + servicesTotal : null
 
   const availabilitySummary = useMemo(() => {
     if (!selectedVenue || !usesVenueAvailability) {
@@ -1794,14 +1795,18 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 </div>
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Add-ons</span>
-                  <span className="bk-summary-value">{formatCurrency(servicesTotal)}</span>
+                  <span className="bk-summary-value">
+                    {hasSelectedSlot
+                      ? formatCurrency(servicesTotal)
+                      : f('Calculated after slot selection')}
+                  </span>
                 </div>
                 <div className="bk-summary-card">
                   <span className="bk-summary-label">Estimated Total</span>
                   <span className="bk-summary-value">
-                    {estimatedBasePrice === null && servicesTotal === 0
-                      ? f('Calculated after slot selection')
-                      : formatCurrency(estimatedTotal)}
+                    {hasSelectedSlot
+                      ? formatCurrency(estimatedTotal)
+                      : f('Calculated after slot selection')}
                   </span>
                 </div>
               </div>
