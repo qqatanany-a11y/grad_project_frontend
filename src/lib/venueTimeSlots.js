@@ -96,17 +96,34 @@ export function normalizeVenueTimeSlot(slot) {
 export function normalizeVenueAvailabilitySlot(slot) {
   const slotId = Number(readValue(slot, 'id', 'Id'))
   const venueId = Number(readValue(slot, 'venueId', 'VenueId'))
+  const venueAvailabilityId = Number(
+    readValue(slot, 'venueAvailabilityId', 'VenueAvailabilityId'),
+  )
+  const timeSlotId = Number(readValue(slot, 'timeSlotId', 'TimeSlotId'))
   const price = Number(readValue(slot, 'price', 'Price'))
   const rawDate = String(readValue(slot, 'date', 'Date') ?? '').trim()
+  const normalizedVenueAvailabilityId =
+    Number.isInteger(venueAvailabilityId) && venueAvailabilityId > 0
+      ? venueAvailabilityId
+      : null
+  const normalizedTimeSlotId =
+    Number.isInteger(timeSlotId) && timeSlotId > 0 ? timeSlotId : null
+  const normalizedSlotId =
+    Number.isInteger(slotId) && slotId > 0
+      ? slotId
+      : normalizedVenueAvailabilityId ?? normalizedTimeSlotId ?? null
 
   return {
-    id: Number.isInteger(slotId) && slotId > 0 ? slotId : null,
+    id: normalizedSlotId,
     venueId: Number.isInteger(venueId) && venueId > 0 ? venueId : null,
+    venueAvailabilityId: normalizedVenueAvailabilityId,
+    timeSlotId: normalizedTimeSlotId,
     date: rawDate ? rawDate.slice(0, 10) : '',
     startTime: normalizeTimeValue(String(readValue(slot, 'startTime', 'StartTime') ?? '')),
     endTime: normalizeTimeValue(String(readValue(slot, 'endTime', 'EndTime') ?? '')),
     price: Number.isFinite(price) ? price : 0,
     isBooked: readValue(slot, 'isBooked', 'IsBooked') === true,
+    isRecurring: readValue(slot, 'isRecurring', 'IsRecurring') === true,
   }
 }
 
@@ -163,6 +180,96 @@ export function getVenueAvailabilitySlots(source) {
     .map((slot) => normalizeVenueAvailabilitySlot(slot))
     .filter((slot) => slot.id && slot.startTime && slot.endTime && !slot.isBooked)
     .sort(sortVenueTimeSlots)
+}
+
+function normalizePositiveInteger(value) {
+  const parsedValue = Number(value)
+  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : null
+}
+
+export function getVenueAvailabilitySelectionState(slot) {
+  const venueAvailabilityId = normalizePositiveInteger(slot?.venueAvailabilityId)
+  const timeSlotId = normalizePositiveInteger(slot?.timeSlotId)
+  const fallbackId = normalizePositiveInteger(slot?.id)
+
+  if (venueAvailabilityId) {
+    return {
+      venueAvailabilityId: String(venueAvailabilityId),
+      timeSlotId: '',
+    }
+  }
+
+  if (timeSlotId) {
+    return {
+      venueAvailabilityId: '',
+      timeSlotId: String(timeSlotId),
+    }
+  }
+
+  if (fallbackId) {
+    return {
+      venueAvailabilityId: String(fallbackId),
+      timeSlotId: '',
+    }
+  }
+
+  return {
+    venueAvailabilityId: '',
+    timeSlotId: '',
+  }
+}
+
+export function getVenueAvailabilitySelectionPayload(slot) {
+  const venueAvailabilityId = normalizePositiveInteger(slot?.venueAvailabilityId)
+  const timeSlotId = normalizePositiveInteger(slot?.timeSlotId)
+  const fallbackId = normalizePositiveInteger(slot?.id)
+
+  if (venueAvailabilityId) {
+    return {
+      venueAvailabilityId,
+      timeSlotId: null,
+    }
+  }
+
+  if (timeSlotId) {
+    return {
+      venueAvailabilityId: null,
+      timeSlotId,
+    }
+  }
+
+  return {
+    venueAvailabilityId: fallbackId,
+    timeSlotId: null,
+  }
+}
+
+export function isVenueAvailabilitySlotSelected(slot, selection) {
+  const slotSelection = getVenueAvailabilitySelectionState(slot)
+  const selectedVenueAvailabilityId = String(selection?.venueAvailabilityId ?? '')
+  const selectedTimeSlotId = String(selection?.timeSlotId ?? '')
+
+  if (
+    slotSelection.venueAvailabilityId &&
+    slotSelection.venueAvailabilityId === selectedVenueAvailabilityId
+  ) {
+    return true
+  }
+
+  if (slotSelection.timeSlotId && slotSelection.timeSlotId === selectedTimeSlotId) {
+    return true
+  }
+
+  // Legacy drafts stored recurring slot ids in venueAvailabilityId.
+  if (
+    slotSelection.timeSlotId &&
+    !selectedTimeSlotId &&
+    slotSelection.timeSlotId === selectedVenueAvailabilityId
+  ) {
+    return true
+  }
+
+  return false
 }
 
 function hasSlotContent(slot) {

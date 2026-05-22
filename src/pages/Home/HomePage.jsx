@@ -9,7 +9,10 @@ import { getVenuePhotoSet } from '../../lib/venueMedia'
 import {
   formatVenueDateLabel,
   formatVenueTimeSlot,
+  getVenueAvailabilitySelectionPayload,
+  getVenueAvailabilitySelectionState,
   getVenueAvailabilitySlots,
+  isVenueAvailabilitySlotSelected,
 } from '../../lib/venueTimeSlots'
 import LanguageToggle from '../../i18n/LanguageToggle'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -1302,7 +1305,7 @@ function scrollTo(id) {
 function formatVenuePrice(value) {
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '--'
-  return `${amount} JOD`
+  return `${amount.toFixed(2)} JOD`
 }
 
 function formatBookingDate(value) {
@@ -1532,7 +1535,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
 
   const selectedBookingSlot =
     selectedVenueTimeSlots.find(
-      (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
+      (slot) => isVenueAvailabilitySlotSelected(slot, bookingForm),
     ) ?? null
 
   const selectedVenuePhotoSet = useMemo(
@@ -1591,21 +1594,22 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   }, [bookingForm.date, selectedVenue?.id, selectedVenueUsesAvailability])
 
   useEffect(() => {
-    if (!bookingForm.venueAvailabilityId) {
+    if (!bookingForm.venueAvailabilityId && !bookingForm.timeSlotId) {
       return
     }
 
     const selectedStillAvailable = selectedVenueTimeSlots.some(
-      (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
+      (slot) => isVenueAvailabilitySlotSelected(slot, bookingForm),
     )
 
     if (!selectedStillAvailable) {
       setBookingForm((currentForm) => ({
         ...currentForm,
         venueAvailabilityId: '',
+        timeSlotId: '',
       }))
     }
-  }, [bookingForm.venueAvailabilityId, selectedVenueTimeSlots])
+  }, [bookingForm.timeSlotId, bookingForm.venueAvailabilityId, selectedVenueTimeSlots])
 
   useEffect(() => {
     if (!selectedVenue?.id || !isBookingUser) {
@@ -1654,10 +1658,13 @@ function HomePage({ onNavigate, onStartBooking, session }) {
   const selectedBookingServices = bookingServiceOptions.filter((option) =>
     bookingForm.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
   )
-  const servicesTotal = selectedBookingServices.reduce((sum, option) => sum + Number(option.price || 0), 0)
-  const estimatedBasePrice = selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
+  const servicesTotal = selectedBookingServices.reduce(
+    (sum, option) => sum + Number(option.price ?? 0),
+    0,
+  )
+  const estimatedBasePrice = selectedBookingSlot ? Number(selectedBookingSlot.price ?? 0) : null
 
-  const hasSelectedBookingSlot = estimatedBasePrice !== null
+  const hasSelectedBookingSlot = selectedBookingSlot !== null
   const estimatedTotal =
     hasSelectedBookingSlot ? estimatedBasePrice + servicesTotal : null
 
@@ -1719,16 +1726,17 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       ...(name === 'date'
         ? {
             venueAvailabilityId: '',
+            timeSlotId: '',
           }
         : {}),
     }))
   }
 
-  const selectBookingSlot = (slotId) => {
+  const selectBookingSlot = (slot) => {
     clearBookingFeedback()
     setBookingForm((currentForm) => ({
       ...currentForm,
-      venueAvailabilityId: String(slotId),
+      ...getVenueAvailabilitySelectionState(slot),
     }))
   }
 
@@ -1854,7 +1862,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
       venueId: Number(selectedVenue.id),
       venueCategory: getVenueCategoryValue(selectedVenue),
       date: bookingForm.date,
-      venueAvailabilityId: Number(selectedBookingSlot.id),
+      ...getVenueAvailabilitySelectionPayload(selectedBookingSlot),
     }
 
     clearBookingFeedback()
@@ -1888,6 +1896,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     setBookingSubmitting(true)
 
     try {
+      const selectedSlotPayload = getVenueAvailabilitySelectionPayload(selectedBookingSlot)
+
       const formData = new FormData()
       formData.append(
         'data',
@@ -1895,7 +1905,8 @@ function HomePage({ onNavigate, onStartBooking, session }) {
           venueId: Number(selectedVenue.id),
           date: `${bookingForm.date}T00:00:00Z`,
           guestsCount: Number(bookingForm.guestsCount),
-          venueAvailabilityId: Number(selectedBookingSlot.id),
+          venueAvailabilityId: selectedSlotPayload.venueAvailabilityId,
+          timeSlotId: selectedSlotPayload.timeSlotId,
           venueServiceOptionIds: bookingForm.venueServiceOptionIds,
         }),
       )
@@ -2408,7 +2419,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           {selectedVenueTimeSlots.length > 0 ? (
                             <div className="hp-booking-slot-list">
                               {selectedVenueTimeSlots.map((slot) => {
-                                const isSelected = String(bookingForm.venueAvailabilityId) === String(slot.id)
+                                const isSelected = isVenueAvailabilitySlotSelected(slot, bookingForm)
                                 const slotDateLabel = formatVenueDateLabel(slot.date || bookingForm.date)
 
                                 return (
@@ -2421,7 +2432,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                         type="radio"
                                         name="home-time-slot"
                                         checked={isSelected}
-                                        onChange={() => selectBookingSlot(slot.id)}
+                                        onChange={() => selectBookingSlot(slot)}
                                       />
                                       <div className="hp-booking-slot-content">
                                         <div className="hp-booking-slot-badges">
@@ -2759,7 +2770,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                         {selectedVenueTimeSlots.length > 0 ? (
                           <div className="hp-booking-slot-list">
                             {selectedVenueTimeSlots.map((slot) => {
-                              const isSelected = String(bookingForm.venueAvailabilityId) === String(slot.id)
+                              const isSelected = isVenueAvailabilitySlotSelected(slot, bookingForm)
                               const slotDateLabel = formatVenueDateLabel(slot.date || bookingForm.date)
 
                               return (
@@ -2772,7 +2783,7 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                       type="radio"
                                       name="home-time-slot"
                                       checked={isSelected}
-                                      onChange={() => selectBookingSlot(slot.id)}
+                                      onChange={() => selectBookingSlot(slot)}
                                     />
                                     <div className="hp-booking-slot-content">
                                       <div className="hp-booking-slot-badges">

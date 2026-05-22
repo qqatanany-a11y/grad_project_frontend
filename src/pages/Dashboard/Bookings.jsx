@@ -13,7 +13,10 @@ import { useI18n } from '../../i18n/I18nProvider'
 import {
   formatVenueDateLabel,
   formatVenueTimeSlot,
-  getVenueAvailabilitySlots
+  getVenueAvailabilitySelectionPayload,
+  getVenueAvailabilitySelectionState,
+  getVenueAvailabilitySlots,
+  isVenueAvailabilitySlotSelected,
 } from '../../lib/venueTimeSlots'
 import { makeDashStyles } from './dashboardPageStyles'
 
@@ -929,7 +932,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
   const selectedTimeSlot =
     availableTimeSlots.find(
-      (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
+      (slot) => isVenueAvailabilitySlotSelected(slot, formValues),
     ) ?? null
 
   useEffect(() => {
@@ -947,6 +950,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         ...currentValues,
         venueId: '',
         venueAvailabilityId: '',
+        timeSlotId: '',
         venueServiceOptionIds: [],
       }))
       setServiceOptions([])
@@ -998,10 +1002,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
   useEffect(() => {
     if (!availableTimeSlots.length) {
-      if (formValues.venueAvailabilityId) {
+      if (formValues.venueAvailabilityId || formValues.timeSlotId) {
         setFormValues((currentValues) => ({
           ...currentValues,
           venueAvailabilityId: '',
+          timeSlotId: '',
         }))
       }
 
@@ -1009,16 +1014,16 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     }
 
     const selectedStillAvailable = availableTimeSlots.some(
-      (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
+      (slot) => isVenueAvailabilitySlotSelected(slot, formValues),
     )
 
     if (!selectedStillAvailable) {
       setFormValues((currentValues) => ({
         ...currentValues,
-        venueAvailabilityId: String(availableTimeSlots[0].id),
+        ...getVenueAvailabilitySelectionState(availableTimeSlots[0]),
       }))
     }
-  }, [availableTimeSlots, formValues.venueAvailabilityId])
+  }, [availableTimeSlots, formValues.timeSlotId, formValues.venueAvailabilityId])
 
   useEffect(() => {
     if (!isUser || !formValues.venueId) {
@@ -1084,10 +1089,13 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
   const selectedServiceOptions = serviceOptions.filter((option) =>
     formValues.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
   )
-  const servicesTotal = selectedServiceOptions.reduce((sum, option) => sum + Number(option.price || 0), 0)
-  const estimatedBasePrice = selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
+  const servicesTotal = selectedServiceOptions.reduce(
+    (sum, option) => sum + Number(option.price ?? 0),
+    0,
+  )
+  const estimatedBasePrice = selectedTimeSlot ? Number(selectedTimeSlot.price ?? 0) : null
 
-  const hasSelectedSlot = estimatedBasePrice !== null
+  const hasSelectedSlot = selectedTimeSlot !== null
   const estimatedTotal = hasSelectedSlot ? estimatedBasePrice + servicesTotal : null
 
   const availabilitySummary = useMemo(() => {
@@ -1127,10 +1135,10 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     usesVenueAvailability,
   ])
 
-  const selectVenueSlot = (slotId) => {
+  const selectVenueSlot = (slot) => {
     setFormValues((currentValues) => ({
       ...currentValues,
-      venueAvailabilityId: String(slotId),
+      ...getVenueAvailabilitySelectionState(slot),
     }))
   }
 
@@ -1169,6 +1177,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
       ...(name === 'venueId' || name === 'date'
         ? {
             venueAvailabilityId: '',
+            timeSlotId: '',
           }
         : {}),
     }))
@@ -1260,6 +1269,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     setSubmitting(true)
 
     try {
+      const selectedSlotPayload = getVenueAvailabilitySelectionPayload(selectedTimeSlot)
+
       const formData = new FormData()
       formData.append(
         'data',
@@ -1267,7 +1278,8 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
           venueId: Number(formValues.venueId),
           date: `${formValues.date}T00:00:00Z`,
           guestsCount: Number(formValues.guestsCount),
-          venueAvailabilityId: Number(selectedTimeSlot.id),
+          venueAvailabilityId: selectedSlotPayload.venueAvailabilityId,
+          timeSlotId: selectedSlotPayload.timeSlotId,
           venueServiceOptionIds: formValues.venueServiceOptionIds,
         }),
       )
@@ -1686,16 +1698,16 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
             <>
               <div className="bk-note">
                 Selected venue type: <strong>{getVenueCategoryLabel(getVenueCategoryValue(selectedVenue))}</strong>
-                {' Â· '}
+                {' | '}
                 Pricing model: <strong>{getPricingTypeLabel(getPricingTypeValue(selectedVenue))}</strong>
                 {selectedTimeSlot ? (
                   <>
-                    {' Â· '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
-                    {' Â· '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
+                    {' | '}Selected slot: <strong>{formatVenueTimeSlot(selectedTimeSlot)}</strong>
+                    {' | '}Slot price: <strong>{formatCurrency(selectedTimeSlot.price)}</strong>
                   </>
                 ) : getVenuePricePerHour(selectedVenue) ? (
                   <>
-                    {' Â· '}Base rate: <strong>{formatCurrency(selectedVenue.pricePerHour)} / hour</strong>
+                    {' | '}Base rate: <strong>{formatCurrency(selectedVenue.pricePerHour)} / hour</strong>
                   </>
                 ) : null}
               </div>
@@ -1706,7 +1718,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                   <label className="bk-label">{f('Available Fixed Slots')}</label>
                   <div className="bk-slot-list">
                     {availableTimeSlots.map((slot) => {
-                      const selected = String(formValues.venueAvailabilityId) === String(slot.id)
+                      const selected = isVenueAvailabilitySlotSelected(slot, formValues)
                       const slotDateLabel = formatVenueDateLabel(slot.date || formValues.date)
 
                       return (
@@ -1716,7 +1728,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                               type="radio"
                               name="venueAvailabilityId"
                               checked={selected}
-                              onChange={() => selectVenueSlot(slot.id)}
+                              onChange={() => selectVenueSlot(slot)}
                             />
                             <div className="bk-slot-content">
                               <div className="bk-slot-badges">
