@@ -1668,8 +1668,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     return selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
   }, [selectedBookingSlot])
 
+  const hasSelectedBookingSlot = estimatedBasePrice !== null
   const estimatedTotal =
-    estimatedBasePrice === null ? null : estimatedBasePrice + servicesTotal
+    hasSelectedBookingSlot ? estimatedBasePrice + servicesTotal : null
 
   const bookingAvailabilitySummary = useMemo(() => {
     if (!selectedVenue || !selectedVenueUsesAvailability) {
@@ -2520,12 +2521,18 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             </div>
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Add-ons</span>
-                              <span className="hp-booking-summary-value">{formatVenuePrice(servicesTotal)}</span>
+                              <span className="hp-booking-summary-value">
+                                {hasSelectedBookingSlot
+                                  ? formatVenuePrice(servicesTotal)
+                                  : f('Calculated after slot selection')}
+                              </span>
                             </div>
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Estimated Total</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedTotal === null ? 'Calculated after submit' : formatVenuePrice(estimatedTotal)}
+                                {estimatedTotal === null
+                                  ? f('Calculated after slot selection')
+                                  : formatVenuePrice(estimatedTotal)}
                               </span>
                             </div>
                           </div>
@@ -2606,7 +2613,9 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             <div className="hp-booking-summary-card">
                               <span className="hp-booking-summary-label">Estimated Total</span>
                               <span className="hp-booking-summary-value">
-                                {estimatedTotal === null ? 'Calculated after submit' : formatVenuePrice(estimatedTotal)}
+                                {estimatedTotal === null
+                                  ? f('Calculated after slot selection')
+                                  : formatVenuePrice(estimatedTotal)}
                               </span>
                             </div>
                           </div>
