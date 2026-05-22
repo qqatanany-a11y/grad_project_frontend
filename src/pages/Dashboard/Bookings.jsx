@@ -927,13 +927,10 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     return venueAvailabilitySlots
   }, [formValues.date, selectedVenue, venueAvailabilitySlots])
 
-  const selectedTimeSlot = useMemo(() => {
-    return (
-      availableTimeSlots.find(
-        (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
-      ) ?? null
-    )
-  }, [availableTimeSlots, formValues.venueAvailabilityId])
+  const selectedTimeSlot =
+    availableTimeSlots.find(
+      (slot) => String(slot.id) === String(formValues.venueAvailabilityId),
+    ) ?? null
 
   useEffect(() => {
     if (!formValues.venueId) {
@@ -1046,7 +1043,7 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
         setFormValues((currentValues) => ({
           ...currentValues,
           venueServiceOptionIds: currentValues.venueServiceOptionIds.filter((optionId) =>
-            nextOptions.some((option) => option.id === optionId),
+            nextOptions.some((option) => String(option.id) === String(optionId)),
           ),
         }))
       } catch {
@@ -1084,15 +1081,11 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
     updateBookingRecord(bookingId, { paymentStatus: nextPaymentStatus })
   }
 
-  const servicesTotal = useMemo(() => {
-    return serviceOptions
-      .filter((option) => formValues.venueServiceOptionIds.includes(option.id))
-      .reduce((sum, option) => sum + Number(option.price || 0), 0)
-  }, [formValues.venueServiceOptionIds, serviceOptions])
-
-  const estimatedBasePrice = useMemo(() => {
-    return selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
-  }, [selectedTimeSlot])
+  const selectedServiceOptions = serviceOptions.filter((option) =>
+    formValues.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
+  )
+  const servicesTotal = selectedServiceOptions.reduce((sum, option) => sum + Number(option.price || 0), 0)
+  const estimatedBasePrice = selectedTimeSlot ? Number(selectedTimeSlot.price || 0) : null
 
   const hasSelectedSlot = estimatedBasePrice !== null
   const estimatedTotal = hasSelectedSlot ? estimatedBasePrice + servicesTotal : null
@@ -1183,12 +1176,16 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
 
   const handleOptionToggle = (optionId) => {
     setFormValues((currentValues) => {
-      const alreadySelected = currentValues.venueServiceOptionIds.includes(optionId)
+      const alreadySelected = currentValues.venueServiceOptionIds.some(
+        (selectedId) => String(selectedId) === String(optionId),
+      )
 
       return {
         ...currentValues,
         venueServiceOptionIds: alreadySelected
-          ? currentValues.venueServiceOptionIds.filter((id) => id !== optionId)
+          ? currentValues.venueServiceOptionIds.filter(
+              (selectedId) => String(selectedId) !== String(optionId),
+            )
           : [...currentValues.venueServiceOptionIds, optionId],
       }
     })
@@ -1754,7 +1751,9 @@ function Bookings({ session, initialBookingDraft = null, onBookingDraftApplied }
                 ) : serviceOptions.length > 0 ? (
                   <div className="bk-option-list">
                     {serviceOptions.map((option) => {
-                      const selected = formValues.venueServiceOptionIds.includes(option.id)
+                      const selected = formValues.venueServiceOptionIds.some(
+                        (selectedId) => String(selectedId) === String(option.id),
+                      )
 
                       return (
                         <label

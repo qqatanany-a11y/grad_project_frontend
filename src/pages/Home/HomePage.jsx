@@ -1530,13 +1530,10 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     return bookingAvailabilitySlots
   }, [bookingAvailabilitySlots, bookingForm.date, selectedVenue])
 
-  const selectedBookingSlot = useMemo(() => {
-    return (
-      selectedVenueTimeSlots.find(
-        (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
-      ) ?? null
-    )
-  }, [bookingForm.venueAvailabilityId, selectedVenueTimeSlots])
+  const selectedBookingSlot =
+    selectedVenueTimeSlots.find(
+      (slot) => String(slot.id) === String(bookingForm.venueAvailabilityId),
+    ) ?? null
 
   const selectedVenuePhotoSet = useMemo(
     () =>
@@ -1654,19 +1651,11 @@ function HomePage({ onNavigate, onStartBooking, session }) {
     }
   }, [isBookingUser, selectedVenue?.id, session?.token])
 
-  const selectedBookingServices = useMemo(() => {
-    return bookingServiceOptions.filter((option) =>
-      bookingForm.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
-    )
-  }, [bookingForm.venueServiceOptionIds, bookingServiceOptions])
-
-  const servicesTotal = useMemo(() => {
-    return selectedBookingServices.reduce((sum, option) => sum + Number(option.price || 0), 0)
-  }, [selectedBookingServices])
-
-  const estimatedBasePrice = useMemo(() => {
-    return selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
-  }, [selectedBookingSlot])
+  const selectedBookingServices = bookingServiceOptions.filter((option) =>
+    bookingForm.venueServiceOptionIds.some((selectedId) => String(selectedId) === String(option.id)),
+  )
+  const servicesTotal = selectedBookingServices.reduce((sum, option) => sum + Number(option.price || 0), 0)
+  const estimatedBasePrice = selectedBookingSlot ? Number(selectedBookingSlot.price || 0) : null
 
   const hasSelectedBookingSlot = estimatedBasePrice !== null
   const estimatedTotal =
