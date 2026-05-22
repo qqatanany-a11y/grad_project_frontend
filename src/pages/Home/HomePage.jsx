@@ -1078,6 +1078,9 @@ const styles = `
     border: 1.5px solid var(--border);
     background: #fff;
   }
+  .hp-booking-summary-card.wide {
+    grid-column: 1 / -1;
+  }
   .hp-booking-summary-label {
     display: block;
     margin-bottom: 0.25rem;
@@ -1092,6 +1095,27 @@ const styles = `
     font-weight: 800;
     color: var(--text);
     line-height: 1.45;
+  }
+  .hp-booking-summary-breakdown {
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(79,70,229,0.12);
+    display: grid;
+    gap: 0.5rem;
+  }
+  .hp-booking-summary-breakdown-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .hp-booking-summary-breakdown-row strong {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--text);
+    text-align: end;
   }
   .hp-booking-review-grid {
     display: grid;
@@ -2513,27 +2537,27 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                           )}
 
                           <div className="hp-booking-summary-grid">
-                            <div className="hp-booking-summary-card">
-                              <span className="hp-booking-summary-label">Base Estimate</span>
-                              <span className="hp-booking-summary-value">
-                                {estimatedBasePrice === null ? f('Choose a slot') : formatVenuePrice(estimatedBasePrice)}
-                              </span>
-                            </div>
-                            <div className="hp-booking-summary-card">
-                              <span className="hp-booking-summary-label">Add-ons</span>
-                              <span className="hp-booking-summary-value">
-                                {hasSelectedBookingSlot
-                                  ? formatVenuePrice(servicesTotal)
-                                  : f('Calculated after slot selection')}
-                              </span>
-                            </div>
-                            <div className="hp-booking-summary-card">
-                              <span className="hp-booking-summary-label">Estimated Total</span>
+                            <div className="hp-booking-summary-card wide">
+                              <span className="hp-booking-summary-label">{f('Estimated Total')}</span>
                               <span className="hp-booking-summary-value">
                                 {estimatedTotal === null
                                   ? f('Calculated after slot selection')
                                   : formatVenuePrice(estimatedTotal)}
                               </span>
+                              <div className="hp-booking-summary-breakdown">
+                                <div className="hp-booking-summary-breakdown-row">
+                                  <span>{f('Base Estimate')}</span>
+                                  <strong>
+                                    {estimatedBasePrice === null
+                                      ? f('Choose a slot')
+                                      : formatVenuePrice(estimatedBasePrice)}
+                                  </strong>
+                                </div>
+                                <div className="hp-booking-summary-breakdown-row">
+                                  <span>{f('Add-ons')}</span>
+                                  <strong>{formatVenuePrice(servicesTotal)}</strong>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
