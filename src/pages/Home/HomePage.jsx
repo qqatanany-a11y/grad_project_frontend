@@ -2536,30 +2536,28 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                             </div>
                           )}
 
-                          <div className="hp-booking-summary-grid">
-                            <div className="hp-booking-summary-card wide">
-                              <span className="hp-booking-summary-label">{f('Estimated Total')}</span>
-                              <span className="hp-booking-summary-value">
-                                {estimatedTotal === null
-                                  ? f('Calculated after slot selection')
-                                  : formatVenuePrice(estimatedTotal)}
-                              </span>
-                              <div className="hp-booking-summary-breakdown">
-                                <div className="hp-booking-summary-breakdown-row">
-                                  <span>{f('Base Estimate')}</span>
-                                  <strong>
-                                    {estimatedBasePrice === null
-                                      ? f('Choose a slot')
-                                      : formatVenuePrice(estimatedBasePrice)}
-                                  </strong>
-                                </div>
-                                <div className="hp-booking-summary-breakdown-row">
-                                  <span>{f('Add-ons')}</span>
-                                  <strong>{formatVenuePrice(servicesTotal)}</strong>
+                          {estimatedTotal !== null ? (
+                            <div className="hp-booking-summary-grid">
+                              <div className="hp-booking-summary-card wide">
+                                <span className="hp-booking-summary-label">{f('Estimated Total')}</span>
+                                <span className="hp-booking-summary-value">{formatVenuePrice(estimatedTotal)}</span>
+                                <div className="hp-booking-summary-breakdown">
+                                  <div className="hp-booking-summary-breakdown-row">
+                                    <span>{f('Base Estimate')}</span>
+                                    <strong>
+                                      {estimatedBasePrice === null
+                                        ? f('Choose a slot')
+                                        : formatVenuePrice(estimatedBasePrice)}
+                                    </strong>
+                                  </div>
+                                  <div className="hp-booking-summary-breakdown-row">
+                                    <span>{f('Add-ons')}</span>
+                                    <strong>{formatVenuePrice(servicesTotal)}</strong>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          ) : null}
                         </div>
                       ) : null}
 
@@ -2634,14 +2632,12 @@ function HomePage({ onNavigate, onStartBooking, session }) {
                                   : f('No add-ons')}
                               </span>
                             </div>
-                            <div className="hp-booking-summary-card">
-                              <span className="hp-booking-summary-label">Estimated Total</span>
-                              <span className="hp-booking-summary-value">
-                                {estimatedTotal === null
-                                  ? f('Calculated after slot selection')
-                                  : formatVenuePrice(estimatedTotal)}
-                              </span>
-                            </div>
+                            {estimatedTotal !== null ? (
+                              <div className="hp-booking-summary-card">
+                                <span className="hp-booking-summary-label">Estimated Total</span>
+                                <span className="hp-booking-summary-value">{formatVenuePrice(estimatedTotal)}</span>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       ) : null}
